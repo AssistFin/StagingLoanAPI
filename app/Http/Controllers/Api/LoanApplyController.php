@@ -1,0 +1,616 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Models\User;
+use setasign\Fpdi\Fpdi;
+use App\Models\LoanApproval;
+use App\Models\LoanDocument;
+use Illuminate\Http\Request;
+use setasign\Fpdi\PdfReader;
+use App\Models\LoanDisbursal;
+use App\Models\LoanKYCDetails;
+use App\Models\LoanApplication;
+use App\Models\LoanBankDetails;
+use App\Models\LoanAddressDetails;
+use Illuminate\Support\Facades\DB;
+use App\Models\LoanPersonalDetails;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use App\Models\LoanEmploymentDetails;
+use Illuminate\Support\Facades\Validator;
+
+class LoanApplyController extends Controller
+{
+    public function index()
+    {
+        try {
+            Log::info('Fetching loan application data for user', ['user_id' => auth()->id()]);
+
+            $loans = LoanApplication::with([
+                'personalDetails', 
+                'employmentDetails', 
+                'kycDetails', 
+                'loanDocument',
+                'addressDetails', 
+                'bankDetails'
+            ])
+            ->where([
+                ['user_id', auth()->id()],
+                ['loan_closed_status', 'pending']
+            ])
+            ->first();
+
+            $aadharAddress = DB::table('aadhaar_data')
+                ->where('user_id', auth()->id())
+                ->select('full_address')
+                ->first();
+
+            if ($loans) {
+                $loans["aadharAddress"] = $aadharAddress;
+            }
+
+            return response()->json(['status' => true, 'data' => $loans]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching loan application data', [
+                'user_id' => auth()->id(),
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong while fetching loan data. Please try again later.'
+            ], 500);
+        }
+    }
+
+
+    public function progress()
+    {
+        $loan = LoanApplication::where('user_id', auth()->id())->first();
+
+        return response()->json([
+            'status' => true,
+            'data'   => $loan ? [
+                'loan_id' => $loan->id,
+                'current_step' => $loan->current_step, 
+            ] : [],
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        Log::info('Received loan application request', $request->all());
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'loan_amount' => 'required|numeric',
+                'purpose_of_loan' => 'required|string',
+                'running_loan' => 'string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $lastLoanId = LoanApplication::latest('id')->value('id');
+            $userId = auth()->id(); 
+            $date = now()->format('Ymd'); 
+            $sequentialNumber = $lastLoanId ? ($lastLoanId + 1) : 1;
+            $sequentialNumber = str_pad($sequentialNumber, 3, '0', STR_PAD_LEFT); 
+            $loanNumber = "LA-{$userId}-{$date}-{$sequentialNumber}";
+
+            $loan = LoanApplication::create([
+                'user_id' => $userId,
+                'loan_no' => $loanNumber,
+                'loan_amount' => $request->loan_amount,
+                'purpose_of_loan' => $request->purpose_of_loan,
+                'running_loan' => $request->running_loan,
+                'current_step' => 'applyforaloan',
+                'next_step' => 'proofofaddress',
+                'status' => 'pending',
+            ]);
+
+            return response()->json(['status' => true, 'message' => 'Loan application created.', 'data' => $loan], 201);
+        } catch (\Exception $e) {
+            Log::error('Error in loan application creation', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
+        }
+    }
+
+
+
+    public function storePersonalDetails(Request $request)
+    {
+        Log::info('Received personal details submission', $request->all());
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'loan_application_id' => 'required|exists:loan_applications,id',
+                // 'date_of_birth' => 'required|date',
+                'pin_code' => 'required|string',
+                'city' => 'required|string',
+                'employment_type' => 'required|string',
+                'monthly_income' => 'required|numeric',
+                'income_received_in' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $personalDetails = LoanPersonalDetails::updateOrCreate(
+                ['loan_application_id' => $request->loan_application_id],
+                $request->all()
+            );
+
+            $loan = LoanApplication::where([['user_id', auth()->id()], ['id', $request->loan_application_id]])->first();
+
+            if ($loan) {
+                $loan->current_step = 'proofofaddress';
+                $loan->next_step = 'completekyc';
+                $loan->save();
+            }
+
+            if ($loan) {
+                $recentClosedLoan = LoanApplication::where('user_id', auth()->id())
+                    ->where('id', '!=', $loan->id) 
+                    ->where('loan_disbursal_status', 'disbursed')
+                    ->where('loan_closed_status', 'closed')
+                    ->whereNotNull('loan_closed_date')
+                    ->where('loan_closed_date', '>=', now()->subMonths(6))
+                    ->orderBy('loan_closed_date', 'desc')
+                    ->first();
+        
+                if ($recentClosedLoan) {
+                    $loan->current_step = 'proofofaddress';
+                    $loan->next_step = 'addressconfirmation'; 
+                } else {
+                    $loan->current_step = 'proofofaddress';
+                    $loan->next_step = 'completekyc';
+                }
+        
+                $loan->save();
+            }
+
+            return response()->json(['status' => true, 'message' => 'Personal details saved.', 'data' => $personalDetails]);
+        } catch (\Exception $e) {
+            Log::error('Error saving personal details', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
+        }
+    }
+
+ 
+    public function storeKYCDetails(Request $request)
+    {
+        Log::info('Received KYC details submission', $request->all());
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'loan_application_id' => 'required|exists:loan_applications,id',
+                'pan_number' => 'string',
+                'aadhar_number' => 'string',
+                'aadhar_otp' => 'nullable|string'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $data = $request->all();
+
+            $kycDetails = LoanKYCDetails::updateOrCreate(
+                ['loan_application_id' => $request->loan_application_id],
+                $data
+            );
+
+            $loan = LoanApplication::where([['user_id', auth()->id()], ['id', $request->loan_application_id]])->first();
+
+            if ($loan) {
+                $loan->current_step = 'completekyc';
+                $loan->next_step = 'aadharverification';
+                $loan->save();
+            }
+
+            return response()->json(['status' => true, 'message' => 'KYC details saved.', 'data' => $kycDetails]);
+        } catch (\Exception $e) {
+            Log::error('Error saving KYC details', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
+        }
+    }
+
+
+    public function uploadLoanDocument(Request $request)
+    {
+        Log::info('Received loan document upload request', $request->all());
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'loan_application_id' => 'required|exists:loan_applications,id',
+                'selfie_image' => 'required|image|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $securePath = config('services.docs.upload_kfs_doc');
+
+            if (!file_exists($securePath)) {
+                mkdir($securePath, 0777, true);
+            }
+
+            $fileName = uniqid() . '.' . $request->file('selfie_image')->getClientOriginalExtension();
+
+            $request->file('selfie_image')->move($securePath, $fileName);
+
+            $loanDocument = LoanDocument::updateOrCreate(
+                ['loan_application_id' => $request->loan_application_id],
+                ['selfie_image' => $fileName]
+            );
+
+            $loan = LoanApplication::where([['user_id', auth()->id()], ['id', $request->loan_application_id]])->first();
+            if ($loan) {
+                $loan->current_step = 'submitselfie';
+                $loan->next_step = 'addressconfirmation';
+                $loan->save();
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Loan document uploaded successfully.',
+                'data' => $loanDocument
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error uploading loan document', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
+        }
+    }
+
+
+    public function storeAddressDetails(Request $request)
+    {
+        Log::info('Received address details request', $request->all());
+    
+        try {
+            $validator = Validator::make($request->all(), [
+                'loan_application_id' => 'required|exists:loan_applications,id',
+                'address_type' => 'required|string',
+            ]);
+    
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+            }
+    
+            // If address_type is 'Both', fetch Aadhaar address fields
+            if ($request->address_type === 'Both') {
+                $aadhaarData = DB::table('aadhaar_data')
+                    ->where('user_id', auth()->id())
+                    ->select('house', 'street', 'pincode', 'district as city', 'state')
+                    ->first();
+    
+                if ($aadhaarData) {
+                    $request->merge([
+                        'house_no' => $aadhaarData->house ?? null,
+                        'locality' => $aadhaarData->street ?? null,
+                        'pincode' => $aadhaarData->pincode ?? null,
+                        'city' => $aadhaarData->city ?? null,
+                        'state' => $aadhaarData->state ?? null,
+                    ]);
+                } else {
+                    return response()->json(['status' => false, 'message' => 'Aadhaar address data not found.'], 404);
+                }
+            }
+    
+            // Save or update the address details
+            $addressDetails = LoanAddressDetails::updateOrCreate(
+                ['loan_application_id' => $request->loan_application_id],
+                $request->all()
+            );
+    
+            // Update loan application steps
+            $loan = LoanApplication::where([['user_id', auth()->id()], ['id', $request->loan_application_id]])->first();
+            if ($loan) {
+                $loan->current_step = 'addressconfirmation';
+                $loan->next_step = 'otherinformation';
+                $loan->save();
+            }
+    
+            return response()->json([
+                'status' => true,
+                'message' => 'Address details saved.',
+                'data' => $addressDetails
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error storing address details', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+    
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
+        }
+    }
+    
+
+    public function storeEmploymentDetails(Request $request)
+    {
+        Log::info('Received employment details request', $request->all());
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'loan_application_id' => 'required|exists:loan_applications,id',
+                'company_name' => 'required|string',
+                'designation' => 'required|string',
+                'email' => 'required|email',
+                'office_address' => 'required|string',
+                'education_qualification' => 'required|string',
+                'marital_status' => 'required|string',
+                'work_experience_years' => 'required|numeric',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $employmentDetails = LoanEmploymentDetails::updateOrCreate(
+                ['loan_application_id' => $request->loan_application_id],
+                $request->all()
+            );
+
+            User::where('id', auth()->id())->update([
+                'email' => $request->email
+            ]);
+
+            $loan = LoanApplication::where([
+                ['user_id', auth()->id()],
+                ['id', $request->loan_application_id]
+            ])->first();
+
+            if ($loan) {
+                $loan->current_step = 'otherinformation';
+                $loan->next_step = 'bankinfo';
+                $loan->save();
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Employment details saved.',
+                'data' => $employmentDetails
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error storing employment details', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
+        }
+    }
+
+
+    public function storeBankDetails(Request $request)
+    {
+        Log::info('Received bank details request', $request->all());
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'loan_application_id' => 'required|exists:loan_applications,id',
+                'bank_name' => 'required|string',
+                'bank_statement' => 'nullable|file|mimes:pdf|max:5120',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $data = $request->only(['loan_application_id', 'bank_name', 'bank_statement_password']);
+
+            if ($request->hasFile('bank_statement')) {
+                $securePath = config('services.docs.upload_kfs_doc');
+                
+                if (!file_exists($securePath)) {
+                    mkdir($securePath, 0777, true);
+                }
+
+                $fileName = uniqid() . '.' . $request->file('bank_statement')->getClientOriginalExtension();
+                $request->file('bank_statement')->move($securePath, $fileName);
+
+                $data['bank_statement'] = $securePath . '/' . $fileName;
+            }
+
+            $bankDetails = LoanBankDetails::updateOrCreate(
+                ['loan_application_id' => $request->loan_application_id],
+                $data
+            );
+
+            $loan = LoanApplication::where([
+                ['user_id', auth()->id()],
+                ['id', $request->loan_application_id]
+            ])->first();
+
+            if ($loan) {
+                $loan->current_step = 'bankinfo';
+                $loan->next_step = 'loanstatus';
+                $loan->save();
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Bank details saved.',
+                'data' => $bankDetails
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error storing bank details', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
+        }
+    }
+
+
+    public function loanApproval(Request $request) {
+
+        $approval = LoanApproval::where([
+            ['loan_application_id', $request->loan_application_id],
+            ['user_id', $request->user_id],
+            ['loan_number', $request->loan_number],
+        ])->first();
+
+        return response()->json(['status' => true, 'message' => 'Loan is approved.', 'data' => $approval]);
+    }
+
+    public function loanDisbursal(Request $request) {
+
+        $disbursal = LoanDisbursal::where([
+            ['loan_application_id', $request->loan_application_id],
+            ['user_id', $request->user_id],
+        ])->first();
+
+        return response()->json(['status' => true, 'message' => 'Loan is disbursal.', 'data' => $disbursal]);
+    }
+
+    public function loanAcceptance(Request $request) {
+        $user = auth()->user();
+        $ip = $request->ip();
+        $fileName = $request->file_name;
+        $loanNo = $request->loan_application_id;
+
+        $filePath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/{$fileName}";
+
+        if (!file_exists($filePath)) {
+            return response()->json(['status' => false, 'message' => 'File not found.'], 404);
+        }
+
+        $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$fileName}";
+
+        $pdf = new Fpdi();
+
+        $pageCount = $pdf->setSourceFile($filePath);
+
+        $pdf = new Fpdi();
+        $pdf->SetAutoPageBreak(false); 
+
+        $pageCount = $pdf->setSourceFile($filePath);
+
+        for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+            $templateId = $pdf->importPage($pageNo);
+            $size = $pdf->getTemplateSize($templateId);
+
+            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+            $pdf->useTemplate($templateId);
+
+            // Setup text
+            $userName = "{$user->firstname} {$user->lastname}";
+            $dateTime = now()->format('d/m/Y H:i:s');
+            $ipAddress = $ip;
+
+            $pdf->SetFont('Helvetica', '', 8);
+            $pdf->SetTextColor(50, 50, 50);
+
+            $text1 = "Accepted and Signed by {$userName}";
+            $text2 = "{$dateTime} | {$ipAddress}";
+
+            $textWidth = 70;
+            $x = $size['width'] - $textWidth - 10; 
+            $y = $size['height'] - 20;
+
+            $pdf->SetXY($x, $y);
+            $pdf->MultiCell($textWidth, 4, "{$text1}\n{$text2}", 0, 'L');
+        }     
+
+        $pdf->Output($outputPath, 'F');
+
+        $approval = LoanApplication::where([
+            ['id', $request->loan_application_id],
+            ['user_id', $request->user_id],
+            ['loan_no', $request->loan_number],
+        ])->update([
+            "current_step" => "viewloan",
+            "next_step" => "loandisbursal",
+            "user_acceptance_status" => "accepted",
+            "user_acceptance_date" => now()
+        ]);
+
+        return response()->json(['status' => true, 'message' => 'Loan offer accepted.', 'data' => $approval]);
+    }
+
+    public function updateLoanStep(Request $request)
+    {
+        $request->validate([
+            'loan_application_id' => 'required|exists:loan_applications,id',
+            'current_step' => 'required|string',
+            'next_step' => 'required|string'
+        ]);
+
+        $loan = LoanApplication::where('id', $request->loan_application_id)
+                            ->where('user_id', auth()->id())
+                            ->first();
+
+        if ($loan) {
+            $loan->current_step = $request->current_step;
+            $loan->next_step = $request->next_step;
+            $loan->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Loan step updated successfully',
+                'loan' => $loan
+            ]);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Loan not found'
+        ], 404);
+    }
+
+    public function getAadharAddress()
+    {
+        $aadharAddresss = DB::table('aadhaar_data')
+                            ->where('user_id', auth()->id())
+                            ->select('full_address')
+                            ->first();
+
+        return response()->json(['status' => true, 'message' => 'Aadhar Address.', 'data' => $aadharAddresss]);
+    }
+}
