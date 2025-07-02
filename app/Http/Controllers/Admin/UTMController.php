@@ -93,6 +93,14 @@ class UTMController extends Controller
                     'Employment Type' => $utmRecord->employment_type ?? '',
                     'Monthly Income' => $utmRecord->monthly_income ?? '',
                     'Income Received In' => $utmRecord->income_received_in ?? '',
+                    'Date' => \Carbon\Carbon::parse($utmRecord->created_at)->timezone('Asia/Kolkata'),
+                    'Source' => $utmRecord->utm_source ?? '',
+                    'Medium' => $utmRecord->utm_medium ?? '',
+                    'Campaign' => $utmRecord->utm_campaign ?? '',
+                    'Term' => $utmRecord->utm_term ?? '',
+                    'Content' => $utmRecord->utm_content ?? '',
+                    'IP Address' => $utmRecord->ip_address ?? '',
+
                 ];
             }
 
