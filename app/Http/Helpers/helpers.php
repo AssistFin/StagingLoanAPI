@@ -533,7 +533,7 @@ function queryLoanBuild($key, $value) {
     return $route . $delimeter . "$key=$value";
 }
 
-function sendMailViaSMTP($subject, $message, $to, $attachment){
+function sendMailViaSMTP($subject, $message, $to, $attachment = null){
     $mail = new PHPMailer(true);
 
     try {
@@ -553,8 +553,9 @@ function sendMailViaSMTP($subject, $message, $to, $attachment){
         }else{
             $mail->addAddress('tech.assistfin@gmail.com');
         }
-        
-        $mail->addAttachment($attachment);
+        if($attachment){
+            $mail->addAttachment($attachment);
+        }
         $mail->Subject = $subject;
         $mail->Body    = $message;
         //$mail->SMTPDebug = 3;

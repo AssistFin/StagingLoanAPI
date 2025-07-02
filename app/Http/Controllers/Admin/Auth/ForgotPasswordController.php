@@ -7,6 +7,7 @@ use App\Models\AdminPasswordReset;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Log;
 
 class ForgotPasswordController extends Controller
 {
@@ -29,11 +30,6 @@ class ForgotPasswordController extends Controller
         $this->validate($request, [
             'email' => 'required|email',
         ]);
-
-       /* if(!verifyCaptcha()){
-            $notify[] = ['error','Invalid captcha provided'];
-            return back()->withNotify($notify);
-        } */
 
         $admin = Admin::where('email', $request->email)->first();
         if (!$admin) {
@@ -59,6 +55,18 @@ class ForgotPasswordController extends Controller
 
         $email = $admin->email;
         session()->put('pass_res_mail',$email);
+
+        //BOC by Ankit 
+        $subject = "LoanOne | Password Reset OTP";
+        $message = "Dear $admin->name,<br><br>
+        Your verification code for reset password in loanone admin is : $code <br><br><br>
+        Thank you for choosing LoanOne,<br>
+        powered by Altura Financial Services Ltd.";
+
+        $mailSend = sendMailViaSMTP($subject, $message, $admin->email, null);
+
+        Log::info("Mail Send Via SMTP For password reset and the response is : {$mailSend}");
+        //EOC by Ankit
 
         return to_route('admin.password.code.verify');
     }
