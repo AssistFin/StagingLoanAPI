@@ -565,10 +565,16 @@
                             <!-- Bank Acc No -->
                             <div class="col-md-6">
                                 <label for="bank_acc_no" class="form-label">Bank Account No</label>
-                                <input type="number" class="form-control" id="bank_acc_no" name="bank_acc_no" required step="0.01" value="">
+                                <input type="number" class="form-control" id="bank_acc_no" name="bank_acc_no" required step="0.01" value="{{ $lead->bankDetails->account_number ?? '' }}">
                                 <input type="hidden" id="bank_lead_id" value="{{ $lead->id }}">
                                 <input type="hidden" id="bank_user_id" value="{{ $lead->user_id }}">
                                 <span id="bankError" class="error-message text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="ifsccode" class="form-label">IFSC Code</label>
+                                <input type="text" class="form-control" id="ifsccode" name="ifsccode" required value="{{ $lead->bankDetails->ifsc_code ?? '' }}">
+                                <span class="error-message text-danger"></span>
                             </div>
                             {{-- @if(isset($loanApproval) && !$loanApproval->status == "2")
                                 
@@ -618,13 +624,13 @@
                     
                             <div class="col-md-6">
                                 <label>Customer Account No</label>
-                                <input type="text" name="account_no" class="form-control" required value="{{isset($loanDisbursal) ? $loanDisbursal->account_no : ""}}">
+                                <input type="text" name="account_no" class="form-control" required value="{{ $lead->bankDetails->account_number ?? '' }}">
                                 <span class="error-message text-danger"></span>
                             </div>
                     
                             <div class="col-md-6">
                                 <label>IFSC Code</label>
-                                <input type="text" name="ifsc" class="form-control" required value="{{isset($loanDisbursal) ? $loanDisbursal->ifsc : ""}}">
+                                <input type="text" name="ifsc" class="form-control" required value="{{ $lead->bankDetails->ifsc_code ?? '' }}">
                                 <span class="error-message text-danger"></span>
                             </div>
                     

@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Models\LoanApproval;
 use Illuminate\Http\Request;
 use App\Models\LoanApplication;
+use App\Models\LoanBankDetails;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class LoanApprovalController extends Controller
 {
@@ -101,8 +104,10 @@ class LoanApprovalController extends Controller
             'loan_purpose' => 'nullable|string',
             'final_remark' => 'nullable|string',
             'additional_remark' => 'nullable|string',
+            'bank_acc_no' => 'required|string',
+            'ifsccode' => 'required|string',
         ]);
-
+        //dd($request->input('ifsccode'));
         // Calculate financial details
         $approvalAmount = $request->input('approval_amount'); 
         $processingFeePercentage = $request->input('processing_fee'); 
@@ -115,7 +120,6 @@ class LoanApprovalController extends Controller
         $request->merge(['disbursal_amount' => $disbursalAmount]);
 
         // Fetch User & Loan Details
-        // $loan = LoanApplication::where('user_id', $request->user_id)->first();
         $loan = LoanApplication::where([['user_id', $request->user_id], ['id', $request->loan_application_id]])->first();
 
         $user = $loan->user; // Assuming relationship exists
@@ -131,11 +135,6 @@ class LoanApprovalController extends Controller
         $loanAmount = $request->approval_amount;
         $totalInterest = $request->repayment_amount - $request->approval_amount;
         $loanTenureDays = $request->loan_tenure_days;
-
-       
-        // $apr = ($loanAmount > 0 && $loanTenureDays > 0) 
-        //     ? (($totalInterest / ($loanAmount * $loanTenureDays)) * 365 * 100) 
-        //     : 0;
 
         $fileName = "KFS_" . uniqid() . ".pdf";
 
@@ -184,6 +183,21 @@ class LoanApprovalController extends Controller
             $loan->admin_approval_date = now();
             $loan->save();
         }
+
+        //BOC By Ankit Tiwari
+        LoanBankDetails::where('loan_application_id',$request->loan_application_id)->update(['account_number'=>$request->input('bank_acc_no'), 'ifsc_code'=>$request->input('ifsccode')]);
+
+        $subject = "Loan App. No. ".$loan->loan_no." | Loan Approved Confirmation";
+        $message = "Dear $user->firstname $user->lastname,<br><br>
+        We are pleased to inform you that your loan has been approved successfully.<br>
+        Please refer the link to login from <a href='https://loanone.in' target='_blank'> LoanOne.in</a> and check the status of your loan application.<br><br>
+        For any queries, feel free to contact us at 9211717788 or email care@loanone.in.<br><br><br>
+        Thank you for choosing LoanOne,<br>
+        powered by Altura Financial Services Ltd.";
+        
+        $mailSend = sendMailViaSMTP($subject, $message, null, null);
+        Log::info("Mail Send Via SMTP For Loan Approval and the response is : {$mailSend}");
+        //EOC By Ankit Tiwari
 
         return redirect()->back()->with('success', 'Loan Approved and KFS PDF Generated Successfully');
     }

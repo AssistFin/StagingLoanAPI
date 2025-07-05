@@ -62,7 +62,7 @@
         <div class="col-lg-12">
             <div class="card b-radius--10 ">
                 <div class="card-body">
-
+                    
                     <div class="flex flex-wrap items-center gap-3 py-4">
                         <div class="filter-row">
                             <select id="date_range" name="date_range" class="form-control">
@@ -102,7 +102,6 @@
                         </div>
                         
                     </div>
-
                     <div class="table-responsive--md  table-responsive">
                         <table class="table table--light style--two">
                             <thead>
@@ -199,7 +198,6 @@
         $('.fa-info-circle').tooltip();
     });
 </script>
-
 <script>
     function fetchUTMLeads(page = 1) {
         const dateRange = $('#date_range').val();
