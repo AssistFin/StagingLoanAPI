@@ -247,7 +247,10 @@ class LeadController extends Controller
             if ($loanType) {
                 switch ($loanType) {
                     case 'complete_app_loan':
-                        $query->where('current_step', 'loanstatus')->whereHas('bankDetails');
+                        $query->where('current_step', 'loanstatus');
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereDate('created_at', Carbon::today());
+                        });
                         break;
                     case 'active_loan':
                         $query->where('loan_closed_status', 'pending')->where('loan_disbursal_status', 'disbursed');

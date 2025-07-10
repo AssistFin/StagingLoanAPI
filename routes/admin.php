@@ -34,6 +34,7 @@ use App\Http\Controllers\Admin\CronConfigurationController;
 use App\Http\Controllers\Admin\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\Auth\ForgotPasswordController;
 use App\Http\Controllers\Admin\CreditBureauController;
+use App\Http\Controllers\Admin\ExperianCreditBureauController;
 use App\Http\Controllers\Api\ScoreMeWebhookController;
 
 
@@ -410,6 +411,10 @@ Route::middleware('admin')->group(function () {
         Route::get('/index', 'index')->name('index');
         Route::get('/checkReport', 'checkReportByExperian')->name('checkReport');
         Route::get('/checkBankAccNo', 'checkBankAccNoByApproval')->name('checkBankAccNo');
+    });
+
+    Route::name('experiancreditbureau.')->prefix('experiancreditbureau')->controller(ExperianCreditBureauController::class)->group(function () {
+        Route::get('/index', 'index')->name('index');
     });
 
     Route::name('creditbureau.')->prefix('creditbureau')->controller(ScoreMeWebhookController::class)->group(function () {

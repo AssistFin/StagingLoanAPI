@@ -152,6 +152,23 @@
                         <span class="menu-title">@lang('Credit Bureau')</span>
                     </a>
                 </li>
+
+                <li class="sidebar-menu-item sidebar-dropdown">
+                    <a href="javascript:void(0)" class="{{ menuActive('admin.experiancreditbureau*', 3) }}">
+                        <i class="menu-icon las la-list"></i>
+                        <span class="menu-title">@lang('Credit Bureau Report')</span>
+                    </a>
+                    <div class="sidebar-submenu {{ menuActive('admin.experiancreditbureau*', 2) }}">
+                        <ul>
+                            <li class="sidebar-menu-item {{ menuActive('admin.experiancreditbureau.index') }}">
+                                <a href="{{ route('admin.experiancreditbureau.index') }}" class="nav-link">
+                                    <i class="menu-icon las la-check-circle"></i>
+                                    <span class="menu-title">@lang('Experian Report')</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
                 <!-- Add the Credit Assessment and Follow-ups sections -->
 
                 <li class="sidebar-menu-item sidebar-dropdown">
