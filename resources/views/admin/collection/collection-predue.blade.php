@@ -33,13 +33,10 @@
                                 <th>@lang('Customer Name')</th>
                                 <th>@lang('Mobile No')</th>
                                 <th>@lang('Loan Amount')</th>
-                                <th>@lang('Purpose Of Loan')</th>
-                                <th>@lang('Personal Details')</th>
-                                <th>@lang('KYC Details')</th>
-                                <th>@lang('Selfie Document')</th>
-                                <th>@lang('Address Details')</th>
-                                <th>@lang('Employement Details')</th>
-                                <th>@lang('Bank Details')</th>
+                                <th>@lang('Total Due')</th>
+                                <th>@lang('Repayment Date')</th>
+                                <th>@lang('Action')</th>
+                                <th>@lang('Payment Link')</th>
                             </tr>
                             </thead>
                             <tbody id="cPredueTable">
@@ -51,14 +48,11 @@
                                     <td>{{ $lead->loan_no }}</td>
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
-                                    <td>{{ $lead->loan_amount }}</td>
-                                    <td>{{ $lead->purpose_of_loan }}</td>
-                                    <td>{!! $lead->personalDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->kycDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->loanDocument ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->addressDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->employmentDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->bankDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
+                                    <td>{{ number_format($lead->loanApproval->approval_amount,0) }}</td>
+                                    <td>{{ $lead->total_dues }}</td>
+                                    <td>{{ $lead->loanApproval->repay_date }}</td>
+                                    <td><button type="button" class="btn btn-success">Send SMS</button><button type="button" class="btn btn-danger">Send Email</button></td>
+                                    <td>{{ $lead->payment_link }}</td>
                                 </tr>
                             @empty
                                 <tr>

@@ -17,7 +17,8 @@ class DecisionController extends Controller
             'kycDetails', 
             'loanDocument',
             'addressDetails', 
-            'bankDetails'
+            'bankDetails',
+            'loanApproval'
         ])->where('admin_approval_status', 'approved')
           ->where('loan_disbursal_status', '!=', 'disbursed')
           ->where('loan_closed_status', '!=', 'closed')
@@ -40,6 +41,40 @@ class DecisionController extends Controller
         return view('admin.decision.decision-approved', compact('leads'));
     }
 
+    public function decisionpendingDisbursed(Request $request)
+    {
+        $query = LoanApplication::with([
+            'user',
+            'personalDetails', 
+            'employmentDetails', 
+            'kycDetails', 
+            'loanDocument',
+            'addressDetails', 
+            'bankDetails',
+            'loanDisbursal',
+            'loanApproval'
+        ])->where('loan_disbursal_status', 'pending')
+          ->where('admin_approval_status', 'approved')
+          ->where('user_acceptance_status', 'accepted')
+          ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+            
+            if ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                        $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+                });
+            }
+        $leads = $query->paginate(25);
+
+        return view('admin.decision.decision-disbursed', compact('leads'));
+    }
+
     public function decisionDisbursed(Request $request)
     {
         $query = LoanApplication::with([
@@ -49,7 +84,9 @@ class DecisionController extends Controller
             'kycDetails', 
             'loanDocument',
             'addressDetails', 
-            'bankDetails'
+            'bankDetails',
+            'loanDisbursal',
+            'loanApproval'
         ])->where('loan_disbursal_status', 'disbursed')
           ->orderByRaw('created_at DESC');
 
@@ -109,7 +146,9 @@ class DecisionController extends Controller
             'kycDetails', 
             'loanDocument',
             'addressDetails', 
-            'bankDetails'
+            'bankDetails',
+            'collections',
+            'loanApproval'
         ])->where('loan_closed_status', 'closed')
           ->orderByRaw('created_at DESC');
 

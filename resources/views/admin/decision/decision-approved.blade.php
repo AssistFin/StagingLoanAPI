@@ -33,7 +33,8 @@
                                 <th>@lang('Customer Name')</th>
                                 <th>@lang('Mobile No')</th>
                                 <th>@lang('Loan Amount')</th>
-                                <th>@lang('Purpose Of Loan')</th>
+                                <th>@lang('Disbursal Amount')</th>
+                                <th>@lang('Sanction Date')</th>
                             </tr>
                             </thead>
                             <tbody id="dApprovedTable">
@@ -45,8 +46,9 @@
                                     <td>{{ $lead->loan_no }}</td>
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
-                                    <td>{{ $lead->loan_amount }}</td>
-                                    <td>{{ $lead->purpose_of_loan }}</td>
+                                    <td>{{ number_format($lead->loanApproval->approval_amount,0) }}</td>
+                                    <td>{{ number_format($lead->loanApproval->disbursal_amount,0) }}</td>
+                                    <td>{{ $lead->loanApproval->created_at }}</td>
                                 </tr>
                             @empty
                                 <tr>

@@ -20,7 +20,7 @@
             <div class="card b-radius--10 ">
                 <div class="card-body">
                     <div class="d-flex justify-content-end mb-3">
-                        <input type="text" id="d-rejected-search-input" class="form-control" 
+                        <input type="text" id="d-disbursed-search-input" class="form-control" 
                             placeholder="Search by Name / Mobile No / Loan App No / Email..." 
                             style="max-width: 400px;">
                     </div>
@@ -33,11 +33,11 @@
                                 <th>@lang('Customer Name')</th>
                                 <th>@lang('Mobile No')</th>
                                 <th>@lang('Loan Amount')</th>
-                                <th>@lang('Remark')</th>
-                                <th>@lang('Rejection Date')</th>
+                                <th>@lang('Disbursement Amount')</th>
+                                <th>@lang('Disbursement Date')</th>
                             </tr>
                             </thead>
-                            <tbody id="dRejectedTable">
+                            <tbody id="dDisbursedTable">
                             @forelse($leads as $lead)
                                 <tr>
                                     <td style="cursor: pointer">
@@ -46,9 +46,9 @@
                                     <td>{{ $lead->loan_no }}</td>
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
-                                    <td>{{ number_format($lead->loan_amount,0) }}</td>
-                                    <td>{{ $lead->purpose_of_loan }}</td>
-                                    <td>{{ $lead->admin_approval_date }}</td>
+                                    <td>{{ number_format($lead->loanApproval->approval_amount,0) }}</td>
+                                    <td>{{ !empty($lead->loanDisbursal->disbursal_amount) ? number_format($lead->loanDisbursal->disbursal_amount,0) : 0 }}</td>
+                                    <td>{{ $lead->loanDisbursal->disbursal_date }}</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -59,11 +59,16 @@
                         </table>
                         <br>
                         <br>  
-                        <div class="sticky-pagination" id="dRejectPaginationLinks">
+                        <div class="sticky-pagination" id="dDisbursePaginationLinks">
                             {{ $leads->links() }}
-                        </div>
+                        </div> 
                     </div>
                 </div>
+                {{-- @if ($leads->hasPages())
+                    <div class="card-footer py-4">
+                        {{ $leads->links() }}
+                    </div>
+                @endif --}}
             </div>
         </div>
     </div>
@@ -77,9 +82,9 @@
 
 @push('script')
 <script>
-        const searchInput = document.getElementById('d-rejected-search-input');
-        const dRejectedTable = document.getElementById('dRejectedTable');
-        const dRejectPaginationLinks = document.getElementById('dRejectPaginationLinks');
+        const searchInput = document.getElementById('d-disbursed-search-input');
+        const dDisbursedTable = document.getElementById('dDisbursedTable');
+        const dDisbursePaginationLinks = document.getElementById('dDisbursePaginationLinks');
         let searchTimeout;
 
         searchInput.addEventListener('input', function() {
@@ -92,7 +97,7 @@
         });
 
         function fetchLeads(searchTerm) {
-            const url = `/admin/decision/decision-rejected?search=${searchTerm}`;
+            const url = `/admin/decision/decision-disbursed?search=${searchTerm}`;
 
             fetch(url, {
                 headers: {
@@ -106,23 +111,23 @@
                 tempElement.innerHTML = html;
 
                 // Find the tbody within the temporary element
-                const newTbody = tempElement.querySelector('#dRejectedTable');
+                const newTbody = tempElement.querySelector('#dDisbursedTable');
 
                 if (newTbody) {
-                    dRejectedTable.innerHTML = newTbody.innerHTML;
+                    dDisbursedTable.innerHTML = newTbody.innerHTML;
                 } else {
-                    dRejectedTable.innerHTML = '<tr><td colspan="11">No data found.</td></tr>';
+                    dDisbursedTable.innerHTML = '<tr><td colspan="11">No data found.</td></tr>';
                 }
                 
                 // Update pagination links
                 if (searchTerm) {
-                    dRejectPaginationLinks.innerHTML = newPagination ? newPagination.innerHTML : '';
+                    dDisbursePaginationLinks.innerHTML = newPagination ? newPagination.innerHTML : '';
                 } else {
-                    dRejectPaginationLinks.innerHTML = initialPaginationHTML;
+                    dDisbursePaginationLinks.innerHTML = initialPaginationHTML;
                 }
             })
             .catch(error => {
-                console.error('Error fetching rejected decision:', error);
+                console.error('Error fetching disbursed decision:', error);
             });
         }
     </script>

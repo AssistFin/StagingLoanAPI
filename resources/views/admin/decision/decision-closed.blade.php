@@ -33,10 +33,13 @@
                                 <th>@lang('Customer Name')</th>
                                 <th>@lang('Mobile No')</th>
                                 <th>@lang('Loan Amount')</th>
-                                <th>@lang('Purpose Of Loan')</th>
+                                <th>@lang('Total Collection Amt')</th>
+                                <th>@lang('Closed Date')</th>
+                                <th>@lang('Status')</th>
                             </tr>
                             </thead>
                             <tbody id="dClosedTable">
+                                
                             @forelse($leads as $lead)
                                 <tr>
                                     <td style="cursor: pointer">
@@ -45,8 +48,10 @@
                                     <td>{{ $lead->loan_no }}</td>
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
-                                    <td>{{ $lead->loan_amount }}</td>
-                                    <td>{{ $lead->purpose_of_loan }}</td>
+                                    <td>{{ number_format($lead->loanApproval->approval_amount,0) }}</td>
+                                    <td>{{ $lead->collections->sum('collection_amt') }}</td>
+                                    <td>{{ optional($lead->collections->last())->collection_date }}</td>
+                                    <td>{{ optional($lead->collections->last())->status }}</td>
                                 </tr>
                             @empty
                                 <tr>

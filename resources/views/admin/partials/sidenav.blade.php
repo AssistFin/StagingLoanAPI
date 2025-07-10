@@ -219,6 +219,12 @@
                                     <span class="menu-title">@lang('Approved')</span>
                                 </a>
                             </li>
+                            <li class="sidebar-menu-item {{ menuActive('admin.decision.pendingdisbursed') }}">
+                            <a href="{{ route('admin.decision.pendingdisbursed') }}" class="nav-link">
+                                    <i class="menu-icon las la-user-check"></i>
+                                    <span class="menu-title">@lang('Pending Disbursal')</span>
+                                </a>
+                            </li>
                             <li class="sidebar-menu-item {{ menuActive('admin.decision.disbursed') }}">
                             <a href="{{ route('admin.decision.disbursed') }}" class="nav-link">
                                     <i class="menu-icon las la-user-check"></i>
@@ -229,12 +235,6 @@
                                 <a href="{{ route('admin.decision.rejected') }}" class="nav-link">
                                     <i class="menu-icon las la-check-circle"></i>
                                     <span class="menu-title">@lang('Rejected')</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-menu-item {{ menuActive('admin.decision.closed') }}">
-                                <a href="{{ route('admin.decision.closed') }}" class="nav-link">
-                                    <i class="menu-icon las la-user-check"></i>
-                                    <span class="menu-title">@lang('Closed')</span>
                                 </a>
                             </li>
                         </ul>
@@ -258,6 +258,12 @@
                                 <a href="{{ route('admin.collection.overdue') }}" class="nav-link">
                                     <i class="menu-icon las la-user-check"></i>
                                     <span class="menu-title">@lang('Overdue')</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-menu-item {{ menuActive('admin.decision.closed') }}">
+                                <a href="{{ route('admin.decision.closed') }}" class="nav-link">
+                                    <i class="menu-icon las la-user-check"></i>
+                                    <span class="menu-title">@lang('Closed')</span>
                                 </a>
                             </li>
                         </ul>
