@@ -48,7 +48,7 @@
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
                                     <td>{{ number_format($lead->loanApproval->approval_amount,0) }}</td>
                                     <td>{{ !empty($lead->loanDisbursal->disbursal_amount) ? number_format($lead->loanDisbursal->disbursal_amount,0) : 0 }}</td>
-                                    <td>{{ $lead->loanDisbursal->disbursal_date }}</td>
+                                    <td>{{ !empty($lead->loanDisbursal->disbursal_date) ? $lead->loanDisbursal->disbursal_date : '' }}</td>
                                 </tr>
                             @empty
                                 <tr>

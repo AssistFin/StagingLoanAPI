@@ -40,7 +40,7 @@
                         </ul>
                     </div>
                 </li>
-                <li class="sidebar-menu-item sidebar-dropdown">
+                <!--li class="sidebar-menu-item sidebar-dropdown">
                     <a href="javascript:void(0)" class="{{ menuActive('admin.users*', 3) }}">
                         <i class="menu-icon las la-users"></i>
                         <span class="menu-title">@lang('Manage Users')</span>
@@ -145,30 +145,8 @@
                         <i class="menu-icon las la-chart-bar"></i>
                         <span class="menu-title">@lang('Loan Plans')</span>
                     </a>
-                </li>
-                <li class="sidebar-menu-item {{ menuActive('admin.creditbureau.*') }}">
-                    <a href="{{ route('admin.creditbureau.index') }}" class="nav-link ">
-                        <i class="menu-icon las la-chart-bar"></i>
-                        <span class="menu-title">@lang('Credit Bureau')</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-menu-item sidebar-dropdown">
-                    <a href="javascript:void(0)" class="{{ menuActive('admin.experiancreditbureau*', 3) }}">
-                        <i class="menu-icon las la-list"></i>
-                        <span class="menu-title">@lang('Credit Bureau Report')</span>
-                    </a>
-                    <div class="sidebar-submenu {{ menuActive('admin.experiancreditbureau*', 2) }}">
-                        <ul>
-                            <li class="sidebar-menu-item {{ menuActive('admin.experiancreditbureau.index') }}">
-                                <a href="{{ route('admin.experiancreditbureau.index') }}" class="nav-link">
-                                    <i class="menu-icon las la-check-circle"></i>
-                                    <span class="menu-title">@lang('Experian Report')</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
+                </li-->
+                
                 <!-- Add the Credit Assessment and Follow-ups sections -->
 
                 <li class="sidebar-menu-item sidebar-dropdown">
@@ -270,6 +248,30 @@
                     </div>
                 </li>
 
+                <li class="sidebar-menu-item {{ menuActive('admin.creditbureau.*') }}">
+                    <a href="{{ route('admin.creditbureau.index') }}" class="nav-link ">
+                        <i class="menu-icon las la-chart-bar"></i>
+                        <span class="menu-title">@lang('Credit Bureau')</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-menu-item sidebar-dropdown">
+                    <a href="javascript:void(0)" class="{{ menuActive('admin.experiancreditbureau*', 3) }}">
+                        <i class="menu-icon las la-list"></i>
+                        <span class="menu-title">@lang('Credit Bureau Report')</span>
+                    </a>
+                    <div class="sidebar-submenu {{ menuActive('admin.experiancreditbureau*', 2) }}">
+                        <ul>
+                            <li class="sidebar-menu-item {{ menuActive('admin.experiancreditbureau.index') }}">
+                                <a href="{{ route('admin.experiancreditbureau.index') }}" class="nav-link">
+                                    <i class="menu-icon las la-check-circle"></i>
+                                    <span class="menu-title">@lang('Experian Report')</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
                 {{-- <li class="sidebar-menu-item sidebar-dropdown">
                     <a href="javascript:void(0)" class="{{ menuActive('admin.credit.assessment*', 3) }}">
                         <i class="menu-icon las la-search-dollar"></i>
@@ -293,7 +295,7 @@
                     </div>
                 </li> --}}
 
-                <li class="sidebar-menu-item sidebar-dropdown">
+                <!--li class="sidebar-menu-item sidebar-dropdown">
                     <a href="javascript:void(0)" class="{{ menuActive('admin.followups*', 3) }}">
                         <i class="menu-icon las la-sync-alt"></i>
                         <span class="menu-title">@lang('Follow-ups')</span>
@@ -396,12 +398,12 @@
                                     <span class="menu-title">@lang('Automatic Gateways')</span>
                                 </a>
                             </li>
-                            <!-- <li class="sidebar-menu-item {{ menuActive('admin.gateway.manual.*') }} ">
+                            <li class="sidebar-menu-item {{ menuActive('admin.gateway.manual.*') }} ">
                                 <a href="{{ route('admin.gateway.manual.index') }}" class="nav-link">
                                     <i class="menu-icon las la-dot-circle"></i>
                                     <span class="menu-title">@lang('Manual Gateways')</span>
                                 </a>
-                            </li> -->
+                            </li> 
 
                         </ul>
                     </div>
@@ -605,7 +607,7 @@
                         <i class="menu-icon las la-thumbs-up"></i>
                         <span class="menu-title">@lang('Subscribers') </span>
                     </a>
-                </li>
+                </li-->
 
                 <li class="sidebar__menu-header">@lang('Settings')</li>
 

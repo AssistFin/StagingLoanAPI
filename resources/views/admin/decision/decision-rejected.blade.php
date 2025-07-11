@@ -47,7 +47,7 @@
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
                                     <td>{{ number_format($lead->loan_amount,0) }}</td>
-                                    <td>{{ $lead->purpose_of_loan }}</td>
+                                    <td>{{ $lead->loanApproval->final_remark }}</td>
                                     <td>{{ $lead->admin_approval_date }}</td>
                                 </tr>
                             @empty

@@ -116,7 +116,8 @@ class DecisionController extends Controller
             'kycDetails', 
             'loanDocument',
             'addressDetails', 
-            'bankDetails'
+            'bankDetails',
+            'loanApproval'
         ])->where('admin_approval_status', 'rejected')
           ->orderByRaw('created_at DESC');
 
