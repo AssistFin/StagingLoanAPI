@@ -120,6 +120,30 @@ class CollectionController extends Controller
         $totalRecordsQuery = clone $query;
         $totalRecords = $totalRecordsQuery->count();
 
+        $today = now()->toDateString();
+        $baseQuery = (clone $query)->getQuery();
+
+        $totals = DB::table(DB::raw("({$baseQuery->toSql()}) as base"))
+        ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'base.id')
+        ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'base.id')
+        ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'base.id')
+        ->selectRaw('
+            SUM(
+                (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) +
+                ((lap.approval_amount * lap.roi / 100) * DATEDIFF(?, ld.created_at)) +
+                IF(DATEDIFF(?, lap.repay_date) > 0,
+                    (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF(?, lap.repay_date),
+                    0
+                )
+            ) as total_dues_sum,
+            SUM(lap.approval_amount) as total_approval_amount
+        ', [$today, $today, $today])
+        ->mergeBindings($baseQuery)
+        ->first();
+
+        $totalDuesSum = (int) $totals->total_dues_sum;
+        $totalApprovalAmount = (int) $totals->total_approval_amount;
+
         // 2️⃣ Paginate first
         $leads = $query->paginate(25);
 
@@ -164,7 +188,7 @@ class CollectionController extends Controller
             return $lead;
         });
 
-        return view('admin.collection.collection-predue', compact('leads','totalRecords'));
+        return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
 
     public function collectionOverdue(Request $request)
@@ -278,6 +302,29 @@ class CollectionController extends Controller
         $totalRecordsQuery = clone $query;
         $totalRecords = $totalRecordsQuery->count();
 
+        $today = now()->toDateString();
+        $baseQuery = (clone $query)->getQuery();
+
+        $totals = DB::table(DB::raw("({$baseQuery->toSql()}) as base"))
+        ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'base.id')
+        ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'base.id')
+        ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'base.id')
+        ->selectRaw('
+            SUM(
+                (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) +
+                ((lap.approval_amount * lap.roi / 100) * DATEDIFF(?, ld.created_at)) +
+                IF(DATEDIFF(?, lap.repay_date) > 0,
+                    (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF(?, lap.repay_date),
+                    0
+                )
+            ) as total_dues_sum,
+            SUM(lap.approval_amount) as total_approval_amount
+        ', [$today, $today, $today])
+        ->mergeBindings($baseQuery)
+        ->first();
+
+        $totalDuesSum = (int) $totals->total_dues_sum;
+        $totalApprovalAmount = (int) $totals->total_approval_amount;
         // 2️⃣ Paginate first
         $leads = $query->paginate(25);
 
@@ -324,7 +371,7 @@ class CollectionController extends Controller
             return $lead;
         });
 
-        return view('admin.collection.collection-overdue', compact('leads','totalRecords'));
+        return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
 
 

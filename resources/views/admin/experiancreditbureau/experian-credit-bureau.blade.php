@@ -25,6 +25,8 @@
             <div class="card b-radius--10 ">
                 <div class="card-body">
                     <div class="d-flex justify-content-end mb-3">
+                        <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" style="max-width: 150px;" readonly >
+                        &nbsp;&nbsp;
                         <button type="button" id="experian_cb_export" class="btn btn-primary form-control" style="max-width: 150px;" >Export CSV</button>
                     </div>
                     <div class="table-responsive--md  table-responsive">
@@ -37,9 +39,8 @@
                                 <th>@lang('Full Address')</th>
                             </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="ecbTable">
                             @forelse($userRecords as $record)
-                            @if( $record->user->firstname && $record->user->lastname && $record->user->mobile && $record->date_of_birth && $record->pan && isset($record->addressDetails->house_no) && isset($record->addressDetails->city) && isset($record->addressDetails->pincode) && isset($record->addressDetails->state))
                                 <tr>
                                     <td>{{ $record->user->firstname }} {{ $record->user->lastname }}
                                     </br>({{ $record->user->mobile }})</td>
@@ -52,7 +53,6 @@
                                     </td>
 
                                 </tr>
-                            @endif
                             @empty
                                 <tr>
                                     <td colspan="9" class="text-center">@lang('No User data found')</td>
@@ -63,7 +63,7 @@
                     </div>
                     </br></br>
                     @if($userRecords->hasPages())
-                        <div class="sticky-pagination" class="card-footer py-4">
+                        <div class="sticky-pagination" id="ecbPaginationLinks" class="card-footer py-4">
                             {{ paginateLinks($userRecords) }}
                         </div>
                     @endif
@@ -84,12 +84,47 @@
         $('.fa-info-circle').tooltip();
     });
 
-    $('#experian_cb_export').on('click', function () {
-        const params = {
-            export: 'csv'
-        };
-        const query = $.param(params);
-        window.location.href = "{{ route('admin.experiancreditbureau.index') }}?" + query;
+    function fetchECBs(page = 1) {
+
+        $.ajax({
+            url: "{{ route('admin.experiancreditbureau.index') }}",
+            type: "GET",
+            data: {
+                page: page,
+            },
+            success: function(response) {
+                $('#ecbTable').html($(response).find('#ecbTable').html());
+                $('#ecbPaginationLinks').html($(response).find('#ecbPaginationLinks').html());
+                $('#total_records').val($(response).find('#total_records').val());
+            }
+        });
+    }
+
+    $(document).ready(function () {
+
+        $('#ecbPaginationLinks').on('click', '.pagination .page-item .page-link', function (e) {
+            e.preventDefault();
+
+            const href = $(this).attr('href');
+            //console.log('test', href);
+            if (!href || href === '#') return;
+
+            try {
+                const url = new URL(href, window.location.origin);
+                const page = url.searchParams.get("page") || 1;
+                fetchECBs(page);
+            } catch (error) {
+                console.error("Invalid pagination URL", error);
+            }
+        });
+
+        $('#experian_cb_export').on('click', function () {
+            const params = {
+                export: 'csv'
+            };
+            const query = $.param(params);
+            window.location.href = "{{ route('admin.experiancreditbureau.index') }}?" + query;
+        });
     });
 
 

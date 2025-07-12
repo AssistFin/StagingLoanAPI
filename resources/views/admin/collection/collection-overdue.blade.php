@@ -75,6 +75,10 @@
 
                             <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >
 
+                            <input type="text" id="total_aa_records" placeholder="Total Records"  class="form-control" value="{{ number_format($totalApprovalAmount,0) }}" readonly >
+
+                            <input type="text" id="total_ds_records" placeholder="Total Records"  class="form-control" value="{{ number_format($totalDuesSum,0) }}" readonly >
+
                             <button type="button" id="cod_export" class="btn btn-primary form-control">Export CSV</button>
                         </div>
 
@@ -169,6 +173,8 @@
                 $('#cOverdueTable').html($(response).find('#cOverdueTable').html());
                 $('#cOverduePaginationLinks').html($(response).find('#cOverduePaginationLinks').html());
                 $('#total_records').val($(response).find('#total_records').val());
+                $('#total_aa_records').val($(response).find('#total_aa_records').val());
+                $('#total_ds_records').val($(response).find('#total_ds_records').val());
             }
         });
     }
@@ -187,13 +193,13 @@
                 dateFormat: "yy-mm-dd",
                 maxDate: -1, // disable today and future
                 onSelect: function (selectedDate) {
-                    const fromDate = $(this).datepicker("getDate");
+                    //const fromDate = $(this).datepicker("getDate");
 
                     // Set minDate for To Date to be the next day after From Date
-                    const minToDate = new Date(fromDate);
-                    minToDate.setDate(minToDate.getDate() + 1);
+                    //const minToDate = new Date(fromDate);
+                    //minToDate.setDate(minToDate.getDate());
 
-                    $("#to_date").datepicker("option", "minDate", minToDate);
+                    //$("#to_date").datepicker("option", "minDate", minToDate);
                     $("#to_date").datepicker("option", "maxDate", today);
 
                     setTimeout(() => $("#to_date").datepicker("show"), 300);

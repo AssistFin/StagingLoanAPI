@@ -75,6 +75,10 @@
 
                             <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >
 
+                            <input type="text" id="total_aa_records" placeholder="Total Records"  class="form-control" value="{{ number_format($totalApprovalAmount,0) }}" readonly >
+
+                            <input type="text" id="total_ds_records" placeholder="Total Records"  class="form-control" value="{{ number_format($totalDuesSum,0) }}" readonly >
+
                             <button type="button" id="cpd_export" class="btn btn-primary form-control">Export CSV</button>
                         </div>
 
@@ -167,6 +171,8 @@
                 $('#cPredueTable').html($(response).find('#cPredueTable').html());
                 $('#cPreduePaginationLinks').html($(response).find('#cPreduePaginationLinks').html());
                 $('#total_records').val($(response).find('#total_records').val());
+                $('#total_aa_records').val($(response).find('#total_aa_records').val());
+                $('#total_ds_records').val($(response).find('#total_ds_records').val());
             }
         });
     }
