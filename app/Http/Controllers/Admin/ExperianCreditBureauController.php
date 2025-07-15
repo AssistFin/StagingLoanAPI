@@ -25,12 +25,12 @@ class ExperianCreditBureauController extends Controller
                 'employmentDetails',
                 'kycDetails',
                 'loanDocument',
-                'addressDetails',
                 'bankDetails',
             ])
             ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'loan_applications.id')
             ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'loan_applications.id')
             ->join('pan_data', 'pan_data.user_id', '=', 'loan_applications.user_id')
+            ->join('loan_address_details', 'loan_address_details.loan_application_id', '=', 'loan_applications.id')
             ->join('aadhaar_data', 'aadhaar_data.user_id', '=', 'loan_applications.user_id')
             ->leftJoin(DB::raw('(
                 SELECT loan_application_id, SUM(collection_amt) as total_paid
@@ -47,16 +47,22 @@ class ExperianCreditBureauController extends Controller
                 'pan_data.pan as pan',
                 'pan_data.date_of_birth as date_of_birth',
                 'aadhaar_data.aadhaar_number as aadhaar_number',
-                'uc.total_paid as total_paid'
-            );
+                'uc.total_paid as total_paid',
+                'loan_address_details.house_no as house_no',
+                'loan_address_details.city as city',
+                'loan_address_details.state as state',
+                'loan_address_details.pincode as pincode',
+                'loan_address_details.address_type as address_type',
 
+            );
+        
         if ($request->has('export') && $request->export === 'csv') {
             $userRecords = $query->get();
             $csvData = [];
 
             foreach ($userRecords as $lead) {
                 $todayDate = $today;
-
+                //dd($lead->addressDetails);
                 $loan = DB::table('loan_applications as la')
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
@@ -91,10 +97,10 @@ class ExperianCreditBureauController extends Controller
                 $daysAfterDue = is_numeric($loan->days_after_due ?? null) && $loan->days_after_due > 0 ? $loan->days_after_due : 0;
                 $totalDues = $loan->total_dues ?? 0;
 
-                $full_address = $lead->full_address ?? ($lead->addressDetails->full_address ?? '');
-                $state = $lead->state ?? ($lead->addressDetails->state ?? '');
-                $pin_code = $lead->pin_code ?? ($lead->addressDetails->pin_code ?? '');
-                $address_type = $lead->address_type ?? ($lead->addressDetails->address_type ?? '');
+                $full_address = $lead->house_no ? $lead->house_no.', '.$lead->city : '';
+                $state = $lead->state ? $lead->state : '';
+                $pin_code = $lead->pincode ? $lead->pincode : '';
+                $address_type = $lead->address_type ? $lead->address_type : '';
 
                 $asset_classification = '';
                 if ($daysAfterDue <= 30) $asset_classification = 'Standard';
@@ -162,7 +168,7 @@ class ExperianCreditBureauController extends Controller
                     'Cash Limit' => $lead->approval_amount,
                     'Rate of Interest' => '1%',
                     'RepaymentTenure' => !empty($lead->loanApproval->loan_tenure_days) ? $lead->loanApproval->loan_tenure_days : 0,
-                    'EMI Amount' => !empty($lead->loanApproval->repayment_amount) ? $lead->loanApproval->repayment_amount : 0,
+                    'EMI Amount' => !empty($lead->loanApproval->repayment_amount && $lead->loanApproval->repayment_amount != 0.00) ? $lead->loanApproval->repayment_amount : 0,
                     'Written- off Amount (Total)' => '',
                     'Written- off Principal Amount' => '',
                     'Settlement Amt' => !empty($loans->total_paid) ? $loans->total_paid : 0,
