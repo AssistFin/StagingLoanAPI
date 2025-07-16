@@ -18,7 +18,7 @@ class CollectionController extends Controller
         // 1️⃣ Base query
         $query = LoanApplication::whereHas('loanDisbursal')
             ->whereHas('loanApproval', function ($query) use ($today) {
-                $query->whereDate('repay_date', '>', $today);
+                $query->whereDate('repay_date', '>=', $today);
             })
             ->with([
                 'user',

@@ -31,7 +31,7 @@ class ExperianCreditBureauController extends Controller
             ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'loan_applications.id')
             ->join('pan_data', 'pan_data.user_id', '=', 'loan_applications.user_id')
             ->join('loan_address_details', 'loan_address_details.loan_application_id', '=', 'loan_applications.id')
-            ->join('aadhaar_data', 'aadhaar_data.user_id', '=', 'loan_applications.user_id')
+            ->leftJoin('aadhaar_data', 'aadhaar_data.user_id', '=', 'loan_applications.user_id')
             ->leftJoin(DB::raw('(
                 SELECT loan_application_id, SUM(collection_amt) as total_paid
                 FROM utr_collections
@@ -62,7 +62,7 @@ class ExperianCreditBureauController extends Controller
 
             foreach ($userRecords as $lead) {
                 $todayDate = $today;
-                //dd($lead->addressDetails);
+                
                 $loan = DB::table('loan_applications as la')
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')

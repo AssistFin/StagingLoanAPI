@@ -1447,7 +1447,7 @@
         }
 
         // Check if principal is less than remaining principal
-        if (enteredPrincipal < remainingPrincipal) {
+        if (statusSelect.value === 'Closed' && enteredPrincipal < remainingPrincipal) {
             e.preventDefault();
             principalError.textContent = 'Principal amount cannot be less than the remaining principal amount';
             principalError.classList.remove('error-message');

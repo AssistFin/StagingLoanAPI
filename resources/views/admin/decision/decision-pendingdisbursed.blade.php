@@ -47,8 +47,8 @@
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
                                     <td>{{ number_format($lead->loanApproval->approval_amount,0) }}</td>
-                                    <td>{{ !empty($lead->loanDisbursal->disbursal_amount) ? number_format($lead->loanDisbursal->disbursal_amount,0) : 0 }}</td>
-                                    <td>{{ !empty($lead->loanDisbursal->disbursal_date) ? $lead->loanDisbursal->disbursal_date : '' }}</td>
+                                    <td>{{ !empty($lead->loanApproval->disbursal_amount) ? number_format($lead->loanApproval->disbursal_amount,0) : 0 }}</td>
+                                    <td>{{ !empty($lead->loanApproval->tentative_disbursal_date) ? $lead->loanApproval->tentative_disbursal_date : '' }}</td>
                                 </tr>
                             @empty
                                 <tr>
