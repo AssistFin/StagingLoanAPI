@@ -76,11 +76,20 @@
                                 <option value="previous_month">Previous Month</option>
                                 <option value="custom">Custom Range</option>
                             </select>
+
+                            <select id="source" name="source" class="form-control">
+                                <option value="">Select Source</option>
+                                <option value="fb">FB</option>
+                                <option value="google">Google</option>
+                                <option value="digisoftnexus">Digisoftnexus</option>
+                            </select>
                             
                             <select id="utm_records" name="utm_records" class="form-control">
                                 <option value="">Select UTM Records</option>
                                 <option value="tur">Total UTM Records</option>
                                 <option value="tusr">Total Userwise Records</option>
+                                <option value="tca">Total Complete Application</option>
+                                <option value="tda">Total Disbursed Application</option>
                             </select>
 
                             <input type="text" id="utm-search-input" class="form-control" 
@@ -204,6 +213,7 @@
         const fromDate = $('#from_date').val();
         const toDate = $('#to_date').val();
         const utm_records = $('#utm_records').val();
+        const source = $('#source').val();
         const searchTerm = $('#utm-search-input').val();
 
         $.ajax({
@@ -215,6 +225,7 @@
                 from_date: fromDate,
                 to_date: toDate,
                 utm_records: utm_records,
+                source : source,
                 search: searchTerm
             },
             success: function(response) {
@@ -226,7 +237,7 @@
     }
 
     $(document).ready(function () {
-        $('#date_range, #utm_records').on('change', () => fetchUTMLeads());
+        $('#date_range, #utm_records, #source').on('change', () => fetchUTMLeads());
         $('#utm-search-input').on('keyup', () => fetchUTMLeads());
 
         $('#date_range').on('change', function () {
@@ -299,6 +310,7 @@
                 from_date: $('#from_date').val(),
                 to_date: $('#to_date').val(),
                 utm_records: $('#utm_records').val(),
+                source: $('#source').val(),
                 search: $('#utm-search-input').val(),
                 export: 'csv'
             };

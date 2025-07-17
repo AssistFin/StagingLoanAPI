@@ -20,6 +20,7 @@ class UTMController extends Controller
             ->leftJoin('users', 'utm_tracking.user_id', '=', 'users.id')
             ->leftJoin('loan_applications', 'loan_applications.user_id', '=', 'users.id')
             ->leftJoin('loan_personal_details', 'loan_personal_details.loan_application_id', '=', 'loan_applications.id')
+            ->leftJoin('loan_disbursals', 'loan_disbursals.loan_application_id', '=', 'loan_applications.id')
             ->select(
                 'utm_tracking.*',
                 'users.firstname',
@@ -38,13 +39,7 @@ class UTMController extends Controller
         $utm_records = $request->get('utm_records');
         $fromDate = $request->get('from_date');
         $toDate = $request->get('to_date');
-
-        // Filter by UTM Records
-        if ($utm_records) {
-            if ($utm_records === 'tusr') {
-                $query->where('utm_tracking.user_id' , '!=', NULL);
-            }
-        }
+        $source = $request->get('source');
 
         // Filter by Date Range
         if ($dateRange) {
@@ -53,18 +48,42 @@ class UTMController extends Controller
             } elseif ($dateRange === 'yesterday') {
                 $query->whereDate('utm_tracking.created_at', now()->yesterday());
             } elseif ($dateRange === 'last_3_days') {
-                $query->whereBetween('utm_tracking.created_at', [now()->subDays(3), now()]);
+                $query->whereBetween('utm_tracking.created_at', [
+                    now()->subDays(2)->startOfDay(),
+                    now()->endOfDay()
+                ]);
             } elseif ($dateRange === 'last_7_days') {
-                $query->whereBetween('utm_tracking.created_at', [now()->subDays(7), now()]);
+                $query->whereBetween('utm_tracking.created_at', [
+                    now()->subDays(6)->startOfDay(),
+                    now()->endOfDay()
+                ]);
             } elseif ($dateRange === 'last_15_days') {
-                $query->whereBetween('utm_tracking.created_at', [now()->subDays(15), now()]);
+                $query->whereBetween('utm_tracking.created_at', [
+                    now()->subDays(14)->startOfDay(),
+                    now()->endOfDay()
+                ]);
             } elseif ($dateRange === 'current_month') {
-                $query->whereBetween('utm_tracking.created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+                $query->whereBetween('utm_tracking.created_at', [
+                    Carbon::now()->startOfMonth(),
+                    Carbon::now()->endOfMonth()
+                ]);
             } elseif ($dateRange === 'previous_month') {
-                $query->whereBetween('utm_tracking.created_at', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
+                $query->whereBetween('utm_tracking.created_at', [
+                    Carbon::now()->subMonth()->startOfMonth(),
+                    Carbon::now()->subMonth()->endOfMonth()
+                ]);
             } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
-                $query->whereBetween('utm_tracking.created_at', [$fromDate, $toDate]);
+                $query->whereBetween('utm_tracking.created_at', [
+                    Carbon::parse($fromDate)->startOfDay(),
+                    Carbon::parse($toDate)->endOfDay()
+                ]);
             }
+        }
+
+        if ($source) {
+            $query->where(function ($q) use ($source) {
+                $q->where('utm_tracking.utm_source', 'like', "%{$source}%");
+            });
         }
 
         // Search functionality
@@ -75,8 +94,36 @@ class UTMController extends Controller
         }
 
         // Clone the query to get the total count before pagination
+
+        if ($utm_records) {
+            if ($utm_records === 'tusr') {
+                $query->where('utm_tracking.user_id' , '!=', NULL);
+                $totalRecordsQuery = clone $query;
+                $totalRecords = $totalRecordsQuery->count();
+            }else if ($utm_records === 'tca') {
+                $loanAppIds = (clone $query)->pluck('loan_applications.id');
+                
+                $query->whereIn('loan_applications.id', $loanAppIds)->where('loan_applications.current_step', 'loanstatus');
+
+                $totalRecords = DB::table('loan_applications')
+                    ->whereIn('id', $loanAppIds)
+                    ->where('current_step', 'loanstatus')
+                    ->count();
+            }else if ($utm_records === 'tda') {
+                $loanAppIds = (clone $query)->pluck('loan_applications.id');
+
+                $query->whereIn('loan_disbursals.loan_application_id', $loanAppIds); 
+
+                $totalRecords = DB::table('loan_disbursals')
+                    ->whereIn('loan_application_id', $loanAppIds)
+                    ->count();
+            }
+        }
+
+
         $totalRecordsQuery = clone $query;
         $totalRecords = $totalRecordsQuery->count();
+        
 
        if ($request->has('export') && $request->export === 'csv') {
             $utmRecords = $query->get();
@@ -105,10 +152,11 @@ class UTMController extends Controller
             }
 
             $missingInfoText = $utm_records ?? 'all';
+            $sourceText = $source ?? 'all';
             $dateRangeText = $dateRange ?? 'alltime';
             $timestamp = now()->format('Ymd_His');
 
-            $filename = "{$dateRangeText}_{$missingInfoText}_utm_tracking_export_{$timestamp}.csv";
+            $filename = "{$dateRangeText}_{$sourceText}_{$missingInfoText}_utm_tracking_export_{$timestamp}.csv";
 
             $headers = [
                 'Content-Type' => 'text/csv',
