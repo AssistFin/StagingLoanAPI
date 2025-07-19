@@ -22,6 +22,7 @@ class UTMController extends Controller
             ->leftJoin('loan_personal_details', 'loan_personal_details.loan_application_id', '=', 'loan_applications.id')
             ->leftJoin('loan_disbursals', 'loan_disbursals.loan_application_id', '=', 'loan_applications.id')
             ->leftJoin('loan_approvals', 'loan_approvals.loan_application_id', '=', 'loan_applications.id')
+            ->leftJoin('loan_bank_details', 'loan_bank_details.loan_application_id', '=', 'loan_applications.id')
             ->select(
                 'utm_tracking.*',
                 'users.firstname',
@@ -44,41 +45,80 @@ class UTMController extends Controller
 
         // Filter by Date Range
         if ($dateRange) {
-            if ($dateRange === 'today') {
+            if($utm_records && $utm_records === 'tca'){
+                if ($dateRange === 'today') {
+                $query->whereDate('loan_bank_details.created_at', now()->today());
+                } elseif ($dateRange === 'yesterday') {
+                    $query->whereDate('loan_bank_details.created_at', now()->yesterday());
+                } elseif ($dateRange === 'last_3_days') {
+                    $query->whereBetween('loan_bank_details.created_at', [
+                        now()->subDays(2)->startOfDay(),
+                        now()->endOfDay()
+                    ]);
+                } elseif ($dateRange === 'last_7_days') {
+                    $query->whereBetween('loan_bank_details.created_at', [
+                        now()->subDays(6)->startOfDay(),
+                        now()->endOfDay()
+                    ]);
+                } elseif ($dateRange === 'last_15_days') {
+                    $query->whereBetween('loan_bank_details.created_at', [
+                        now()->subDays(14)->startOfDay(),
+                        now()->endOfDay()
+                    ]);
+                } elseif ($dateRange === 'current_month') {
+                    $query->whereBetween('loan_bank_details.created_at', [
+                        Carbon::now()->startOfMonth(),
+                        Carbon::now()->endOfMonth()
+                    ]);
+                } elseif ($dateRange === 'previous_month') {
+                    $query->whereBetween('loan_bank_details.created_at', [
+                        Carbon::now()->subMonth()->startOfMonth(),
+                        Carbon::now()->subMonth()->endOfMonth()
+                    ]);
+                } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                    $query->whereBetween('loan_bank_details.created_at', [
+                        Carbon::parse($fromDate)->startOfDay(),
+                        Carbon::parse($toDate)->endOfDay()
+                    ]);
+                }
+            }else{
+                if ($dateRange === 'today') {
                 $query->whereDate('utm_tracking.created_at', now()->today());
-            } elseif ($dateRange === 'yesterday') {
-                $query->whereDate('utm_tracking.created_at', now()->yesterday());
-            } elseif ($dateRange === 'last_3_days') {
-                $query->whereBetween('utm_tracking.created_at', [
-                    now()->subDays(2)->startOfDay(),
-                    now()->endOfDay()
-                ]);
-            } elseif ($dateRange === 'last_7_days') {
-                $query->whereBetween('utm_tracking.created_at', [
-                    now()->subDays(6)->startOfDay(),
-                    now()->endOfDay()
-                ]);
-            } elseif ($dateRange === 'last_15_days') {
-                $query->whereBetween('utm_tracking.created_at', [
-                    now()->subDays(14)->startOfDay(),
-                    now()->endOfDay()
-                ]);
-            } elseif ($dateRange === 'current_month') {
-                $query->whereBetween('utm_tracking.created_at', [
-                    Carbon::now()->startOfMonth(),
-                    Carbon::now()->endOfMonth()
-                ]);
-            } elseif ($dateRange === 'previous_month') {
-                $query->whereBetween('utm_tracking.created_at', [
-                    Carbon::now()->subMonth()->startOfMonth(),
-                    Carbon::now()->subMonth()->endOfMonth()
-                ]);
-            } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
-                $query->whereBetween('utm_tracking.created_at', [
-                    Carbon::parse($fromDate)->startOfDay(),
-                    Carbon::parse($toDate)->endOfDay()
-                ]);
+                } elseif ($dateRange === 'yesterday') {
+                    $query->whereDate('utm_tracking.created_at', now()->yesterday());
+                } elseif ($dateRange === 'last_3_days') {
+                    $query->whereBetween('utm_tracking.created_at', [
+                        now()->subDays(2)->startOfDay(),
+                        now()->endOfDay()
+                    ]);
+                } elseif ($dateRange === 'last_7_days') {
+                    $query->whereBetween('utm_tracking.created_at', [
+                        now()->subDays(6)->startOfDay(),
+                        now()->endOfDay()
+                    ]);
+                } elseif ($dateRange === 'last_15_days') {
+                    $query->whereBetween('utm_tracking.created_at', [
+                        now()->subDays(14)->startOfDay(),
+                        now()->endOfDay()
+                    ]);
+                } elseif ($dateRange === 'current_month') {
+                    $query->whereBetween('utm_tracking.created_at', [
+                        Carbon::now()->startOfMonth(),
+                        Carbon::now()->endOfMonth()
+                    ]);
+                } elseif ($dateRange === 'previous_month') {
+                    $query->whereBetween('utm_tracking.created_at', [
+                        Carbon::now()->subMonth()->startOfMonth(),
+                        Carbon::now()->subMonth()->endOfMonth()
+                    ]);
+                } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                    $query->whereBetween('utm_tracking.created_at', [
+                        Carbon::parse($fromDate)->startOfDay(),
+                        Carbon::parse($toDate)->endOfDay()
+                    ]);
+                }
             }
+
         }
 
         if ($source) {
@@ -93,9 +133,8 @@ class UTMController extends Controller
                 $q->where('users.mobile', 'like', "%{$searchTerm}%");
             });
         }
-
-        // Clone the query to get the total count before pagination
-        $totalRecords = 0;
+        
+        //echo 'test 1 - '.$totalRecords;
         if ($utm_records) {
             $loanAppIds = (clone $query)->pluck('loan_applications.id');
             $loanAppIds = array_filter($loanAppIds->toArray(), function ($id) {
@@ -105,52 +144,31 @@ class UTMController extends Controller
 
             if ($utm_records === 'tusr') {
                 $query->where('utm_tracking.user_id' , '!=', NULL);
-                $totalRecordsQuery = clone $query;
-                $totalRecords = $totalRecordsQuery->count();
 
             }else if ($utm_records === 'tca') {
                 
                 $state = ['loanstatus','noteligible','viewloan','loandisbursal'];
                 $query->whereIn('loan_applications.id', $loanAppIds)->whereIn('loan_applications.current_step', $state);
 
-                $totalRecords = DB::table('loan_applications')
-                    ->whereIn('id', $loanAppIds)
-                    ->whereIn('current_step', $state)
-                    ->count();
             }else if ($utm_records === 'taa') {
                 
                 $query->whereIn('loan_approvals.loan_application_id', $loanAppIds)->where('loan_approvals.status', 1); 
-
-                $totalRecords = DB::table('loan_approvals')
-                    ->whereIn('loan_application_id', $loanAppIds)
-                    ->where('status', 1)
-                    ->count();
 
             }else if ($utm_records === 'tra') {
                 
                 $query->whereIn('loan_approvals.loan_application_id', $loanAppIds)->where('loan_approvals.status', 2);
 
-                $totalRecords = DB::table('loan_approvals')
-                    ->whereIn('loan_application_id', $loanAppIds)
-                    ->where('status', 2)
-                    ->count();
             }else if ($utm_records === 'tda') {
                 
                 $query->whereIn('loan_disbursals.loan_application_id', $loanAppIds); 
-
-                $totalRecords = DB::table('loan_disbursals')
-                    ->whereIn('loan_application_id', $loanAppIds)
-                    ->count();
             }
         }
 
-        if(!$totalRecords && !empty($totalRecords)){
-            $totalRecordsQuery = clone $query;
-            $totalRecords = $totalRecordsQuery->count();
-        }
-        
+        // Clone the query to get the total count before pagination
+        $totalRecordsQuery = clone $query;
+        $totalRecords = $totalRecordsQuery->count();
 
-       if ($request->has('export') && $request->export === 'csv') {
+        if ($request->has('export') && $request->export === 'csv') {
             $utmRecords = $query->get();
 
             $csvData = [];
@@ -199,7 +217,7 @@ class UTMController extends Controller
 
             return Response::stream($callback, 200, $headers);
         } 
-
+        //echo 'test 3 - '.$totalRecords;
         $utmRecords = $query->paginate(25);
 
         return view('admin.leads.utm-details', compact('pageTitle', 'utmRecords', 'totalRecords'));

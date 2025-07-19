@@ -60,7 +60,60 @@ class LeadController extends Controller
         $dateRange = $request->get('date_range');
         $loanType = $request->get('loan_type');
 
-        if ($loanType === 'approved_loan') {
+        if ($loanType === 'complete_app_loan') {
+            if ($dateRange) {
+                switch ($dateRange) {
+                    case 'today':
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereDate('created_at', Carbon::today());
+                        });
+                        break;
+                    case 'yesterday':
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereDate('created_at', Carbon::yesterday());
+                        });
+                        break;
+                    case 'last_3_days':
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereBetween('created_at', [now()->subDays(3), now()]);
+                        });
+                        break;
+                    case 'last_7_days':
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereBetween('created_at', [now()->subDays(7), now()]);
+                        });
+                        break;
+                    case 'last_15_days':
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereBetween('created_at', [now()->subDays(15), now()]);
+                        });
+                        break;
+                    case 'current_month':
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereBetween('created_at', [
+                                Carbon::now()->startOfMonth(),
+                                Carbon::now()->endOfMonth()
+                            ]);
+                        });
+                        break;
+                    case 'previous_month':
+                        $query->whereHas('bankDetails', function ($q) {
+                            $q->whereBetween('created_at', [
+                                Carbon::now()->subMonth()->startOfMonth(),
+                                Carbon::now()->subMonth()->endOfMonth()
+                            ]);
+                        });
+                        break;
+                    case 'custom':
+                        if ($request->get('from_date') && $request->get('to_date')) {
+                            $query->whereHas('bankDetails', function ($q) use ($request) {
+                                $q->whereBetween('created_at', [$request->get('from_date'), $request->get('to_date')]);
+                            });
+                        }
+                        break;
+                }
+            }
+        } else if ($loanType === 'approved_loan') {
             $query->where('admin_approval_status', 'approved');
             if ($dateRange) {
                 switch ($dateRange) {
@@ -301,10 +354,6 @@ class LeadController extends Controller
             // Apply other loan type filters (rest of your Step 6)
             if ($loanType) {
                 switch ($loanType) {
-                    case 'complete_app_loan':
-                        $state = ['loanstatus','noteligible','viewloan','loandisbursal'];
-                        $query->whereIn('current_step',$state);
-                        break;
                     case 'active_loan':
                         $query->where('loan_closed_status', 'pending')->where('loan_disbursal_status', 'disbursed');
                         break;
@@ -572,6 +621,9 @@ class LeadController extends Controller
         // Step 9: Default - Return paginated leads to blade
         //$sql = vsprintf(str_replace('?', "'%s'", $query->toSql()), $query->getBindings());
         //dd($sql);
+
+        $totalRecordsQuery = clone $query;
+        $totalRecords = $totalRecordsQuery->count();
 
         $leads = $query->paginate(25);
 
