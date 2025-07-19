@@ -79,7 +79,7 @@
 
                             <select id="source" name="source" class="form-control">
                                 <option value="">Select Source</option>
-                                <option value="fb">FB</option>
+                                <option value="fb">Facebook</option>
                                 <option value="google">Google</option>
                                 <option value="digisoftnexus">Digisoftnexus</option>
                             </select>
@@ -89,6 +89,8 @@
                                 <option value="tur">Total UTM Records</option>
                                 <option value="tusr">Total Userwise Records</option>
                                 <option value="tca">Total Complete Application</option>
+                                <option value="taa">Total Approved Application</option>
+                                <option value="tra">Total Rejected Application</option>
                                 <option value="tda">Total Disbursed Application</option>
                             </select>
 
@@ -131,8 +133,8 @@
                             @forelse($utmRecords as $record)
                                 <tr>
                                     <td data-label="@lang('Date')">
-                                        {{ showDateTime(\Carbon\Carbon::parse($record->created_at)->timezone('Asia/Kolkata')) }}<br>
-                                        {{ \Carbon\Carbon::parse($record->created_at)->timezone('Asia/Kolkata')->diffForHumans() }}
+                                        {{ showDateTime(\Carbon\Carbon::parse($record->created_at)) }}<br>
+                                        {{ \Carbon\Carbon::parse($record->created_at)->diffForHumans() }}
                                     </td>
                                     <td data-label="@lang('User')">
                                         @if($record->user_id)

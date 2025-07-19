@@ -21,6 +21,7 @@ class LeadController extends Controller
 {
     public function leadsAll(Request $request)
     {
+        $excludedUserIds = ['591','592','593','594','595','697','1003','1680'];
         // Step 1: Fetch all loan_application_ids which have KYC details
         $usersWithKyc = DB::table('loan_kyc_details')
             ->pluck('loan_application_id');
@@ -39,7 +40,7 @@ class LeadController extends Controller
                 'loanDocument',
                 'addressDetails',
                 'bankDetails'
-            ])
+            ])->whereNotIn('user_id', $excludedUserIds)
             ->orderByDesc('user_id');
 
         // Step 4: Apply search filter (search by name, email, mobile, loan_no)
@@ -61,6 +62,60 @@ class LeadController extends Controller
 
         if ($loanType === 'approved_loan') {
             $query->where('admin_approval_status', 'approved');
+            if ($dateRange) {
+                switch ($dateRange) {
+                    case 'today':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereDate('created_at', Carbon::today());
+                        });
+                        break;
+                    case 'yesterday':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereDate('created_at', Carbon::yesterday());
+                        });
+                        break;
+                    case 'last_3_days':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('created_at', [now()->subDays(3), now()]);
+                        });
+                        break;
+                    case 'last_7_days':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('created_at', [now()->subDays(7), now()]);
+                        });
+                        break;
+                    case 'last_15_days':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('created_at', [now()->subDays(15), now()]);
+                        });
+                        break;
+                    case 'current_month':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('created_at', [
+                                Carbon::now()->startOfMonth(),
+                                Carbon::now()->endOfMonth()
+                            ]);
+                        });
+                        break;
+                    case 'previous_month':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('created_at', [
+                                Carbon::now()->subMonth()->startOfMonth(),
+                                Carbon::now()->subMonth()->endOfMonth()
+                            ]);
+                        });
+                        break;
+                    case 'custom':
+                        if ($request->get('from_date') && $request->get('to_date')) {
+                            $query->whereHas('loanApproval', function ($q) use ($request) {
+                                $q->whereBetween('created_at', [$request->get('from_date'), $request->get('to_date')]);
+                            });
+                        }
+                        break;
+                }
+            }
+        } else if ($loanType === 'rejected_loan') {
+            $query->where('admin_approval_status', 'rejected');
             if ($dateRange) {
                 switch ($dateRange) {
                     case 'today':
@@ -247,10 +302,8 @@ class LeadController extends Controller
             if ($loanType) {
                 switch ($loanType) {
                     case 'complete_app_loan':
-                        $query->where('current_step', 'loanstatus');
-                        $query->whereHas('bankDetails', function ($q) {
-                            $q->whereDate('created_at', Carbon::today());
-                        });
+                        $state = ['loanstatus','noteligible','viewloan','loandisbursal'];
+                        $query->whereIn('current_step',$state);
                         break;
                     case 'active_loan':
                         $query->where('loan_closed_status', 'pending')->where('loan_disbursal_status', 'disbursed');
@@ -292,12 +345,24 @@ class LeadController extends Controller
                         $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
                         $disbursedDate = optional($lead->loanApproval)->approval_date ?? 0;
                         $dateHead = 'Approved Date';
+                        $purpose_head = 'Purpose Of Loan';
+                        $purpose = $lead->purpose_of_loan;
+                        break;
+                    
+                    case 'rejected_loan':
+                        $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
+                        $disbursedDate = optional($lead->loanApproval)->approval_date ?? 0;
+                        $dateHead = 'Rejected Date';
+                        $purpose_head = 'Rejection Remark';
+                        $purpose = optional($lead->loanApproval)->final_remark ?? 0;
                         break;
 
                     case 'disbursed_loan':
                         $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
                         $disbursedDate = optional($lead->loanDisbursal)->disbursal_date ?? 0;
                         $dateHead = 'Disbursed Date';
+                        $purpose_head = 'Purpose Of Loan';
+                        $purpose = $lead->purpose_of_loan;
                         break;
 
                     case 'closed_loan':
@@ -305,6 +370,8 @@ class LeadController extends Controller
                         $loanAmount = $lead->collections->sum('collection_amt');
                         $disbursedDate = $lead->loan_closed_date ? $lead->loan_closed_date : 0;
                         $dateHead = 'Closed Date';
+                        $purpose_head = 'Purpose Of Loan';
+                        $purpose = $lead->purpose_of_loan;
                         break;
 
                     case 'overdue_loan':
@@ -318,12 +385,16 @@ class LeadController extends Controller
                             $loanAmount = 0;
                         }
                         $dateHead = 'Overdue Date';
+                        $purpose_head = 'Purpose Of Loan';
+                        $purpose = $lead->purpose_of_loan;
                         break;
 
                     default:
                         $loanAmount = $lead->loan_amount; // fallback
                         $disbursedDate = $lead->created_at;
                         $dateHead = 'Loan Date';
+                        $purpose_head = 'Purpose Of Loan';
+                        $purpose = $lead->purpose_of_loan;
                 }
 
                 $csvData[] = [
@@ -332,7 +403,7 @@ class LeadController extends Controller
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loanAmount, 2),
                      $dateHead => $disbursedDate,
-                    'Purpose Of Loan' => $lead->purpose_of_loan,
+                    $purpose_head => $purpose,
                 ];
             }
 
@@ -384,21 +455,37 @@ class LeadController extends Controller
 
             $totalRecords = DB::table('loan_approvals')
                 ->whereIn('loan_application_id', $loanAppIds)
+                ->where('status', 1)
+                ->count();
+
+        } elseif ($loanType === 'rejected_loan') {
+            // Get IDs of matched loan applications
+            $loanAppIds = (clone $query)->pluck('id');
+
+            // Fetch totals from loan_approval table
+            $totalAmount = DB::table('loan_approvals')
+                ->whereIn('loan_application_id', $loanAppIds)
+                ->sum('approval_amount');
+
+            $totalRecords = DB::table('loan_approvals')
+                ->whereIn('loan_application_id', $loanAppIds)
+                ->where('status', 2)
                 ->count();
 
         } elseif ($loanType === 'complete_app_loan') {
             // Get IDs of matched loan applications
             $loanAppIds = (clone $query)->pluck('id');
+            $state = ['loanstatus','noteligible','viewloan','loandisbursal'];
 
             // Fetch totals from loan_approval table
             $totalAmount = DB::table('loan_applications')
                 ->whereIn('id', $loanAppIds)
-                ->where('current_step', 'loanstatus')
+                ->whereIn('current_step',$state)
                 ->sum('loan_amount');
 
             $totalRecords = DB::table('loan_applications')
                 ->whereIn('id', $loanAppIds)
-                ->where('current_step', 'loanstatus')
+                ->whereIn('current_step',$state)
                 ->count();
 
         } elseif ($loanType === 'closed_loan') {

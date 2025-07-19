@@ -82,6 +82,7 @@
                                 <option value="">Select Loan Type</option>
                                 <option value="complete_app_loan">Complete Application</option>
                                 <option value="approved_loan">Approved</option>
+                                <option value="rejected_loan">Rejected</option>
                                 <option value="disbursed_loan">Disbursed</option>
                                 <option value="closed_loan">Closed</option>
                                 <option value="active_loan">Active Loans</option>
@@ -127,12 +128,12 @@
                                     <th>@lang('Loan Application No.')</th>
                                     <th>@lang('Loan Amount')</th>
                                     <th>@lang('Purpose Of Loan')</th>
-                                    <th>@lang('Personal Details')</th>
+                                    <!--th>@lang('Personal Details')</th>
                                     <th>@lang('KYC Details')</th>
                                     <th>@lang('Selfie Document')</th>
                                     <th>@lang('Address Details')</th>
                                     <th>@lang('Employement Details')</th>
-                                    <th>@lang('Bank Details')</th>
+                                    <th>@lang('Bank Details')</th-->
                                     <!--th>@lang('Action')</th-->
                                 </tr>
                             </thead>
@@ -171,7 +172,7 @@
                                             <td>{{ $lead->purpose_of_loan }}</td>
                         
                                             {{-- Personal Details --}}
-                                            <td>
+                                            <!--td>
                                                 {!! $lead->personal_details_exists 
                                                     ? '<i class="fas fa-check" style="color: green;"></i>' 
                                                     : '<i class="fas fa-times" style="color: red;"></i>' !!}
@@ -213,7 +214,7 @@
                                                 {!! $lead->bank_details_exists 
                                                     ? '<i class="fas fa-check" style="color: green;"></i>' 
                                                     : '<i class="fas fa-times" style="color: red;"></i>' !!}
-                                            </td>
+                                            </td-->
                         
                                             {{-- Action --}}
                                             <!--td>

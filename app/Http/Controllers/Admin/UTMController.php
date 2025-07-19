@@ -21,6 +21,7 @@ class UTMController extends Controller
             ->leftJoin('loan_applications', 'loan_applications.user_id', '=', 'users.id')
             ->leftJoin('loan_personal_details', 'loan_personal_details.loan_application_id', '=', 'loan_applications.id')
             ->leftJoin('loan_disbursals', 'loan_disbursals.loan_application_id', '=', 'loan_applications.id')
+            ->leftJoin('loan_approvals', 'loan_approvals.loan_application_id', '=', 'loan_applications.id')
             ->select(
                 'utm_tracking.*',
                 'users.firstname',
@@ -94,24 +95,47 @@ class UTMController extends Controller
         }
 
         // Clone the query to get the total count before pagination
-
+        $totalRecords = 0;
         if ($utm_records) {
+            $loanAppIds = (clone $query)->pluck('loan_applications.id');
+            $loanAppIds = array_filter($loanAppIds->toArray(), function ($id) {
+                return !is_null($id);
+            });
+            $loanAppIds = array_values($loanAppIds);
+
             if ($utm_records === 'tusr') {
                 $query->where('utm_tracking.user_id' , '!=', NULL);
                 $totalRecordsQuery = clone $query;
                 $totalRecords = $totalRecordsQuery->count();
+
             }else if ($utm_records === 'tca') {
-                $loanAppIds = (clone $query)->pluck('loan_applications.id');
                 
-                $query->whereIn('loan_applications.id', $loanAppIds)->where('loan_applications.current_step', 'loanstatus');
+                $state = ['loanstatus','noteligible','viewloan','loandisbursal'];
+                $query->whereIn('loan_applications.id', $loanAppIds)->whereIn('loan_applications.current_step', $state);
 
                 $totalRecords = DB::table('loan_applications')
                     ->whereIn('id', $loanAppIds)
-                    ->where('current_step', 'loanstatus')
+                    ->whereIn('current_step', $state)
+                    ->count();
+            }else if ($utm_records === 'taa') {
+                
+                $query->whereIn('loan_approvals.loan_application_id', $loanAppIds)->where('loan_approvals.status', 1); 
+
+                $totalRecords = DB::table('loan_approvals')
+                    ->whereIn('loan_application_id', $loanAppIds)
+                    ->where('status', 1)
+                    ->count();
+
+            }else if ($utm_records === 'tra') {
+                
+                $query->whereIn('loan_approvals.loan_application_id', $loanAppIds)->where('loan_approvals.status', 2);
+
+                $totalRecords = DB::table('loan_approvals')
+                    ->whereIn('loan_application_id', $loanAppIds)
+                    ->where('status', 2)
                     ->count();
             }else if ($utm_records === 'tda') {
-                $loanAppIds = (clone $query)->pluck('loan_applications.id');
-
+                
                 $query->whereIn('loan_disbursals.loan_application_id', $loanAppIds); 
 
                 $totalRecords = DB::table('loan_disbursals')
@@ -120,9 +144,10 @@ class UTMController extends Controller
             }
         }
 
-
-        $totalRecordsQuery = clone $query;
-        $totalRecords = $totalRecordsQuery->count();
+        if(!$totalRecords && !empty($totalRecords)){
+            $totalRecordsQuery = clone $query;
+            $totalRecords = $totalRecordsQuery->count();
+        }
         
 
        if ($request->has('export') && $request->export === 'csv') {

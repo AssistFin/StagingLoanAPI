@@ -14,7 +14,7 @@ use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\ScoreMeWebhookController;
 
 Route::post('/scoreme/webhook', [ScoreMeWebhookController::class, 'handle']);
-
+Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -111,6 +111,8 @@ Route::namespace('Api')->name('api.')->group(function () {
 
         Route::prefix('loans')->group(function () {
             Route::get('/apply', [LoanApplyController::class, 'index']); 
+            Route::post('/enach', [LoanApplyController::class, 'createEnachMandate']);
+
             Route::get('/progress', [LoanApplyController::class, 'progress']); 
             
             Route::post('/update-loan-step', [LoanApplyController::class, 'updateLoanStep']); 
