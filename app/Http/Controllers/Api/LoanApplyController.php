@@ -126,8 +126,6 @@ class LoanApplyController extends Controller
         }
     }
 
-
-
     public function storePersonalDetails(Request $request)
     {
         Log::info('Received personal details submission', $request->all());
@@ -195,7 +193,6 @@ class LoanApplyController extends Controller
         }
     }
 
- 
     public function storeKYCDetails(Request $request)
     {
         Log::info('Received KYC details submission', $request->all());
@@ -442,7 +439,7 @@ class LoanApplyController extends Controller
 
             if ($request->hasFile('bank_statement')) {
                 $securePath = config('services.docs.upload_kfs_doc');
-                
+
                 if (!file_exists($securePath)) {
                     mkdir($securePath, 0777, true);
                 }
@@ -566,7 +563,7 @@ class LoanApplyController extends Controller
             ['loan_no', $request->loan_number],
         ])->update([
             "current_step" => "viewloan",
-            "next_step" => "loandisbursal",
+            "next_step" => "enachmandate",
             "user_acceptance_status" => "accepted",
             "user_acceptance_date" => now()
         ]);
@@ -612,5 +609,117 @@ class LoanApplyController extends Controller
                             ->first();
 
         return response()->json(['status' => true, 'message' => 'Aadhar Address.', 'data' => $aadharAddresss]);
+    }
+
+    public function createEnachMandate(Request $request)
+    {
+        /*$validated = $request->validate([
+            'bank_name' => 'required|string',
+            'account_number' => 'required|string',
+            'ifsc_code' => 'required|string',
+        ]);*/
+
+        $url = config('services.cashfree.base_url') . '/pg/subscriptions';
+
+        $data = [
+            "customer_details" => [
+                "customer_name" => "John",
+                "customer_email" => "john@dummy.com",
+                "customer_phone" => "9876543210",
+                "customer_bank_account_holder_name" => "Selvabalan I",
+                "customer_bank_account_number" => "42611763806",
+                "customer_bank_ifsc" => "SCBL0036079",
+                "customer_bank_account_type" => "SAVINGS"
+            ],
+            "plan_details" => [
+                "plan_id" => "100000",
+                "plan_name" => "LoanOne Repayment",
+                "plan_type" => "ON_DEMAND",
+                "plan_currency" => "INR",
+                "plan_amount" => 100000,
+                "plan_max_amount" => 100000,
+                "plan_max_cycles" => 10,
+                "plan_note" => "One-time charge manually triggered"
+            ],
+            "subscription_id" => $request->loan_application_id.uniqid(),
+            "authorization_details" => [
+            "authorization_amount" => 100,
+            "authorization_amount_refund" => true,
+                "payment_methods" => [
+                    "enach",
+                    "upi",
+                    "netbanking",
+                    "aadhaar"
+                ]
+            ],
+            "subscription_meta" => [
+            "return_url" => config('services.cashfree.return_url'),
+            ],
+        ];
+
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                "Content-Type: application/json",
+                "x-api-version: " . config('services.cashfree.api_version'),
+                "x-client-id: " . config('services.cashfree.app_id'),
+                "x-client-secret: " . config('services.cashfree.secret_key'),
+            ],
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        $responseData = json_decode($response, true);
+
+        if (isset($responseData['subscription_session_id'])) {
+                $loan = LoanApplication::where('id', $request->loan_application_id)
+                            ->where('user_id', auth()->id())
+                            ->first();
+
+            if ($loan) {
+                $loan->current_step = 'enachmandate';
+                $loan->next_step = 'loandisbursal';
+                $loan->save();
+            }
+            $mandateLink = $responseData['subscription_session_id'];
+            return response()->json([
+                'status' => true,
+                'link' => $mandateLink,
+            ]);
+        } else {
+            return response()->json([
+                'status' => false,
+                'message' => 'Cashfree API failed',
+                'details' => $responseData,
+            ], 500);
+        }
+    }
+
+    public function handleWebhook(Request $request)
+    {
+        // Log it for debug
+        \Log::info('Cashfree Webhook Received', [$request->all()]);
+
+        return response()->json(['message' => 'Webhook handled OK'], 200);
+    }
+
+    public function loanEnachRedirect(Request $request)
+    {
+        $disbursal = LoanDisbursal::where([
+            ['loan_application_id', '1606'],
+            ['user_id', '1379'],
+        ])->first();
+
+        return response()->json(['status' => true, 'message' => 'Loan is Enach Successfull.', 'data' => $disbursal]);
     }
 }

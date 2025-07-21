@@ -37,6 +37,7 @@ return [
         'api_version' => env('CASHFREE_API_VERSION', '2022-01-01'),
         'webhook_secret' => env('CASHFREE_WEBHOOK_SECRET'),
         'app_url' => env('LOANONE_URL'),
+        'return_url' => env('CASHFREE_RETURN_URL'),
     ],
 
     'sandbox' => [
