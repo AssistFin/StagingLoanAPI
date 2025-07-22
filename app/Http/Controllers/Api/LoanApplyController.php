@@ -613,22 +613,19 @@ class LoanApplyController extends Controller
 
     public function createEnachMandate(Request $request)
     {
-        /*$validated = $request->validate([
-            'bank_name' => 'required|string',
-            'account_number' => 'required|string',
-            'ifsc_code' => 'required|string',
-        ]);*/
+        $user = User::where('id', $request->user_id)->first();
+        $bankDetails = LoanBankDetails::where('loan_application_id', $request->loan_application_id)->first();
 
         $url = config('services.cashfree.base_url') . '/pg/subscriptions';
 
         $data = [
             "customer_details" => [
-                "customer_name" => "John",
-                "customer_email" => "john@dummy.com",
-                "customer_phone" => "9876543210",
-                "customer_bank_account_holder_name" => "Selvabalan I",
-                "customer_bank_account_number" => "42611763806",
-                "customer_bank_ifsc" => "SCBL0036079",
+                "customer_name" => $user->firstname." ".$user->lastname,
+                "customer_email" => $user->email,
+                "customer_phone" => $user->mobile,
+                "customer_bank_account_holder_name" => $user->firstname." ".$user->lastname,
+                "customer_bank_account_number" => $bankDetails->account_number,
+                "customer_bank_ifsc" => $bankDetails->ifsc_code,
                 "customer_bank_account_type" => "SAVINGS"
             ],
             "plan_details" => [
@@ -641,7 +638,7 @@ class LoanApplyController extends Controller
                 "plan_max_cycles" => 10,
                 "plan_note" => "One-time charge manually triggered"
             ],
-            "subscription_id" => $request->loan_application_id.uniqid(),
+            "subscription_id" => $request->loan_number,
             "authorization_details" => [
             "authorization_amount" => 100,
             "authorization_amount_refund" => true,
@@ -683,7 +680,7 @@ class LoanApplyController extends Controller
 
         if (isset($responseData['subscription_session_id'])) {
                 $loan = LoanApplication::where('id', $request->loan_application_id)
-                            ->where('user_id', auth()->id())
+                            ->where('user_id', $request->user_id)
                             ->first();
 
             if ($loan) {
