@@ -671,7 +671,7 @@
 
                             <div class="col-md-6">
                                 <label>E-natch Reference Number </label>
-                                <input type="text" name="enach_reference_number" class="form-control" value="{{isset($CashfreeData) ? $CashfreeData->reference_id : ''}}" readonly>
+                                <input type="text" name="enach_reference_number" class="form-control" value="{{isset($cashfreeData) ? $cashfreeData->reference_id : ''}}" readonly>
                                 <span class="error-message text-danger"></span>
                             </div>
     
@@ -683,13 +683,13 @@
                     
                             <div class="col-md-6">
                                 <label>Customer Account No</label>
-                                <input type="text" name="account_no" class="form-control" required value="{{ $lead->bankDetails->account_number ?? '' }}">
+                                <input type="text" name="account_no" class="form-control" required value="{{ $lead->bankDetails->account_number ?? '' }}" readonly>
                                 <span class="error-message text-danger"></span>
                             </div>
                     
                             <div class="col-md-6">
                                 <label>IFSC Code</label>
-                                <input type="text" name="ifsc" class="form-control" required value="{{ $lead->bankDetails->ifsc_code ?? '' }}">
+                                <input type="text" name="ifsc" class="form-control" required value="{{ $lead->bankDetails->ifsc_code ?? '' }}" readonly>
                                 <span class="error-message text-danger"></span>
                             </div>
                     
@@ -705,7 +705,7 @@
                     
                             <div class="col-md-6">
                                 <label>Bank Name</label>
-                                    <select name="bank_name" id="bank_name" class="form-control" required>
+                                    <select name="bank_name" id="bank_name" class="form-control" required readonly>
                                         <option value="">Select a Bank</option>
                                         <option value="Axis" {{ $lead->bankDetails->bank_name  == "Axis" ? "selected" : "" }}>Axis Bank</option>
                                         <option value="Baroda" {{ $lead->bankDetails->bank_name  == "Baroda" ? "selected" : "" }}>Bank of Baroda</option>
