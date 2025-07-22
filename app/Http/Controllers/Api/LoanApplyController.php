@@ -651,7 +651,7 @@ class LoanApplyController extends Controller
                 "plan_max_cycles" => 10,
                 "plan_note" => "One-time charge manually triggered"
             ],
-            "subscription_id" => $request->loan_number.$cashfreeDataCount+1,
+            "subscription_id" => $request->loan_number.'-'.$cashfreeDataCount+1,
             "authorization_details" => [
             "authorization_amount" => 100,
             "authorization_amount_refund" => true,
@@ -700,14 +700,15 @@ class LoanApplyController extends Controller
                 $loan->save();
             }
 
-            $cashfree = CashfreeEnachRequestResponse::updateOrCreate(
-                [
-                    'subscription_id' => $request->loan_number,
-                    'alt_subscription_id' => $request->loan_number.$cashfreeDataCount+1,
-                    'request_data' => json_encode($data),
-                    'status' => 'INITIALIZED',
-                ]
-            );
+            $cashfreeData = CashfreeEnachRequestResponse::create([
+                'subscription_id' => $request->loan_number,
+                'alt_subscription_id' => $request->loan_number.'-'.$cashfreeDataCount+1,
+                'request_data' => json_encode($data),
+                'status' => 'INITIALIZED',
+            ]);
+
+            //dd($cashfreeData);
+
             $mandateLink = $responseData['subscription_session_id'];
             return response()->json([
                 'status' => true,
@@ -734,27 +735,16 @@ class LoanApplyController extends Controller
         $status = $data['authorization_details']['authorization_status'] ? $data['authorization_details']['authorization_status'] : $data['subscription_details']['subscription_status'];
 
         if($data){
-            $cashfree = CashfreeEnachRequestResponse::updateOrCreate(
-                ['subscription_id' => $subscription_id],
-                [
-                    'reference_id' => $reference_id,
-                    'response_data' => json_encode($data),
-                    'status' => $status,
-                ]
-            );
+            $cashfree = CashfreeEnachRequestResponse::where('alt_subscription_id', $subscription_id)
+            ->update([
+                "reference_id" => $reference_id,
+                "response_data" => json_encode($data),
+                "status" => $status,
+            ]);
             return response()->json(['message' => 'Webhook handled OK'], 200);
         }else{
             return response()->json(['message' => 'Webhook Failed'], 301);
         }
     }
 
-    public function loanEnachRedirect(Request $request)
-    {
-        $disbursal = LoanDisbursal::where([
-            ['loan_application_id', '1606'],
-            ['user_id', '1379'],
-        ])->first();
-
-        return response()->json(['status' => true, 'message' => 'Loan is Enach Successfull.', 'data' => $disbursal]);
-    }
 }

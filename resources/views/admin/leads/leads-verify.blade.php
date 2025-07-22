@@ -671,7 +671,7 @@
 
                             <div class="col-md-6">
                                 <label>E-natch Reference Number </label>
-                                <input type="text" name="enach_reference_number" class="form-control" value="{{isset($loanDisbursal) ? $loanDisbursal->enach_reference_number : ''}}" readonly>
+                                <input type="text" name="enach_reference_number" class="form-control" value="{{isset($CashfreeData) ? $CashfreeData->reference_id : ''}}" readonly>
                                 <span class="error-message text-danger"></span>
                             </div>
     

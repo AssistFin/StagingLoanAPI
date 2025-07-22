@@ -855,6 +855,8 @@ class LeadController extends Controller
         
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
+        $CashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $id)->where('reference_id', '!=', '')->first();
+
         $hasPreviousClosedLoan = LoanApplication::where('user_id', $lead->user->id)
         ->where('id', '!=', $lead->id) // Exclude current loan
         ->where('admin_approval_status', 'approved')
@@ -949,7 +951,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','CashfreeData'));
     }
 
     public function deleteLead($id)

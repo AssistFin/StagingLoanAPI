@@ -12,7 +12,7 @@ class CashfreeEnachRequestResponse extends Model
     protected $table = 'cashfree_enach_request_response_data';
 
     protected $fillable = [
-        'subscription_id'
+        'subscription_id','alt_subscription_id','reference_id','request_data','response_data','status'
     ];
 
 }
