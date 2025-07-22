@@ -106,6 +106,7 @@ class LoanApprovalController extends Controller
             'additional_remark' => 'nullable|string',
             'bank_acc_no' => 'required|string',
             'ifsccode' => 'required|string',
+            'bank_name' => 'required|string',
         ]);
         //dd($request->input('ifsccode'));
         // Calculate financial details
@@ -185,7 +186,7 @@ class LoanApprovalController extends Controller
         }
 
         //BOC By Ankit Tiwari
-        LoanBankDetails::where('loan_application_id',$request->loan_application_id)->update(['account_number'=>$request->input('bank_acc_no'), 'ifsc_code'=>$request->input('ifsccode')]);
+        LoanBankDetails::where('loan_application_id',$request->loan_application_id)->update(['account_number'=>$request->input('bank_acc_no'), 'ifsc_code'=>$request->input('ifsccode'), 'bank_name'=>$request->input('bank_name')]);
 
         $subject = "Loan App. No. ".$loan->loan_no." | Loan Approved Confirmation";
         $message = "Dear $user->firstname $user->lastname,<br><br>
