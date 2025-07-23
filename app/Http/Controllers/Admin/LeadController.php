@@ -856,8 +856,8 @@ class LeadController extends Controller
         
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
-        $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->where('status', 'ACTIVE')->first();
-
+        $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
+        
         $hasPreviousClosedLoan = LoanApplication::where('user_id', $lead->user->id)
         ->where('id', '!=', $lead->id) // Exclude current loan
         ->where('admin_approval_status', 'approved')

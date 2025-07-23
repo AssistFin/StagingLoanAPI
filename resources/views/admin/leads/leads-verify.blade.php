@@ -654,6 +654,17 @@
                         <a class="btn btn-info" href="{{ url('/admin/kfs-document/'.$loanApproval->kfs_path.'/'.$lead->id) }}" target="_blank">
                             View KFS Signed Document
                         </a>
+
+                        <a class="btn btn-{{isset($cashfreeData) && $cashfreeData->status == 'FAILED' ? 'danger' : 'success'}}" href="#">
+                            e-NACH Status - {{isset($cashfreeData) ? $cashfreeData->status : ''}} 
+                            @if(isset($cashfreeData) && $cashfreeData->status == 'FAILED')
+                                @php
+                                    $reasonFailedData = json_decode($cashfreeData->response_data, true);
+                                    $reason = $reasonFailedData['failure_details']['failure_reason'] ?? 'Unknown';
+                                    echo '</br>'.'('. $reason . ')';
+                                @endphp
+                            @endif
+                        </a>
                     @endif
                     <form action="{{ route('admin.loan.disbursal.store') }}" method="POST" id="loanDisbursalForm">
                         @csrf
