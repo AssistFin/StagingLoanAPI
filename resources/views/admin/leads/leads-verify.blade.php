@@ -581,57 +581,57 @@
                                 <label for="bank_name" class="form-label">Bank Name</label>
                                     <select name="bank_name" id="bank_name" class="form-control">
                                         <option value="">Select a Bank</option>
-                                        <option value="Axis" {{ $lead->bankDetails->bank_name  == "Axis" ? "selected" : "" }}>Axis Bank</option>
-                                        <option value="Baroda" {{ $lead->bankDetails->bank_name  == "Baroda" ? "selected" : "" }}>Bank of Baroda</option>
-                                        <option value="Maharashtra" {{ $lead->bankDetails->bank_name  == "Maharashtra" ? "selected" : "" }}>Bank of Maharashtra</option>
-                                        <option value="Canara" {{ $lead->bankDetails->bank_name  == "Canara" ? "selected" : "" }}>Canara Bank</option>
-                                        <option value="Federal" {{ $lead->bankDetails->bank_name  == "Federal" ? "selected" : "" }}>Federal Bank</option>
-                                        <option value="HDFC" {{ $lead->bankDetails->bank_name  == "HDFC" ? "selected" : "" }}>HDFC Bank</option>
-                                        <option value="Induslnd" {{ $lead->bankDetails->bank_name  == "Induslnd" ? "selected" : "" }}>Induslnd Bank</option>
-                                        <option value="ICICI" {{ $lead->bankDetails->bank_name  == "ICICI" ? "selected" : "" }}>ICICI Bank</option>
-                                        <option value="IDBI" {{ $lead->bankDetails->bank_name  == "IDBI" ? "selected" : "" }}>IDBI Bank</option>
-                                        <option value="IDFC" {{ $lead->bankDetails->bank_name  == "IDFC" ? "selected" : "" }}>IDFC First Bank</option>
-                                        <option value="South" {{ $lead->bankDetails->bank_name  == "South" ? "selected" : "" }}>South Indian Bank</option>
-                                        <option value="City" {{ $lead->bankDetails->bank_name  == "City" ? "selected" : "" }}>City Union Bank</option>
-                                        <option value="HSBC" {{ $lead->bankDetails->bank_name  == "HSBC" ? "selected" : "" }}>HSBC Bank</option>
-                                        <option value="Overseas" {{ $lead->bankDetails->bank_name  == "Overseas" ? "selected" : "" }}>Indian Overseas Bank</option>
-                                        <option value="Kotak" {{ $lead->bankDetails->bank_name  == "Kotak" ? "selected" : "" }}>Kotak Mahindra Bank</option>
-                                        <option value="PNB" {{ $lead->bankDetails->bank_name  == "PNB" ? "selected" : "" }}>Punjab National Bank (PNB)</option>
-                                        <option value="SBI" {{ $lead->bankDetails->bank_name  == "SBI" ? "selected" : "" }}>State Bank of India (SBI)</option>
-                                        <option value="Syndicate" {{ $lead->bankDetails->bank_name  == "Syndicate" ? "selected" : "" }}>Syndicate Bank</option>
-                                        <option value="UCO" {{ $lead->bankDetails->bank_name  == "UCO" ? "selected" : "" }}>UCO Bank</option>
-                                        <option value="Union" {{ $lead->bankDetails->bank_name  == "Union" ? "selected" : "" }}>Union Bank of India</option>
-                                        <option value="Yes" {{ $lead->bankDetails->bank_name  == "Yes" ? "selected" : "" }}>Yes Bank</option>
-                                        <option value="Indian" {{ $lead->bankDetails->bank_name  == "Indian" ? "selected" : "" }}>Indian Bank</option>
-                                        <option value="Central" {{ $lead->bankDetails->bank_name  == "Central" ? "selected" : "" }}>Central Bank of India</option>
-                                        <option value="PunjabSind" {{ $lead->bankDetails->bank_name  == "PunjabSind" ? "selected" : "" }}>Punjab & Sind Bank</option>
-                                        <option value="AUSFB" {{ $lead->bankDetails->bank_name  == "AUSFB" ? "selected" : "" }}>AU Small Finance Bank</option>
-                                        <option value="Equitas" {{ $lead->bankDetails->bank_name  == "Equitas" ? "selected" : "" }}>Equitas Small Finance Bank</option>
-                                        <option value="Ujjivan" {{ $lead->bankDetails->bank_name  == "Ujjivan" ? "selected" : "" }}>Ujjivan Small Finance Bank</option>
-                                        <option value="Jana" {{ $lead->bankDetails->bank_name  == "Jana" ? "selected" : "" }}>Jana Small Finance Bank</option>
-                                        <option value="Suryoday" {{ $lead->bankDetails->bank_name  == "Suryoday" ? "selected" : "" }}>Suryoday Small Finance Bank</option>
-                                        <option value="CapitalSFB" {{ $lead->bankDetails->bank_name  == "CapitalSFB" ? "selected" : "" }}>Capital Small Finance Bank</option>
-                                        <option value="NorthEastSFB" {{ $lead->bankDetails->bank_name  == "NorthEastSFB" ? "selected" : "" }}>North East Small Finance Bank</option>
-                                        <option value="UtkarshSFB" {{ $lead->bankDetails->bank_name  == "UtkarshSFB" ? "selected" : "" }}>Utkarsh Small Finance Bank</option>
-                                        <option value="ESAFSFB" {{ $lead->bankDetails->bank_name  == "ESAFSFB" ? "selected" : "" }}>ESAF Small Finance Bank</option>
-                                        <option value="FincareSFB" {{ $lead->bankDetails->bank_name  == "FincareSFB" ? "selected" : "" }}>Fincare Small Finance Bank</option>
-                                        <option value="ShivalikSFB" {{ $lead->bankDetails->bank_name  == "ShivalikSFB" ? "selected" : "" }}>Shivalik Small Finance Bank</option>
-                                        <option value="Citi" {{ $lead->bankDetails->bank_name  == "Citi" ? "selected" : "" }}>Citi Bank</option>
-                                        <option value="Deutsche" {{ $lead->bankDetails->bank_name  == "Deutsche" ? "selected" : "" }}>Deutsche Bank</option>
-                                        <option value="Standard" {{ $lead->bankDetails->bank_name  == "Standard" ? "selected" : "" }}>Standard Chartered Bank</option>
-                                        <option value="BankAmerica"{{ $lead->bankDetails->bank_name  == "BankAmerica" ? "selected" : "" }}>Bank of America</option>
-                                        <option value="Barclays" {{ $lead->bankDetails->bank_name  == "Barclays" ? "selected" : "" }}>Barclays Bank</option>
-                                        <option value="BNP" {{ $lead->bankDetails->bank_name  == "BNP" ? "selected" : "" }}>BNP Paribas</option>
-                                        <option value="DBS" {{ $lead->bankDetails->bank_name  == "DBS" ? "selected" : "" }}>DBS Bank</option>
-                                        <option value="RBS" {{ $lead->bankDetails->bank_name  == "RBS" ? "selected" : "" }}>RBS</option>
-                                        <option value="Tamilnad" {{ $lead->bankDetails->bank_name  == "Tamilnad" ? "selected" : "" }}>Tamilnad Mercantile Bank</option>
-                                        <option value="RBL" {{ $lead->bankDetails->bank_name  == "RBL" ? "selected" : "" }}>RBL Bank</option>
-                                        <option value="Nainital" {{ $lead->bankDetails->bank_name  == "Nainital" ? "selected" : "" }}>Nainital Bank</option>
-                                        <option value="Karnataka" {{ $lead->bankDetails->bank_name  == "Karnataka" ? "selected" : "" }}>Karnataka Bank</option>
-                                        <option value="Jammu" {{ $lead->bankDetails->bank_name  == "Jammu" ? "selected" : "" }}>Jammu & Kashmir Bank</option>
-                                        <option value="DCB" {{ $lead->bankDetails->bank_name  == "DCB" ? "selected" : "" }}>DCB Bank</option>
-                                        <option value="CSB" {{ $lead->bankDetails->bank_name  == "CSB" ? "selected" : "" }}>CSB Bank</option>
-                                        <option value="Bandhan" {{ $lead->bankDetails->bank_name  == "Bandhan" ? "selected" : "" }}>Bandhan Bank</option>
+                                        <option value="Axis" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Axis" ? "selected" : "" }}>Axis Bank</option>
+                                        <option value="Baroda" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Baroda" ? "selected" : "" }}>Bank of Baroda</option>
+                                        <option value="Maharashtra" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Maharashtra" ? "selected" : "" }}>Bank of Maharashtra</option>
+                                        <option value="Canara" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Canara" ? "selected" : "" }}>Canara Bank</option>
+                                        <option value="Federal" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Federal" ? "selected" : "" }}>Federal Bank</option>
+                                        <option value="HDFC" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "HDFC" ? "selected" : "" }}>HDFC Bank</option>
+                                        <option value="Induslnd" {{ isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Induslnd" ? "selected" : "" }}>Induslnd Bank</option>
+                                        <option value="ICICI" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "ICICI" ? "selected" : "" }}>ICICI Bank</option>
+                                        <option value="IDBI" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "IDBI" ? "selected" : "" }}>IDBI Bank</option>
+                                        <option value="IDFC" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "IDFC" ? "selected" : "" }}>IDFC First Bank</option>
+                                        <option value="South" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "South" ? "selected" : "" }}>South Indian Bank</option>
+                                        <option value="City" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "City" ? "selected" : "" }}>City Union Bank</option>
+                                        <option value="HSBC" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "HSBC" ? "selected" : "" }}>HSBC Bank</option>
+                                        <option value="Overseas" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Overseas" ? "selected" : "" }}>Indian Overseas Bank</option>
+                                        <option value="Kotak" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Kotak" ? "selected" : "" }}>Kotak Mahindra Bank</option>
+                                        <option value="PNB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "PNB" ? "selected" : "" }}>Punjab National Bank (PNB)</option>
+                                        <option value="SBI" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "SBI" ? "selected" : "" }}>State Bank of India (SBI)</option>
+                                        <option value="Syndicate" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Syndicate" ? "selected" : "" }}>Syndicate Bank</option>
+                                        <option value="UCO" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "UCO" ? "selected" : "" }}>UCO Bank</option>
+                                        <option value="Union" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Union" ? "selected" : "" }}>Union Bank of India</option>
+                                        <option value="Yes" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Yes" ? "selected" : "" }}>Yes Bank</option>
+                                        <option value="Indian" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Indian" ? "selected" : "" }}>Indian Bank</option>
+                                        <option value="Central" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Central" ? "selected" : "" }}>Central Bank of India</option>
+                                        <option value="PunjabSind" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "PunjabSind" ? "selected" : "" }}>Punjab & Sind Bank</option>
+                                        <option value="AUSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "AUSFB" ? "selected" : "" }}>AU Small Finance Bank</option>
+                                        <option value="Equitas" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Equitas" ? "selected" : "" }}>Equitas Small Finance Bank</option>
+                                        <option value="Ujjivan" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Ujjivan" ? "selected" : "" }}>Ujjivan Small Finance Bank</option>
+                                        <option value="Jana" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Jana" ? "selected" : "" }}>Jana Small Finance Bank</option>
+                                        <option value="Suryoday" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Suryoday" ? "selected" : "" }}>Suryoday Small Finance Bank</option>
+                                        <option value="CapitalSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "CapitalSFB" ? "selected" : "" }}>Capital Small Finance Bank</option>
+                                        <option value="NorthEastSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "NorthEastSFB" ? "selected" : "" }}>North East Small Finance Bank</option>
+                                        <option value="UtkarshSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "UtkarshSFB" ? "selected" : "" }}>Utkarsh Small Finance Bank</option>
+                                        <option value="ESAFSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "ESAFSFB" ? "selected" : "" }}>ESAF Small Finance Bank</option>
+                                        <option value="FincareSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "FincareSFB" ? "selected" : "" }}>Fincare Small Finance Bank</option>
+                                        <option value="ShivalikSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "ShivalikSFB" ? "selected" : "" }}>Shivalik Small Finance Bank</option>
+                                        <option value="Citi" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Citi" ? "selected" : "" }}>Citi Bank</option>
+                                        <option value="Deutsche" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Deutsche" ? "selected" : "" }}>Deutsche Bank</option>
+                                        <option value="Standard" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Standard" ? "selected" : "" }}>Standard Chartered Bank</option>
+                                        <option value="BankAmerica"{{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "BankAmerica" ? "selected" : "" }}>Bank of America</option>
+                                        <option value="Barclays" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Barclays" ? "selected" : "" }}>Barclays Bank</option>
+                                        <option value="BNP" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "BNP" ? "selected" : "" }}>BNP Paribas</option>
+                                        <option value="DBS" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "DBS" ? "selected" : "" }}>DBS Bank</option>
+                                        <option value="RBS" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "RBS" ? "selected" : "" }}>RBS</option>
+                                        <option value="Tamilnad" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Tamilnad" ? "selected" : "" }}>Tamilnad Mercantile Bank</option>
+                                        <option value="RBL" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "RBL" ? "selected" : "" }}>RBL Bank</option>
+                                        <option value="Nainital" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Nainital" ? "selected" : "" }}>Nainital Bank</option>
+                                        <option value="Karnataka" {{ isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Karnataka" ? "selected" : "" }}>Karnataka Bank</option>
+                                        <option value="Jammu" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Jammu" ? "selected" : "" }}>Jammu & Kashmir Bank</option>
+                                        <option value="DCB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "DCB" ? "selected" : "" }}>DCB Bank</option>
+                                        <option value="CSB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "CSB" ? "selected" : "" }}>CSB Bank</option>
+                                        <option value="Bandhan" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Bandhan" ? "selected" : "" }}>Bandhan Bank</option>
                                     </select>
                                 <span class="error-message text-danger"></span>
                             </div>
@@ -718,64 +718,64 @@
                                 <label>Bank Name</label>
                                     <select name="bank_name" id="bank_name" class="form-control" required readonly>
                                         <option value="">Select a Bank</option>
-                                        <option value="Axis" {{ $lead->bankDetails->bank_name  == "Axis" ? "selected" : "" }}>Axis Bank</option>
-                                        <option value="Baroda" {{ $lead->bankDetails->bank_name  == "Baroda" ? "selected" : "" }}>Bank of Baroda</option>
-                                        <option value="Maharashtra" {{ $lead->bankDetails->bank_name  == "Maharashtra" ? "selected" : "" }}>Bank of Maharashtra</option>
-                                        <option value="Canara" {{ $lead->bankDetails->bank_name  == "Canara" ? "selected" : "" }}>Canara Bank</option>
-                                        <option value="Federal" {{ $lead->bankDetails->bank_name  == "Federal" ? "selected" : "" }}>Federal Bank</option>
-                                        <option value="HDFC" {{ $lead->bankDetails->bank_name  == "HDFC" ? "selected" : "" }}>HDFC Bank</option>
-                                        <option value="Induslnd" {{ $lead->bankDetails->bank_name  == "Induslnd" ? "selected" : "" }}>Induslnd Bank</option>
-                                        <option value="ICICI" {{ $lead->bankDetails->bank_name  == "ICICI" ? "selected" : "" }}>ICICI Bank</option>
-                                        <option value="IDBI" {{ $lead->bankDetails->bank_name  == "IDBI" ? "selected" : "" }}>IDBI Bank</option>
-                                        <option value="IDFC" {{ $lead->bankDetails->bank_name  == "IDFC" ? "selected" : "" }}>IDFC First Bank</option>
-                                        <option value="South" {{ $lead->bankDetails->bank_name  == "South" ? "selected" : "" }}>South Indian Bank</option>
-                                        <option value="City" {{ $lead->bankDetails->bank_name  == "City" ? "selected" : "" }}>City Union Bank</option>
-                                        <option value="HSBC" {{ $lead->bankDetails->bank_name  == "HSBC" ? "selected" : "" }}>HSBC Bank</option>
-                                        <option value="Overseas" {{ $lead->bankDetails->bank_name  == "Overseas" ? "selected" : "" }}>Indian Overseas Bank</option>
-                                        <option value="Kotak" {{ $lead->bankDetails->bank_name  == "Kotak" ? "selected" : "" }}>Kotak Mahindra Bank</option>
-                                        <option value="PNB" {{ $lead->bankDetails->bank_name  == "PNB" ? "selected" : "" }}>Punjab National Bank (PNB)</option>
-                                        <option value="SBI" {{ $lead->bankDetails->bank_name  == "SBI" ? "selected" : "" }}>State Bank of India (SBI)</option>
-                                        <option value="Syndicate" {{ $lead->bankDetails->bank_name  == "Syndicate" ? "selected" : "" }}>Syndicate Bank</option>
-                                        <option value="UCO" {{ $lead->bankDetails->bank_name  == "UCO" ? "selected" : "" }}>UCO Bank</option>
-                                        <option value="Union" {{ $lead->bankDetails->bank_name  == "Union" ? "selected" : "" }}>Union Bank of India</option>
-                                        <option value="Yes" {{ $lead->bankDetails->bank_name  == "Yes" ? "selected" : "" }}>Yes Bank</option>
-                                        <option value="Indian" {{ $lead->bankDetails->bank_name  == "Indian" ? "selected" : "" }}>Indian Bank</option>
-                                        <option value="Central" {{ $lead->bankDetails->bank_name  == "Central" ? "selected" : "" }}>Central Bank of India</option>
-                                        <option value="PunjabSind" {{ $lead->bankDetails->bank_name  == "PunjabSind" ? "selected" : "" }}>Punjab & Sind Bank</option>
-                                        <option value="AUSFB" {{ $lead->bankDetails->bank_name  == "AUSFB" ? "selected" : "" }}>AU Small Finance Bank</option>
-                                        <option value="Equitas" {{ $lead->bankDetails->bank_name  == "Equitas" ? "selected" : "" }}>Equitas Small Finance Bank</option>
-                                        <option value="Ujjivan" {{ $lead->bankDetails->bank_name  == "Ujjivan" ? "selected" : "" }}>Ujjivan Small Finance Bank</option>
-                                        <option value="Jana" {{ $lead->bankDetails->bank_name  == "Jana" ? "selected" : "" }}>Jana Small Finance Bank</option>
-                                        <option value="Suryoday" {{ $lead->bankDetails->bank_name  == "Suryoday" ? "selected" : "" }}>Suryoday Small Finance Bank</option>
-                                        <option value="CapitalSFB" {{ $lead->bankDetails->bank_name  == "CapitalSFB" ? "selected" : "" }}>Capital Small Finance Bank</option>
-                                        <option value="NorthEastSFB" {{ $lead->bankDetails->bank_name  == "NorthEastSFB" ? "selected" : "" }}>North East Small Finance Bank</option>
-                                        <option value="UtkarshSFB" {{ $lead->bankDetails->bank_name  == "UtkarshSFB" ? "selected" : "" }}>Utkarsh Small Finance Bank</option>
-                                        <option value="ESAFSFB" {{ $lead->bankDetails->bank_name  == "ESAFSFB" ? "selected" : "" }}>ESAF Small Finance Bank</option>
-                                        <option value="FincareSFB" {{ $lead->bankDetails->bank_name  == "FincareSFB" ? "selected" : "" }}>Fincare Small Finance Bank</option>
-                                        <option value="ShivalikSFB" {{ $lead->bankDetails->bank_name  == "ShivalikSFB" ? "selected" : "" }}>Shivalik Small Finance Bank</option>
-                                        <option value="Citi" {{ $lead->bankDetails->bank_name  == "Citi" ? "selected" : "" }}>Citi Bank</option>
-                                        <option value="Deutsche" {{ $lead->bankDetails->bank_name  == "Deutsche" ? "selected" : "" }}>Deutsche Bank</option>
-                                        <option value="Standard" {{ $lead->bankDetails->bank_name  == "Standard" ? "selected" : "" }}>Standard Chartered Bank</option>
-                                        <option value="BankAmerica"{{ $lead->bankDetails->bank_name  == "BankAmerica" ? "selected" : "" }}>Bank of America</option>
-                                        <option value="Barclays" {{ $lead->bankDetails->bank_name  == "Barclays" ? "selected" : "" }}>Barclays Bank</option>
-                                        <option value="BNP" {{ $lead->bankDetails->bank_name  == "BNP" ? "selected" : "" }}>BNP Paribas</option>
-                                        <option value="DBS" {{ $lead->bankDetails->bank_name  == "DBS" ? "selected" : "" }}>DBS Bank</option>
-                                        <option value="RBS" {{ $lead->bankDetails->bank_name  == "RBS" ? "selected" : "" }}>RBS</option>
-                                        <option value="Tamilnad" {{ $lead->bankDetails->bank_name  == "Tamilnad" ? "selected" : "" }}>Tamilnad Mercantile Bank</option>
-                                        <option value="RBL" {{ $lead->bankDetails->bank_name  == "RBL" ? "selected" : "" }}>RBL Bank</option>
-                                        <option value="Nainital" {{ $lead->bankDetails->bank_name  == "Nainital" ? "selected" : "" }}>Nainital Bank</option>
-                                        <option value="Karnataka" {{ $lead->bankDetails->bank_name  == "Karnataka" ? "selected" : "" }}>Karnataka Bank</option>
-                                        <option value="Jammu" {{ $lead->bankDetails->bank_name  == "Jammu" ? "selected" : "" }}>Jammu & Kashmir Bank</option>
-                                        <option value="DCB" {{ $lead->bankDetails->bank_name  == "DCB" ? "selected" : "" }}>DCB Bank</option>
-                                        <option value="CSB" {{ $lead->bankDetails->bank_name  == "CSB" ? "selected" : "" }}>CSB Bank</option>
-                                        <option value="Bandhan" {{ $lead->bankDetails->bank_name  == "Bandhan" ? "selected" : "" }}>Bandhan Bank</option>
+                                        <option value="Axis" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Axis" ? "selected" : "" }}>Axis Bank</option>
+                                        <option value="Baroda" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Baroda" ? "selected" : "" }}>Bank of Baroda</option>
+                                        <option value="Maharashtra" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Maharashtra" ? "selected" : "" }}>Bank of Maharashtra</option>
+                                        <option value="Canara" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Canara" ? "selected" : "" }}>Canara Bank</option>
+                                        <option value="Federal" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Federal" ? "selected" : "" }}>Federal Bank</option>
+                                        <option value="HDFC" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "HDFC" ? "selected" : "" }}>HDFC Bank</option>
+                                        <option value="Induslnd" {{ isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Induslnd" ? "selected" : "" }}>Induslnd Bank</option>
+                                        <option value="ICICI" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "ICICI" ? "selected" : "" }}>ICICI Bank</option>
+                                        <option value="IDBI" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "IDBI" ? "selected" : "" }}>IDBI Bank</option>
+                                        <option value="IDFC" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "IDFC" ? "selected" : "" }}>IDFC First Bank</option>
+                                        <option value="South" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "South" ? "selected" : "" }}>South Indian Bank</option>
+                                        <option value="City" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "City" ? "selected" : "" }}>City Union Bank</option>
+                                        <option value="HSBC" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "HSBC" ? "selected" : "" }}>HSBC Bank</option>
+                                        <option value="Overseas" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Overseas" ? "selected" : "" }}>Indian Overseas Bank</option>
+                                        <option value="Kotak" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Kotak" ? "selected" : "" }}>Kotak Mahindra Bank</option>
+                                        <option value="PNB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "PNB" ? "selected" : "" }}>Punjab National Bank (PNB)</option>
+                                        <option value="SBI" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "SBI" ? "selected" : "" }}>State Bank of India (SBI)</option>
+                                        <option value="Syndicate" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Syndicate" ? "selected" : "" }}>Syndicate Bank</option>
+                                        <option value="UCO" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "UCO" ? "selected" : "" }}>UCO Bank</option>
+                                        <option value="Union" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Union" ? "selected" : "" }}>Union Bank of India</option>
+                                        <option value="Yes" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Yes" ? "selected" : "" }}>Yes Bank</option>
+                                        <option value="Indian" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Indian" ? "selected" : "" }}>Indian Bank</option>
+                                        <option value="Central" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Central" ? "selected" : "" }}>Central Bank of India</option>
+                                        <option value="PunjabSind" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "PunjabSind" ? "selected" : "" }}>Punjab & Sind Bank</option>
+                                        <option value="AUSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "AUSFB" ? "selected" : "" }}>AU Small Finance Bank</option>
+                                        <option value="Equitas" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Equitas" ? "selected" : "" }}>Equitas Small Finance Bank</option>
+                                        <option value="Ujjivan" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Ujjivan" ? "selected" : "" }}>Ujjivan Small Finance Bank</option>
+                                        <option value="Jana" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Jana" ? "selected" : "" }}>Jana Small Finance Bank</option>
+                                        <option value="Suryoday" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Suryoday" ? "selected" : "" }}>Suryoday Small Finance Bank</option>
+                                        <option value="CapitalSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "CapitalSFB" ? "selected" : "" }}>Capital Small Finance Bank</option>
+                                        <option value="NorthEastSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "NorthEastSFB" ? "selected" : "" }}>North East Small Finance Bank</option>
+                                        <option value="UtkarshSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "UtkarshSFB" ? "selected" : "" }}>Utkarsh Small Finance Bank</option>
+                                        <option value="ESAFSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "ESAFSFB" ? "selected" : "" }}>ESAF Small Finance Bank</option>
+                                        <option value="FincareSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "FincareSFB" ? "selected" : "" }}>Fincare Small Finance Bank</option>
+                                        <option value="ShivalikSFB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "ShivalikSFB" ? "selected" : "" }}>Shivalik Small Finance Bank</option>
+                                        <option value="Citi" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Citi" ? "selected" : "" }}>Citi Bank</option>
+                                        <option value="Deutsche" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Deutsche" ? "selected" : "" }}>Deutsche Bank</option>
+                                        <option value="Standard" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Standard" ? "selected" : "" }}>Standard Chartered Bank</option>
+                                        <option value="BankAmerica"{{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "BankAmerica" ? "selected" : "" }}>Bank of America</option>
+                                        <option value="Barclays" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Barclays" ? "selected" : "" }}>Barclays Bank</option>
+                                        <option value="BNP" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "BNP" ? "selected" : "" }}>BNP Paribas</option>
+                                        <option value="DBS" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "DBS" ? "selected" : "" }}>DBS Bank</option>
+                                        <option value="RBS" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "RBS" ? "selected" : "" }}>RBS</option>
+                                        <option value="Tamilnad" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Tamilnad" ? "selected" : "" }}>Tamilnad Mercantile Bank</option>
+                                        <option value="RBL" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "RBL" ? "selected" : "" }}>RBL Bank</option>
+                                        <option value="Nainital" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Nainital" ? "selected" : "" }}>Nainital Bank</option>
+                                        <option value="Karnataka" {{ isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Karnataka" ? "selected" : "" }}>Karnataka Bank</option>
+                                        <option value="Jammu" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Jammu" ? "selected" : "" }}>Jammu & Kashmir Bank</option>
+                                        <option value="DCB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "DCB" ? "selected" : "" }}>DCB Bank</option>
+                                        <option value="CSB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "CSB" ? "selected" : "" }}>CSB Bank</option>
+                                        <option value="Bandhan" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Bandhan" ? "selected" : "" }}>Bandhan Bank</option>
                                     </select>
                                 <span class="error-message text-danger"></span>
                             </div>                        
                     
                             <div class="col-md-6">
                                 <label>Branch</label>
-                                <input type="text" name="branch" class="form-control" required value="{{isset($loanDisbursal) ? $loanDisbursal->branch : ""}}">
+                                <input type="text" name="branch" class="form-control" required value="{{isset($loanDisbursal) ? $loanDisbursal->branch : ''}}">
                                 <span class="error-message text-danger"></span>
                             </div>
                     
