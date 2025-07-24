@@ -655,7 +655,7 @@
                             View KFS Signed Document
                         </a>
 
-                        <a class="btn btn-{{isset($cashfreeData) && $cashfreeData->status == 'FAILED' ? 'danger' : 'success'}}" href="#">
+                        <a class="btn btn-{{isset($cashfreeData) && $cashfreeData->status == 'ACTIVE' ? 'success' : 'danger'}}" href="#">
                             e-NACH Status - {{isset($cashfreeData) ? $cashfreeData->status : ''}} 
                             @if(isset($cashfreeData) && $cashfreeData->status == 'FAILED')
                                 @php
@@ -682,7 +682,7 @@
 
                             <div class="col-md-6">
                                 <label>E-natch Reference Number </label>
-                                <input type="text" name="enach_reference_number" class="form-control" value="{{isset($cashfreeData) ? $cashfreeData->reference_id : ''}}" readonly>
+                                <input type="text" name="enach_reference_number" class="form-control" value="{{isset($cashfreeData) && $cashfreeData->status == 'ACTIVE' ? $cashfreeData->reference_id : (isset($loanDisbursal) ? $loanDisbursal->enach_reference_number : '')}}" readonly>
                                 <span class="error-message text-danger"></span>
                             </div>
     

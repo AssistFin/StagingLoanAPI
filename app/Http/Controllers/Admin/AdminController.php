@@ -16,6 +16,10 @@ use App\Rules\FileTypeValidate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Role;
+use App\Models\Menu;
+use App\Models\Submenu;
+use App\Models\Admin;
 
 class AdminController extends Controller
 {
@@ -131,7 +135,6 @@ class AdminController extends Controller
         return view('admin.dashboard', compact('pageTitle', 'widget', 'chart','deposit','withdrawals','depositsMonth','withdrawalMonth','months','trxReport','plusTrx','minusTrx'));
     }
 
-
     public function profile()
     {
         $pageTitle = 'Profile';
@@ -228,5 +231,72 @@ class AdminController extends Controller
         return readfile($filePath);
     }
 
+    public function index()
+    {
+        $admins = Admin::with('roles')->get();
+        return view('admin.admins.index', compact('admins'));
+    }
 
+    public function create()
+    {
+        $roles = Role::all();
+        return view('admin.admins.create', compact('roles'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required|email|unique:admins,email',
+            'mobile' => 'required',
+            'username' => 'required|unique:admins,username',
+            'password' => 'required|confirmed',
+            'roles' => 'required|array',
+        ]);
+
+        $admin = Admin::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'mobile' => $request->mobile,
+            'username' => $request->username,
+            'password' => Hash::make($request->password),
+        ]);
+
+        $admin->roles()->sync($request->roles);
+
+        return redirect()->route('admin.admins.index')->with('success', 'Admin user created successfully.');
+    }
+
+    public function edit(Admin $admin)
+    {
+        $roles = Role::all();
+        return view('admin.admins.edit', compact('admin', 'roles'));
+    }
+
+    public function update(Request $request, Admin $admin)
+    {
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required|email|unique:admins,email,' . $admin->id,
+            'mobile' => 'required',
+            'username' => 'required|unique:admins,username,' . $admin->id,
+            'roles' => 'required|array',
+        ]);
+
+        $admin->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'mobile' => $request->mobile,
+            'username' => $request->username,
+        ]);
+
+        if ($request->password) {
+            $admin->password = Hash::make($request->password);
+            $admin->save();
+        }
+
+        $admin->roles()->sync($request->roles);
+
+        return redirect()->route('admin.admins.index')->with('success', 'Admin user updated successfully.');
+    }
 }

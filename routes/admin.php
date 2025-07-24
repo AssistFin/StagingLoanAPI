@@ -36,7 +36,8 @@ use App\Http\Controllers\Admin\Auth\ForgotPasswordController;
 use App\Http\Controllers\Admin\CreditBureauController;
 use App\Http\Controllers\Admin\ExperianCreditBureauController;
 use App\Http\Controllers\Api\ScoreMeWebhookController;
-
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\PermissionController;
 
 Route::controller(LoginController::class)->group(function () {
     Route::get('/', 'showLoginForm')->name('login');
@@ -523,4 +524,40 @@ Route::middleware('admin')->group(function () {
             Route::post('manage-section/{id}', 'manageSectionUpdate')->name('manage.section.update');
         });
     });
+
+    Route::controller(RoleController::class)
+        ->name('roles.')
+        ->group(function () {
+            Route::get('roles/index', 'index')->name('index');
+            Route::get('/roles/create', 'create')->name('create');
+            Route::post('/roles', 'store')->name('store');
+            Route::get('/roles/edit-permissions/{id}','editPermissions')->name('edit.permissions');
+            Route::post('/roles/update-permissions/{id}','updatePermissions')->name('update.permissions');
+
+    });
+
+    Route::controller(AdminController::class)
+        ->name('admins.')
+        ->group(function () {
+            Route::get('admins/index', 'index')->name('index');
+            Route::get('admins/create', [AdminController::class, 'create'])->name('create');
+            Route::post('admins/store', [AdminController::class, 'store'])->name('store');
+            Route::get('admins/{admin}/edit', [AdminController::class, 'edit'])->name('edit');
+            Route::post('admins/{admin}/update', [AdminController::class, 'update'])->name('update');
+
+    });
+
+
+    // Route::prefix('admin')->name('admins')->group(function () {
+    //     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+    //     Route::get('/roles/{id}/edit-permissions', [RoleController::class, 'editPermissions'])->name('roles.edit.permissions');
+    //     Route::post('/roles/{id}/update-permissions', [RoleController::class, 'updatePermissions'])->name('roles.update.permissions');
+
+    //     Route::get('admins', [AdminController::class, 'index'])->name('admins.index');
+    //     Route::get('admins/create', [AdminController::class, 'create'])->name('admins.create');
+    //     Route::post('admins/store', [AdminController::class, 'store'])->name('admins.store');
+    //     Route::get('admins/{admin}/edit', [AdminController::class, 'edit'])->name('admins.edit');
+    //     Route::post('admins/{admin}/update', [AdminController::class, 'update'])->name('admins.update');
+    // });
 });
+

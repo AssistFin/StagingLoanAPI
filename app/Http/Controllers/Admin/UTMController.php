@@ -33,7 +33,9 @@ class UTMController extends Controller
                 'loan_applications.loan_no',
                 'loan_personal_details.employment_type',
                 'loan_personal_details.monthly_income',
-                'loan_personal_details.income_received_in'
+                'loan_personal_details.income_received_in',
+                'loan_approvals.cibil_score',
+                'loan_approvals.final_remark'
             )->orderByRaw('utm_tracking.created_at DESC');
         
         $searchTerm = $request->get('search');
@@ -176,22 +178,59 @@ class UTMController extends Controller
             //print_r($utmRecords);
             //dd();
             foreach ($utmRecords as $utmRecord) {
-                $csvData[] = [
-                    'Customer Name' => $utmRecord->firstname . ' ' . $utmRecord->lastname,
-                    'Customer Mobile' => "'" . $utmRecord->mobile,
-                    'Loan Application No' => $utmRecord->loan_no ?? '',
-                    'Employment Type' => $utmRecord->employment_type ?? '',
-                    'Monthly Income' => $utmRecord->monthly_income ?? '',
-                    'Income Received In' => $utmRecord->income_received_in ?? '',
-                    'Date' => \Carbon\Carbon::parse($utmRecord->created_at)->timezone('Asia/Kolkata'),
-                    'Source' => $utmRecord->utm_source ?? '',
-                    'Medium' => $utmRecord->utm_medium ?? '',
-                    'Campaign' => $utmRecord->utm_campaign ?? '',
-                    'Term' => $utmRecord->utm_term ?? '',
-                    'Content' => $utmRecord->utm_content ?? '',
-                    'IP Address' => $utmRecord->ip_address ?? '',
+                if($utm_records && $utm_records === 'taa'){
+                    $csvData[] = [
+                        'Customer Name' => $utmRecord->firstname . ' ' . $utmRecord->lastname,
+                        'Customer Mobile' => "'" . $utmRecord->mobile,
+                        'Loan Application No' => $utmRecord->loan_no ?? '',
+                        'Employment Type' => $utmRecord->employment_type ?? '',
+                        'Monthly Income' => $utmRecord->monthly_income ?? '',
+                        'Income Received In' => $utmRecord->income_received_in ?? '',
+                        'Date' => \Carbon\Carbon::parse($utmRecord->created_at)->timezone('Asia/Kolkata'),
+                        'Source' => $utmRecord->utm_source ?? '',
+                        'Medium' => $utmRecord->utm_medium ?? '',
+                        'Campaign' => $utmRecord->utm_campaign ?? '',
+                        'Term' => $utmRecord->utm_term ?? '',
+                        'Content' => $utmRecord->utm_content ?? '',
+                        'IP Address' => $utmRecord->ip_address ?? '',
+                        'Cibil Score' => $utmRecord->cibil_score ?? '',
+                        'Approval Remark' => $utmRecord->final_remark ?? '',
+                    ];
+                }else if($utm_records && $utm_records === 'tra'){
+                    $csvData[] = [
+                        'Customer Name' => $utmRecord->firstname . ' ' . $utmRecord->lastname,
+                        'Customer Mobile' => "'" . $utmRecord->mobile,
+                        'Loan Application No' => $utmRecord->loan_no ?? '',
+                        'Employment Type' => $utmRecord->employment_type ?? '',
+                        'Monthly Income' => $utmRecord->monthly_income ?? '',
+                        'Income Received In' => $utmRecord->income_received_in ?? '',
+                        'Date' => \Carbon\Carbon::parse($utmRecord->created_at)->timezone('Asia/Kolkata'),
+                        'Source' => $utmRecord->utm_source ?? '',
+                        'Medium' => $utmRecord->utm_medium ?? '',
+                        'Campaign' => $utmRecord->utm_campaign ?? '',
+                        'Term' => $utmRecord->utm_term ?? '',
+                        'Content' => $utmRecord->utm_content ?? '',
+                        'IP Address' => $utmRecord->ip_address ?? '',
+                        'Rejection Remark' => $utmRecord->final_remark ?? '',
+                    ];
+                }else{
+                    $csvData[] = [
+                        'Customer Name' => $utmRecord->firstname . ' ' . $utmRecord->lastname,
+                        'Customer Mobile' => "'" . $utmRecord->mobile,
+                        'Loan Application No' => $utmRecord->loan_no ?? '',
+                        'Employment Type' => $utmRecord->employment_type ?? '',
+                        'Monthly Income' => $utmRecord->monthly_income ?? '',
+                        'Income Received In' => $utmRecord->income_received_in ?? '',
+                        'Date' => \Carbon\Carbon::parse($utmRecord->created_at)->timezone('Asia/Kolkata'),
+                        'Source' => $utmRecord->utm_source ?? '',
+                        'Medium' => $utmRecord->utm_medium ?? '',
+                        'Campaign' => $utmRecord->utm_campaign ?? '',
+                        'Term' => $utmRecord->utm_term ?? '',
+                        'Content' => $utmRecord->utm_content ?? '',
+                        'IP Address' => $utmRecord->ip_address ?? '',
 
-                ];
+                    ];
+                }
             }
 
             $missingInfoText = $utm_records ?? 'all';

@@ -137,4 +137,22 @@ class User extends Authenticatable {
     public function scopeWithBalance($query) {
         return $query->where('balance', '>', 0);
     }
+
+    public function roles() {
+        return $this->belongsToMany(Role::class);
+    }
+
+    public function hasRole($roleName) {
+        return $this->roles->contains('name', $roleName);
+    }
+
+    public function accessibleMenus() {
+        return Menu::whereHas('roles', function ($q) {
+            $q->whereIn('id', $this->roles->pluck('id'));
+        })->with(['submenus' => function ($q) {
+            $q->whereHas('roles', function ($qr) {
+                $qr->whereIn('id', $this->roles->pluck('id'));
+            });
+        }])->get();
+    }
 }
