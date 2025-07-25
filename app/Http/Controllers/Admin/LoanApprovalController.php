@@ -199,7 +199,11 @@ class LoanApprovalController extends Controller
         $mailSend = sendMailViaSMTP($subject, $message, null, null);
         Log::info("Mail Send Via SMTP For Loan Approval and the response is : {$mailSend}");
         //EOC By Ankit Tiwari
-
+        $adminData = auth('admin')->user();
+        
+        if ($adminData) {
+            eventLog($adminData->id, $user->id, 'Loan Approval', json_encode($request->all()));
+        }
         return redirect()->back()->with('success', 'Loan Approved and KFS PDF Generated Successfully');
     }
 }

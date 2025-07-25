@@ -71,6 +71,12 @@ $fullPathToPDF = $basePath . $approvalData->kfs_path;
         $mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
 
         Log::info("Mail Send Via SMTP and te response is : {$mailSend}");
+
+        $adminData = auth('admin')->user();
+        
+        if ($adminData) {
+            eventLog($adminData->id, $userData->id, 'Loan Approval', json_encode($request->all()));
+        }
         return redirect()->back()->with('success', 'Loan Disbursal Recorded Successfully');
     }
 }
