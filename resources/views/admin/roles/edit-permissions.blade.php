@@ -2,8 +2,8 @@
 
 @section('panel')
 <div class="container">
-    <h4>Edit Permissions for Role: {{ $role->name }}</h4>
-
+    <h4>Edit Permissions for Role -  {{ $role->name }}</h4>
+    </br>
     <form action="{{ route('admin.roles.update.permissions', $role->id) }}" method="POST">
         @csrf
 
@@ -35,4 +35,30 @@
         <button type="submit" class="btn btn-success">Save Permissions</button>
     </form>
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Handle menu checkbox change
+        document.querySelectorAll('input[id^="menu"]').forEach(function(menuCheckbox) {
+            menuCheckbox.addEventListener('change', function () {
+                const menuId = this.id.replace('menu', '');
+                const card = this.closest('.card');
+                const submenus = card.querySelectorAll('.form-check-input[id^="submenus"]');
+
+                submenus.forEach(cb => cb.checked = this.checked);
+            });
+        });
+
+        // Handle submenu checkbox change
+        document.querySelectorAll('.form-check-input[id^="submenus"]').forEach(function(subCheckbox) {
+            subCheckbox.addEventListener('change', function () {
+                const card = this.closest('.card');
+                const submenus = card.querySelectorAll('.form-check-input[id^="submenus"]');
+                const menuCheckbox = card.querySelector('input[id^="menu"]');
+
+                const anyChecked = Array.from(submenus).some(cb => cb.checked);
+                menuCheckbox.checked = anyChecked;
+            });
+        });
+    });
+</script>
 @endsection

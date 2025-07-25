@@ -5,6 +5,7 @@ use App\Lib\GoogleAuthenticator;
 use App\Models\Extension;
 use App\Models\Frontend;
 use App\Models\GeneralSetting;
+use App\Models\AdminEventLog;
 use Carbon\Carbon;
 use App\Lib\Captcha;
 use App\Lib\ClientInfo;
@@ -47,7 +48,6 @@ function getNumber($length = 8) {
     }
     return $randomString;
 }
-
 
 function activeTemplate($asset = false) {
     $template = gs('active_template');
@@ -118,33 +118,27 @@ function cryptoQR($wallet) {
     return "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=$wallet&choe=UTF-8";
 }
 
-
 function keyToTitle($text) {
     return ucfirst(preg_replace("/[^A-Za-z0-9 ]/", ' ', $text));
 }
-
 
 function titleToKey($text) {
     return strtolower(str_replace(' ', '_', $text));
 }
 
-
 function strLimit($title = null, $length = 10) {
     return Str::limit($title, $length);
 }
-
 
 function getIpInfo() {
     $ipInfo = ClientInfo::ipInfo();
     return $ipInfo;
 }
 
-
 function osBrowser() {
     $osBrowser = ClientInfo::osBrowser();
     return $osBrowser;
 }
-
 
 function getTemplates() {
     $param['purchasecode'] = env("PURCHASECODE");
@@ -158,7 +152,6 @@ function getTemplates() {
     }
 }
 
-
 function getPageSections($arr = false) {
     $jsonUrl = resource_path('views/') . str_replace('.', '/', activeTemplate()) . 'sections.json';
     $sections = json_decode(file_get_contents($jsonUrl));
@@ -168,7 +161,6 @@ function getPageSections($arr = false) {
     }
     return $sections;
 }
-
 
 function getImage($image, $size = null) {
     $clean = '';
@@ -202,32 +194,31 @@ function authenticate() {
     }
 }
 
-
 function getAddressFromCoordinates($latitude, $longitude)
-    {
-        $apiKey = env('GOOGLE_MAPS_API_KEY'); // Make sure to set this in your .env file
-        $client = new Client();
-        $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng={$latitude},{$longitude}&key={$apiKey}";
+{
+    $apiKey = env('GOOGLE_MAPS_API_KEY'); // Make sure to set this in your .env file
+    $client = new Client();
+    $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng={$latitude},{$longitude}&key={$apiKey}";
 
-        try {
-            Log::info("Requesting address from Google Maps API: " . $url);
+    try {
+        Log::info("Requesting address from Google Maps API: " . $url);
 
-            $response = $client->request('GET', $url);
-            $body = json_decode($response->getBody(), true);
+        $response = $client->request('GET', $url);
+        $body = json_decode($response->getBody(), true);
 
-            Log::info("Google Maps API response status: " . $response->getStatusCode());
-            // Log::info("Google Maps API response body: " . json_encode($body));
+        Log::info("Google Maps API response status: " . $response->getStatusCode());
+        // Log::info("Google Maps API response body: " . json_encode($body));
 
-            if ($response->getStatusCode() == 200 && isset($body['results'][0])) {
-                return $body['results'][0]['formatted_address'];
-            }
-
-            return null;
-        } catch (GuzzleException $e) {
-            Log::error("Error fetching address from Google Maps API: " . $e->getMessage());
-            return null;
+        if ($response->getStatusCode() == 200 && isset($body['results'][0])) {
+            return $body['results'][0]['formatted_address'];
         }
+
+        return null;
+    } catch (GuzzleException $e) {
+        Log::error("Error fetching address from Google Maps API: " . $e->getMessage());
+        return null;
     }
+}
 
 function notify($user, $templateName, $shortCodes = null, $sendVia = null, $createLog = true) {
     $general = gs();
@@ -260,7 +251,6 @@ function paginateLinks($data) {
     return $data->appends(request()->all())->links();
 }
 
-
 function menuActive($routeName, $type = null, $param = null) {
     if ($type == 3) $class = 'side-menu--open';
     elseif ($type == 2) $class = 'sidebar-submenu__open';
@@ -279,7 +269,6 @@ function menuActive($routeName, $type = null, $param = null) {
         return $class;
     }
 }
-
 
 function fileUploader($file, $location, $size = null, $old = null, $thumb = null) {
     $fileManager = new FileManager($file);
@@ -313,13 +302,11 @@ function diffForHumans($date) {
     return Carbon::parse($date)->diffForHumans();
 }
 
-
 function showDateTime($date, $format = 'Y-m-d h:i A') {
     $lang = session()->get('lang');
     Carbon::setlocale($lang);
     return Carbon::parse($date)->translatedFormat($format);
 }
-
 
 function showDateTimeView($datetime, $format = 'Y-m-d h:i A', $tz = 'Asia/Kolkata') {
     return Carbon::parse($datetime)->timezone($tz)->format($format);
@@ -341,7 +328,6 @@ function getContent($dataKeys, $singleQuery = false, $limit = null, $orderById =
     }
     return $content;
 }
-
 
 function gatewayRedirectUrl($type = false) {
     if ($type) {
@@ -367,7 +353,6 @@ function verifyG2fa($user, $code, $secret = null) {
     }
 }
 
-
 function urlPath($routeName, $routeParam = null) {
     if ($routeParam == null) {
         $url = route($routeName);
@@ -379,7 +364,6 @@ function urlPath($routeName, $routeParam = null) {
     return $path;
 }
 
-
 function showMobileNumber($number) {
     $length = strlen($number);
     return substr_replace($number, '***', 2, $length - 4);
@@ -389,7 +373,6 @@ function showEmailAddress($email) {
     $endPosition = strpos($email, '@') - 1;
     return substr_replace($email, '***', 1, $endPosition);
 }
-
 
 function getRealIP() {
     $ip = $_SERVER["REMOTE_ADDR"];
@@ -418,7 +401,6 @@ function getRealIP() {
 
     return $ip;
 }
-
 
 function appendQuery($key, $value) {
     return request()->fullUrlWithQuery([$key => $value]);
@@ -479,6 +461,7 @@ function createBadge($type, $text) {
 function getInitials($name) {
     return Initials::generate($name);
 }
+
 function queryBuild($key, $value) {
     $queries = request()->query();
     if (@$queries['search']) {
@@ -505,7 +488,7 @@ function queryBuild($key, $value) {
     return $route . $delimeter . "$key=$value";
 }
 
-function queryLoanBuild($key, $value) {
+function queryLoanBuild($key, $value){
     $queries = request()->query();
 
 
@@ -599,3 +582,16 @@ function sendMailViaSMTP($subject, $message, $to, $attachment = null){
         return "{$fyString}/{$currentMonth}/{$next}";
     }
 }
+
+function eventLog($admin_id = null, $user_id, $event, $description = null)
+{
+    AdminEventLog::create([
+        'admin_id'   => Auth::guard('admin')->id() ? Auth::guard('admin')->id() : $admin_id,
+        'user_id'    => $user_id,
+        'event'      => $event,
+        'description'=> $description,
+        'ip_address' => request()->header('X-Forwarded-For') ?? request()->ip(),
+        'user_agent' => Request::header('User-Agent')
+    ]);
+}
+

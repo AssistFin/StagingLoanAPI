@@ -50,9 +50,10 @@ class RoleMenuPermissionSeeder extends Seeder
             'Leads' => [
                 'route' => 'admin.leads.index',
                 'submenus' => [
-                    ['name' => 'Leads BSA', 'route' => 'admin.leads.bsa'],
                     ['name' => 'Leads All', 'route' => 'admin.leads.all'],
                     ['name' => 'Leads WBS', 'route' => 'admin.leads.wbs'],
+                    ['name' => 'Leads BSA', 'route' => 'admin.leads.bsa'],
+                    ['name' => 'UTM Tracking', 'route' => 'admin.utm.tracking'],
                 ],
                 'roles' => ['Superadmin', 'Admin'],
             ],
@@ -60,8 +61,9 @@ class RoleMenuPermissionSeeder extends Seeder
                 'route' => 'admin.decision.index',
                 'submenus' => [
                     ['name' => 'Approved', 'route' => 'admin.decision.approved'],
-                    ['name' => 'Rejected', 'route' => 'admin.decision.rejected'],
+                    ['name' => 'Pending Disbursal', 'route' => 'admin.decision.pendingdisbursed'],
                     ['name' => 'Disbursed', 'route' => 'admin.decision.disbursed'],
+                    ['name' => 'Rejected', 'route' => 'admin.decision.rejected'],
                 ],
                 'roles' => ['Superadmin', 'Admin', 'Sub Admin', 'Credit Manager'],
             ],
@@ -70,6 +72,7 @@ class RoleMenuPermissionSeeder extends Seeder
                 'submenus' => [
                     ['name' => 'Predue Collection', 'route' => 'admin.collection.predue'],
                     ['name' => 'Overdue Collection', 'route' => 'admin.collection.overdue'],
+                    ['name' => 'Closed', 'route' => 'admin.decision.closed'],
                 ],
                 'roles' => ['Superadmin', 'Admin', 'Sub Admin', 'Collection Manager'],
             ],

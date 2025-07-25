@@ -90,6 +90,10 @@ class LoginController extends Controller
         }
 
         if ($this->attemptLogin($request)) {
+            $user = auth('admin')->user(); // ✅ Capture user before logout
+            if ($user) {
+                eventLog($user->id, $user->id, 'Login', 'Logged In Successfully.');
+            }
             return $this->sendLoginResponse($request);
         }
 
@@ -104,6 +108,10 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $user = auth('admin')->user(); // ✅ Capture user before logout
+        if ($user) {
+            eventLog($user->id, $user->id, 'Logout', 'Logged Out Successfully.');
+        }
         $this->guard('admin')->logout();
         $request->session()->invalidate();
         return $this->loggedOut($request) ?: redirect($this->redirectTo);
