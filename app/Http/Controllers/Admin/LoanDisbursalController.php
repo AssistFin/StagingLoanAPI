@@ -75,7 +75,7 @@ $fullPathToPDF = $basePath . $approvalData->kfs_path;
         $adminData = auth('admin')->user();
         
         if ($adminData) {
-            eventLog($adminData->id, $userData->id, 'Loan Approval', json_encode($request->all()));
+            eventLog($adminData->id, $userData->id, 'Loan Disbursed', json_encode($request->all()));
         }
         return redirect()->back()->with('success', 'Loan Disbursal Recorded Successfully');
     }

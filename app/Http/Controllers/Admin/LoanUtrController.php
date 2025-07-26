@@ -107,7 +107,7 @@ Customer Support | LoanOne";
         $adminData = auth('admin')->user();
         
         if ($adminData) {
-            eventLog($adminData->id, $userData->id, 'Loan Approval', json_encode($request->all()));
+            eventLog($adminData->id, $userData->id, 'Loan '.$request->status, json_encode($request->all()));
         }
         return redirect()->back()->with('success', 'UTR Collection added successfully.');
     }

@@ -70,7 +70,7 @@ return [
     |
     */
 
-    /* 'timezone' => $timezone, */
+    'timezone' => 'Asia/Kolkata',
 
 
     /*
