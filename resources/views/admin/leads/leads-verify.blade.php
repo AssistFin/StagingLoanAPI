@@ -521,9 +521,11 @@
                             <div class="col-md-6">
                                 <label for="status" class="form-label">Status</label>
                                 <select class="form-control" id="loanApprovalForm_status" name="status" required>
-                                    <option value="0" {{isset($loanApproval) && $loanApproval->status == "0" ? "selected" : ""}}>Pending</option>
+                                    <option value="0" {{isset($loanApproval) && $loanApproval->status == "0" ? "selected" : ""}}>Pending / Hold</option>
                                     <option value="1" {{isset($loanApproval) && $loanApproval->status == "1" ? "selected" : ""}}>Approved</option>
                                     <option value="2" {{isset($loanApproval) && $loanApproval->status == "2" ? "selected" : ""}}>Rejected</option>
+                                    <option value="3" {{isset($loanApproval) && $loanApproval->status == "3" ? "selected" : ""}}>Not Interested</option>
+                                    <option value="4" {{isset($loanApproval) && $loanApproval->status == "4" ? "selected" : ""}}>Approved (Not Interested)</option>
                                 </select>
                                 <span class="error-message text-danger"></span>
                             </div>
@@ -1106,6 +1108,11 @@
             }
 
             if (statusVal == '2') {
+                $("#loanApprovalForm").validate().resetForm();
+                $(".is-invalid").removeClass("is-invalid");
+
+                $('#loanApprovalForm')[0].submit();
+            } else if(statusVal == '3'){
                 $("#loanApprovalForm").validate().resetForm();
                 $(".is-invalid").removeClass("is-invalid");
 

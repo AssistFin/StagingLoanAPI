@@ -83,10 +83,71 @@ class LoanApprovalController extends Controller
         return redirect()->back()->with('success', 'Loan has been rejected successfully');
     }
 
+    protected function handleNotInterestedLoan(Request $request)
+    {
+        $data = [
+            'loan_application_id' => $request->loan_application_id,
+            'user_id' => $request->user_id,
+            'loan_number' => $request->loan_number,
+            'credited_by' => $request->credited_by,
+            'status' => 3, 
+            'final_remark' => $request->final_remark,
+            'additional_remark' => $request->additional_remark,
+            'approval_date' => now(),
+            'loan_type' => "",
+            'branch' => "",
+            'approval_amount' => 0,
+            'repayment_amount' => 0,
+            'disbursal_amount' => 0,
+            'loan_tenure' => "",
+            'tentative_disbursal_date' => "",
+            'loan_tenure_days' => 0,
+            'loan_tenure_date' => "",
+            'roi' => 0,
+            'salary_date' => "",
+            'repay_date' => "",
+            'processing_fee' => 0,
+            'processing_fee_amount' => 0,
+            'gst' => 0,
+            'gst_amount' => 0,
+            'cibil_score' => "",
+            'monthly_income' => 0,
+            'kfs_path' => "",
+            'loan_purpose' => "",
+        ];
+
+        $loanApproval = LoanApproval::updateOrCreate(
+            [
+                'loan_application_id' => $request->loan_application_id,
+                'user_id' => $request->user_id
+            ],
+            $data
+        );
+        
+        $loan = LoanApplication::where([
+            ['user_id', $request->user_id],
+            ['id', $request->loan_application_id]
+        ])->first();
+
+        if ($loan) {
+            $loan->current_step = "loanstatus";
+            $loan->next_step = "loanstatus";
+            $loan->admin_approval_status = "notinterested";
+            $loan->admin_approval_date = now();
+            $loan->save();
+        }
+
+        return redirect()->back()->with('success', 'Loan has been not interested successfully');
+    }
+
     public function store(Request $request)
     {
         if ($request->status == "2") {
             return $this->handleRejectedLoan($request);
+        }
+
+        if ($request->status == "3") {
+            return $this->handleNotInterestedLoan($request);
         }
 
         $request->validate([
@@ -176,11 +237,28 @@ class LoanApprovalController extends Controller
             array_merge($request->all(), ['kfs_path' => $fileName])
         );
 
+        if($request->status == "0"){
+            $next_step = 'loanstatus';
+            $admin_approval_status = 'pending';
+        }else if($request->status == "1"){
+            $next_step = 'viewloan';
+            $admin_approval_status = 'approved';
+        }else if($request->status == "2"){
+            $next_step = 'noteligible';
+            $admin_approval_status = 'rejected';
+        }else if($request->status == "3"){
+            $next_step = 'loanstatus';
+            $admin_approval_status = 'notinterested';
+        }else if($request->status == "4"){
+            $next_step = 'viewloan';
+            $admin_approval_status = 'approvednotinterested';
+        }
+
         // Update Loan Application Steps
         if ($loan) {
             $loan->current_step = "loanstatus";
-            $loan->next_step = $request->status == "1" ? "viewloan" : "noteligible";
-            $loan->admin_approval_status = $request->status == "1" ? "approved" : "rejected";
+            $loan->next_step = $next_step;
+            $loan->admin_approval_status = $admin_approval_status;
             $loan->admin_approval_date = now();
             $loan->save();
         }
