@@ -69,12 +69,6 @@
     </div>
 @endsection
 
-@push('breadcrumb-plugins')
-    @if(request()->routeIs('admin.leads.bsa'))
-        <x-search-form placeholder="Enter Username" />
-    @endif
-@endpush
-
 @push('script')
 <script>
         const searchInput = document.getElementById('d-rejected-search-input');
@@ -92,7 +86,7 @@
         });
 
         function fetchLeads(searchTerm) {
-            const url = `/admin/decision/decision-rejected?search=${searchTerm}`;
+            const url = `/admin/decision/decision-approvedNotInterested?search=${searchTerm}`;
 
             fetch(url, {
                 headers: {

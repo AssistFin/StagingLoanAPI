@@ -92,7 +92,7 @@
         });
 
         function fetchLeads(searchTerm) {
-            const url = `/admin/decision/decision-rejected?search=${searchTerm}`;
+            const url = `/admin/leads/leads-notinterested?search=${searchTerm}`;
 
             fetch(url, {
                 headers: {

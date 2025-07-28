@@ -834,6 +834,37 @@ class LeadController extends Controller
         return view('admin.leads.leads-bsa', compact('leads', 'userIdsWithKyc'));
     }
 
+    public function leadsNotInterested(Request $request)
+    {
+        $query = LoanApplication::with([
+            'user',
+            'personalDetails', 
+            'employmentDetails', 
+            'kycDetails', 
+            'loanDocument',
+            'addressDetails', 
+            'bankDetails',
+            'loanApproval'
+        ])->where('admin_approval_status', 'notinterested')
+          ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+            
+            if ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                        $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+                });
+            }
+        $leads = $query->paginate(25);
+
+        return view('admin.decision.decision-rejected', compact('leads'));
+    }
+
     public function leadsVerify($id = null)
     {
         $lead = LoanApplication::with([

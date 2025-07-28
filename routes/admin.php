@@ -266,6 +266,7 @@ Route::middleware('admin')->group(function () {
         Route::get('leads-all', 'leadsAll')->name('all');
         Route::get('leads-wbs', 'leadsWBS')->name('wbs');
         Route::get('leads-bsa', 'leadsBSA')->name('bsa');
+        Route::get('leads-notinterested', 'leadsNotInterested')->name('notinterested');
         Route::get('verify/{id}', 'leadsVerify')->name('verify');
         Route::delete('delete/{id}', 'deleteLead')->name('delete');
      });
@@ -280,6 +281,8 @@ Route::middleware('admin')->group(function () {
             Route::get('decision-disbursed', 'decisionDisbursed')->name('disbursed');
             Route::get('decision-rejected', 'decisionRejected')->name('rejected');
             Route::get('decision-closed', 'decisionClosed')->name('closed');
+            Route::get('decision-pendingHold', 'decisionPendingHold')->name('pendingHold');
+            Route::get('decision-approvedNotInterested', 'decisionApprovedNotInterested')->name('approvedNotInterested');
     });
 
     // Loan Leads

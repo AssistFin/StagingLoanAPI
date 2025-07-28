@@ -92,7 +92,7 @@
         });
 
         function fetchLeads(searchTerm) {
-            const url = `/admin/decision/decision-rejected?search=${searchTerm}`;
+            const url = `/admin/decision/decision-pendingHold?search=${searchTerm}`;
 
             fetch(url, {
                 headers: {

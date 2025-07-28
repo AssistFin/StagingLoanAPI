@@ -138,6 +138,68 @@ class DecisionController extends Controller
         return view('admin.decision.decision-rejected', compact('leads'));
     }
 
+    public function decisionPendingHold(Request $request)
+    {
+        $query = LoanApplication::with([
+            'user',
+            'personalDetails', 
+            'employmentDetails', 
+            'kycDetails', 
+            'loanDocument',
+            'addressDetails', 
+            'bankDetails',
+            'loanApproval'
+        ])->where('admin_approval_status', 'pending')
+          ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+            
+            if ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                        $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+                });
+            }
+        $leads = $query->paginate(25);
+
+        return view('admin.decision.decision-pendingHold', compact('leads'));
+    }
+
+    public function decisionApprovedNotInterested(Request $request)
+    {
+        $query = LoanApplication::with([
+            'user',
+            'personalDetails', 
+            'employmentDetails', 
+            'kycDetails', 
+            'loanDocument',
+            'addressDetails', 
+            'bankDetails',
+            'loanApproval'
+        ])->where('admin_approval_status', 'approvednotinterested')
+          ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+            
+            if ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                        $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+                });
+            }
+        $leads = $query->paginate(25);
+
+        return view('admin.decision.decision-approvedNotInterested', compact('leads'));
+    }
+
     public function decisionClosed(Request $request)
     {
         $query = LoanApplication::with([
