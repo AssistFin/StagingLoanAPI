@@ -642,7 +642,7 @@ class LoanApplyController extends Controller
                 "customer_bank_account_type" => "SAVINGS"
             ],
             "plan_details" => [
-                "plan_id" => "100000",
+                "plan_id" => "loanone22642",
                 "plan_name" => "LoanOne Repayment",
                 "plan_type" => "ON_DEMAND",
                 "plan_currency" => "INR",
@@ -730,8 +730,8 @@ class LoanApplyController extends Controller
         Log::channel('webhook')->info('Cashfree Enach Webhook Response', $request->all());
 
         $data = $request->input('data');
-        $subscription_id = $data['subscription_id'] ? $data['subscription_id'] : $data['subscription_details']['subscription_id'];
-        $reference_id = $data['cf_subscription_id'] ? $data['cf_subscription_id'] : $data['subscription_details']['cf_subscription_id'];
+        $subscription_id = isset($data['subscription_id']) ? $data['subscription_id'] : ($data['subscription_details']['subscription_id'] ?? null);
+        $reference_id = isset($data['cf_subscription_id']) ? $data['cf_subscription_id'] : ($data['subscription_details']['cf_subscription_id'] ?? null);
         $status = $data['authorization_details']['authorization_status'] ? $data['authorization_details']['authorization_status'] : $data['subscription_details']['subscription_status'];
 
         if($data){

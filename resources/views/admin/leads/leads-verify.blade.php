@@ -32,7 +32,18 @@
                     @endif
                 </div>
                 <div class="card-body text-center">
-                    <img class="account-holder-image rounded border w-100" src="{{ isset($lead->loanDocument) ? url('/admin/secure-file/'.$lead->loanDocument->selfie_image) : asset('assets/admin/images/admin.png') }}" alt="account-holder-image" />
+                    @php
+                        $selfiePath = null;
+
+                        if (isset($lead->loanDocument) && is_object($lead->loanDocument) && !empty($lead->loanDocument->selfie_image)) {
+                            $selfiePath = url('/admin/secure-file/'.$lead->loanDocument->selfie_image);
+                        } elseif (!empty($selfieDoc->selfie_image ?? '')) {
+                            $selfiePath = url('/admin/secure-file/'.$selfieDoc->selfie_image);
+                        } else {
+                            $selfiePath = asset('assets/admin/images/admin.png');
+                        }
+                    @endphp
+                    <img class="account-holder-image rounded border w-100" src="{{ $selfiePath }}" alt="account-holder-image" />
                 </div>
                 <div class="card-footer">
                     <div class="card-title">
@@ -65,7 +76,7 @@
                     
                     <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">History</button>
 
-                    <button class="nav-link {{ $loanApprovalStatus ? '' : 'disabled' }}" id="Creditbureau-tab" data-bs-toggle="tab" data-bs-target="#Creditbureau" type="button" role="tab" aria-controls="Creditbureau" aria-selected="false" {{ $loanApprovalStatus ? '' : 'disabled' }}>Credit Bureau</button>
+                    <button class="nav-link" id="Creditbureau-tab" data-bs-toggle="tab" data-bs-target="#Creditbureau" type="button" role="tab" aria-controls="Creditbureau" aria-selected="false">Credit Bureau</button>
 
                     <button class="nav-link {{ $loanApprovalStatus ? '' : 'disabled' }}" id="Bsareport-tab" data-bs-toggle="tab" data-bs-target="#Bsareport" type="button" role="tab" aria-controls="Bsareport" aria-selected="false" {{ $loanApprovalStatus ? '' : 'disabled' }}>BSA Report</button>
                 </div>
@@ -1008,19 +1019,22 @@
                                     <input type="hidden" id="mobile_{{ $lead->user->id }}" value="{{ $lead->user->mobile }}">
                                     <input type="hidden" id="dob_{{ $lead->user->id }}" value="{{ $panData->date_of_birth ?? '' }}">
                                     <input type="hidden" id="pan_{{ $lead->user->id }}" value="{{ $panData->pan ?? '' }}">
+                                    <input type="hidden" id="gender_{{ $lead->user->id }}" value="{{ isset($aadharData->gender) && $aadharData->gender == 'M' ? '1' : '2' }}">
                                     <input type="hidden" id="houseno_{{ $lead->user->id }}" value="{{ $lead->addressDetails->house_no ?? '' }}">
                                     <input type="hidden" id="city_{{ $lead->user->id }}" value="{{ $lead->addressDetails->city ?? '' }}">
                                     <input type="hidden" id="pincode_{{ $lead->user->id }}" value="{{ $lead->addressDetails->pincode ?? '' }}">
                                     <input type="hidden" id="state_{{ $lead->user->id }}" value="{{ $lead->addressDetails->state ?? '' }}">
                                     <input type="hidden" id="verify_{{ $lead->user->id }}" value="{{ 2 }}">
                                     <td>
-                                        @if (empty($experianCreditBureau->pdf_url))
+                                        @if (empty($experianCreditBureau->response_data))
                                         <button type="button" onclick="checkCreditScore({{ $lead->user->id }})" class="btn btn-danger">Check Credit Score</button>
                                         @endif
-                                        @if (!empty($experianCreditBureau->pdf_url))
-                                            <a href="{{ $experianCreditBureau->pdf_url }}" class="btn btn-primary" id="{{ $panData->pan }}" target="_blank">View Credit Score</a>
-                                            </br></br>
-                                            <a href="{{ $experianCreditBureau->pdf_url }}" class="btn btn-secondary" download>Download PDF</a>
+                                        @if (!empty($experianCreditBureau->response_data))
+
+                                            <button class="btn btn-primary view-report" 
+                                                    data-id="{{ $experianCreditBureau->lead_id }}" 
+                                                    data-url="{{ route('admin.creditbureau.show', $experianCreditBureau->lead_id) }}">View Report
+                                            </button>
                                         @endif
                                     </td>
                                 </tr>
@@ -1069,6 +1083,29 @@
             </div>
         </div> 
     </div>   
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl" style="max-width: 95%;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Experian Report</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="reportContent">
+        <!-- HTML content will be injected here -->
+        <div class="text-center text-muted">Loading...</div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="printDiv('reportContent')">Print</button>
+      </div>
+      
+    </div>
+  </div>
 </div>
 
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
@@ -1615,6 +1652,7 @@
         var date_of_birth = document.getElementById('dob_'+id).value;
         var dob = date_of_birth.replace(/-/g, "");
         var pan = document.getElementById('pan_'+id).value;
+        var gender = document.getElementById('gender_'+id).value;
         var house_no = document.getElementById('houseno_'+id).value;
         var city = document.getElementById('city_'+id).value;
         var pincode = document.getElementById('pincode_'+id).value;
@@ -1632,17 +1670,19 @@
         if(!city) return false;
         if(!pincode) return false;
         if(!state) return false;
+        if(!gender) return false;
+        
 
-        if(firstname && lastname && mobile && dob && pan && house_no && city && pincode && state && loan_no && user_id){
+        if(firstname && lastname && mobile && dob && pan && gender && house_no && city && pincode && state && loan_no && user_id){
             $.ajax({
                 url: "{{ route('admin.creditbureau.checkReport') }}",
                 type: "GET",
                 data: {
-                    firstname : firstname, lastname : lastname, mobile : mobile, dob : dob, pan : pan, house_no : house_no, city : city, pincode : pincode, state : state, loan_no : loan_no, user_id : user_id, verify : verify,
+                    firstname : firstname, lastname : lastname, mobile : mobile, dob : dob, pan : pan, gender : gender, house_no : house_no, city : city, pincode : pincode, state : state, loan_no : loan_no, user_id : user_id, verify : verify,
                 },
                 success: function(response) {
-                    //alert("Success");
-                    location.reload();
+                    alert("Success");
+                    //location.reload();
                 }
             });
         }else{
@@ -1738,4 +1778,29 @@
 
     }
 </script>
+<script>
+    $(document).on('click', '.view-report', function () {
+        const url = $(this).data('url');
+
+        $('#reportContent').html('<div class="text-center text-muted">Loading...</div>');
+        $('#reportModal').modal('show');
+
+        $.get(url, function (response) {
+            $('#reportContent').html(response);
+        }).fail(function () {
+            $('#reportContent').html('<div class="text-danger">Failed to load report.</div>');
+        });
+    });
+
+    function printDiv(divId) {
+        var printContents = document.getElementById(divId).innerHTML;
+        var originalContents = document.body.innerHTML;
+
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+        location.reload(); // Optional: refresh to restore events
+    }
+</script>
+
 @endpush

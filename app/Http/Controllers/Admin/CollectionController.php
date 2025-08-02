@@ -68,7 +68,7 @@ class CollectionController extends Controller
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount',
+                        'lap.repay_date','lap.approval_amount','lap.repayment_amount',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                             (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) +
@@ -91,7 +91,9 @@ class CollectionController extends Controller
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
                     'Total Due' => number_format($totalDues, 0),
+                    'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
+                    
                 ];
             }
 

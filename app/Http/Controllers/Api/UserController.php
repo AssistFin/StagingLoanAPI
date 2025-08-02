@@ -161,7 +161,7 @@ class UserController extends Controller {
                 'loan_account_no' => $loan->loan_account_no,
                 'loan_amount' => optional($loan->loanApproval)->approval_amount,
                 'loan_disbursal_date' => optional($loan->loanDisbursal)->disbursal_date,
-                'repayment_amount' => ($loan->loanApproval->repayment_amount != "0.00") ? optional($loan->loanApproval)->repayment_amount : round($currentRepaymentAmount, 2),
+                'repayment_amount' => isset($loan->loanApproval->repayment_amount) && ($loan->loanApproval->repayment_amount != "0.00") ? optional($loan->loanApproval)->repayment_amount : round($currentRepaymentAmount, 2),
                 'penalAmount' => $penalAmount,
                 'interestAmount' => $interestAmount,
                 'current_repayment_amount' => round($currentRepaymentAmount, 2),

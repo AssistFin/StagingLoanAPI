@@ -12,6 +12,7 @@ use App\Models\UtrCollection;
 use App\Models\LoanApplication;
 use App\Models\CreditBureau;
 use App\Models\CashfreeEnachRequestResponse;
+use App\Models\LoanDocument;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
@@ -893,6 +894,16 @@ class LeadController extends Controller
         ->where('id', '!=', $lead->id) // Exclude current loan
         ->where('admin_approval_status', 'approved')
         ->exists();
+        
+        $selfieDoc = '';
+        if($hasPreviousClosedLoan){
+            $preloanData = LoanApplication::where('user_id', $lead->user->id)
+            ->where('id', '!=', $lead->id) // Exclude current loan
+            ->where('admin_approval_status', 'approved')
+            ->first();
+
+            $selfieDoc = LoanDocument::where('loan_application_id', $preloanData->id)->first();
+        }
 
         $loanUtrCollections = UtrCollection::select(
             'utr_collections.*',
@@ -983,7 +994,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc'));
     }
 
     public function deleteLead($id)

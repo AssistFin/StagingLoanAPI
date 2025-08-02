@@ -35,17 +35,70 @@ class CreditBureauController extends Controller
 
     public function checkReportByExperian(Request $request)
     {
-
         $firstname = $request->get('firstname');
         $lastname = $request->get('lastname');
         $mobile = $request->get('mobile');
         $dob = $request->get('dob');
         $house_no = $request->get('house_no');
         $pan = $request->get('pan');
+        $gender = $request->get('gender');
         $city = $request->get('city');
+        $state = $request->get('state');
         $pincode = $request->get('pincode');
         $loan_no = $request->get('loan_no');
         $user_id = $request->get('user_id');
+        $stateCode = '99';
+        if(ucwords($state) == 'JAMMU & KASHMIR' || ucwords($state) == 'J & K' || ucwords($state) == 'JAMMU AND KASHMIR'){ $stateCode = '01';}
+        if(ucwords($state) == 'HIMACHAL PRADESH'){ $stateCode = '02';}
+        if(ucwords($state) == 'PUNJAB'){ $stateCode = '03';}
+        if(ucwords($state) == 'CHANDIGARH'){ $stateCode = '04';}
+        if(ucwords($state) == 'UTTRANCHAL' || ucwords($state) == 'UTTRAKHAND'){ $stateCode = '05';}
+        if(ucwords($state) == 'HARAYANA'){ $stateCode = '06';}
+        if(ucwords($state) == 'DELHI'){ $stateCode = '07';}
+        if(ucwords($state) == 'RAJASTHAN'){ $stateCode = '08';}
+        if(ucwords($state) == 'UTTAR PRADESH'){ $stateCode = '09';}
+        if(ucwords($state) == 'BIHAR'){ $stateCode = '10';}
+        if(ucwords($state) == 'SIKKIM'){ $stateCode = '11';}
+        if(ucwords($state) == 'ARUNACHAL PRADESH'){ $stateCode = '12';}
+        if(ucwords($state) == 'NAGALAND'){ $stateCode = '13';}
+        if(ucwords($state) == 'MANIPUR'){ $stateCode = '14';}
+        if(ucwords($state) == 'MIZORAM'){ $stateCode = '15';}
+        if(ucwords($state) == 'TRIPURA'){ $stateCode = '16';}
+        if(ucwords($state) == 'MEGHALAYA'){ $stateCode = '17';}
+        if(ucwords($state) == 'ASSAM'){ $stateCode = '18';}
+        if(ucwords($state) == 'WEST BENGAL'){ $stateCode = '19';}
+        if(ucwords($state) == 'JHARKHAND'){ $stateCode = '20';}
+        if(ucwords($state) == 'ORRISA'){ $stateCode = '21';}
+        if(ucwords($state) == 'CHHATTISGARH'){ $stateCode = '22';}
+        if(ucwords($state) == 'MADHYA PRADESH'){ $stateCode = '23';}
+        if(ucwords($state) == 'GUJRAT'){ $stateCode = '24';}
+        if(ucwords($state) == 'DAMAN and DIU'){ $stateCode = '25';}
+        if(ucwords($state) == 'DADARA and NAGAR HAVELI'){ $stateCode = '26';}
+        if(ucwords($state) == 'MAHARASHTRA'){ $stateCode = '27';}
+        if(ucwords($state) == 'ANDHRA PRADESH'){ $stateCode = '28';}
+        if(ucwords($state) == 'KARNATAKA' || $state == 'Karnataka'){ $stateCode = '29';}
+        if(ucwords($state) == 'GOA'){ $stateCode = '30';}
+        if(ucwords($state) == 'LAKSHADWEEP'){ $stateCode = '31';}
+        if(ucwords($state) == 'KERALA'){ $stateCode = '32';}
+        if(ucwords($state) == 'TAMILNADU'){ $stateCode = '33';}
+        if(ucwords($state) == 'PONDICHERRY'){ $stateCode = '34';}
+        if(ucwords($state) == 'ANDAMAN and NICOBAR ISLANDS'){ $stateCode = '35';}
+        if(ucwords($state) == 'TELANGANA'){ $stateCode = '36';}
+
+        // echo '<pre>';
+        // echo '-'.$firstname;
+        // echo '-'.$lastname;
+        // echo '-'.$gender;
+        // echo '-'.$pan;
+        // echo '-'.$dobformattedDate;
+        // echo '-'.$mobile;
+        // echo '-'.$house_no;
+        // echo '-'.$city;
+        // echo '-'.$state;
+        // echo '-'.$stateCode;
+        // echo '-'.$pincode;
+
+        //die('called');
 
         $xmlRequestBody = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:cbv2">
                 <soapenv:Header/>
@@ -65,26 +118,26 @@ class CreditBureauController extends Controller
                                 <PSVFlag>0</PSVFlag>
                             </Application>
                             <Applicant>
-                                <Surname>Sen</Surname>
-                                <FirstName>Tilak</FirstName>
+                                <Surname>'.$lastname.'</Surname>
+                                <FirstName>'.$firstname.'</FirstName>
                                 <MiddleName/>
-                                <GenderCode>2</GenderCode>
-                                <IncomeTaxPAN>TFPPS4289C</IncomeTaxPAN>
+                                <GenderCode>'.$gender.'</GenderCode>
+                                <IncomeTaxPAN>'.$pan.'</IncomeTaxPAN>
                                 <PassportNumber/>
                                 <VoterIdentityCard/>
                                 <Driver_License_Number/>
                                 <Ration_Card_Number/>
                                 <Universal_ID_Number/>
-                                <DateOfBirth>19760817</DateOfBirth>
-                                <MobilePhone>9295390875</MobilePhone>
+                                <DateOfBirth>'.$dob.'</DateOfBirth>
+                                <MobilePhone>'.substr($mobile, -10).'</MobilePhone>
                                 <EMailId></EMailId>
                             </Applicant>
                             <Address>
-                                <FlatNoPlotNoHouseNo>Chinar5 CHS</FlatNoPlotNoHouseNo>
+                                <FlatNoPlotNoHouseNo>'.$house_no.'</FlatNoPlotNoHouseNo>
                                 <BldgNoSocietyName/>
-                                <City>Mumbai</City>
-                                <State>27</State>
-                                <PinCode>400005</PinCode>
+                                <City>'.$city.'</City>
+                                <State>'.$stateCode.'</State>
+                                <PinCode>'.$pincode.'</PinCode>
                             </Address>
                             </INProfileRequest>
                         </urn:in>
@@ -118,15 +171,16 @@ class CreditBureauController extends Controller
         // 4. Store raw request & response
         $randomString = Str::random(10);
         $timestamp = now()->format('Ymd_His');
-        Storage::put("experian/Tilak_{$timestamp}_{$randomString}_request.xml", $xmlRequestBody);
-        Storage::put("experian/Tilak_{$timestamp}_{$randomString}_response.xml", $rawOut);
+        //Storage::put("experian/Tilak_{$timestamp}_{$randomString}_request.xml", $xmlRequestBody);
+        //Storage::put("experian/Tilak_{$timestamp}_{$randomString}_response.xml", $rawOut);
 
+        ini_set('memory_limit', '512M');
         // 5. Generate PDF with key data
-        $pdf = Pdf::loadView('admin.creditbureau.pdf-template', [ 'data' => $jsonData ]);
-        $filename = "Tilak_{$timestamp}_{$randomString}.pdf";
-        Storage::disk('public')->put("experian/credit_reports/$filename", $pdf->output());
-        $pdfPath = asset("storage/experian/credit_reports/$filename");
-
+        //$pdf = Pdf::loadView('admin.creditbureau.pdf-template', [ 'data' => $jsonData ]);
+        //$filename = "Tilak_{$timestamp}_{$randomString}.pdf";
+        //Storage::disk('public')->put("experian/credit_reports/$filename", $pdf->output());
+        //$pdfPath = asset("storage/experian/credit_reports/$filename");
+        $pdfPath = '';
         DB::table('experian_credit_reports')->insert([
             'user_id' => $request->get('user_id'),
             'lead_id' => Str::afterLast($request->get('loan_no'), '-'),
@@ -143,7 +197,8 @@ class CreditBureauController extends Controller
         $userRecords = $query->paginate(25);
 
         $data = $jsonData;
-        $pdfurl = Storage::url($pdfPath);
+        //$pdfurl = Storage::url($pdfPath);
+        $pdfurl = null;
         
         if(empty($request->get('verify'))){
             return view('admin.creditbureau.credit-bureau', compact( 'userRecords', 'data', 'pdfurl'));
@@ -151,32 +206,19 @@ class CreditBureauController extends Controller
         
     }
 
-    public function checkReportByExperian22(Request $request)
+    public function show($id)
     {
-        //require 'vendor/autoload.php';
-        $mail = new PHPMailer(true);
+        $record = DB::table('experian_credit_reports')->where('lead_id', $id)->first();
 
-        try {
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.office365.com'; // e.g., smtp.gmail.com
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'care@loanone.in';
-            $mail->Password   = 'LoanOne2025#@$';
-            $mail->SMTPSecure = 'tls'; // or 'ssl'
-            $mail->Port       = 587;   // or 465
-
-            $mail->setFrom('care@loanone.in', 'Test Mail');
-            $mail->addAddress('tech.assistfin@gmail.com');
-
-            $mail->Subject = 'SMTP Test';
-            $mail->Body    = 'This is a test email sent via SMTP.';
-            $mail->SMTPDebug = 3;
-            $mail->send();
-            echo 'Message has been sent';
-        } catch (Exception $e) {
-            echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+        if (!$record) {
+            return response('Record not found.', 404);
         }
+
+        $data = json_decode($record->response_data, true);
+
+        return view('admin.creditbureau.pdf-template', compact('data'));
     }
+
 
     public function checkBankAccNoByApproval(Request $request){
         $bank_acc_no = $request->get('bank_acc_no');

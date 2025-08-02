@@ -160,7 +160,7 @@ class LoanApprovalController extends Controller
             'processing_fee' => 'nullable|numeric|min:0',
             'cibil_score' => 'nullable|numeric|min:300|max:900',
             'monthly_income' => 'nullable|numeric|min:0',
-            'status' => 'required|in:0,1,2',
+            'status' => 'required|in:0,1,2,3,4',
             'approval_date' => 'nullable|date',
             'loan_purpose' => 'nullable|string',
             'final_remark' => 'nullable|string',

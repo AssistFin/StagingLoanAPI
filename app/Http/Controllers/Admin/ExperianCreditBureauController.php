@@ -38,7 +38,7 @@ class ExperianCreditBureauController extends Controller
                 GROUP BY loan_application_id
             ) as uc'), 'uc.loan_application_id', '=', 'loan_applications.id')
             ->whereNotIn('loan_applications.user_id', $excludedUserIds)
-            ->where('loan_applications.loan_closed_status', 'pending')
+            //->where('loan_applications.loan_closed_status', 'pending')
             ->orderByDesc('loan_applications.user_id')
             ->select(
                 'loan_applications.*',
@@ -62,7 +62,7 @@ class ExperianCreditBureauController extends Controller
 
             foreach ($userRecords as $lead) {
                 $todayDate = $today;
-                
+                //dd($lead->addressDetails);
                 $loan = DB::table('loan_applications as la')
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
@@ -91,7 +91,7 @@ class ExperianCreditBureauController extends Controller
                             ) as total_dues')
                     ])
                     ->where('la.id', $lead->id)
-                    ->where('la.loan_closed_status', 'pending')
+                    //->where('la.loan_closed_status', 'pending')
                     ->first();
 
                 $daysAfterDue = is_numeric($loan->days_after_due ?? null) && $loan->days_after_due > 0 ? $loan->days_after_due : 0;
@@ -151,8 +151,8 @@ class ExperianCreditBureauController extends Controller
                     'Date Closed' => !empty($lead->loan_closed_date) ? date('Y-m-d', strtotime($lead->loan_closed_date)) : '',
                     'Date Reported' => $todayDate,
                     'High Credit/Sanctioned Amt' => $lead->approval_amount,
-                    'Current Balance' => number_format($loan->remaining_principal ?? 0, 2),
-                    'Amt Overdue' => $totalDues,
+                    'Current Balance' => empty($lead->loan_closed_date) ? number_format($loan->remaining_principal ?? 0, 2) : 0,
+                    'Amt Overdue' => number_format($totalDues ?? 0, 2),
                     'No of Days Past Due' => $daysAfterDue,
                     'Old Mbr Code' => '',
                     'Old Mbr Short Name' => '',
