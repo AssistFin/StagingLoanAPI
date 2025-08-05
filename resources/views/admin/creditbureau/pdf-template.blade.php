@@ -68,6 +68,9 @@
 <body>
 
     <h1>Experian Credit Information Report</h1>
+
+    @if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'Normal Response')
+    
     @php
         $reportdateString = (string)($data['CreditProfileHeader']['ReportDate']);
         $carbonDates = \Carbon\Carbon::createFromFormat('Ymd', $reportdateString);
@@ -404,29 +407,33 @@
                         <tr>
                             <td colspan="12" style="padding: 10px 0; border-right: 1px solid #000;">
                                 @foreach($accountHistory as $dpd)
-                                    @php
-                                        $month = $dpd['Month'] ?? '01';
-                                        $year = $dpd['Year'] ?? '2000';
-                                        $monthName = \Carbon\Carbon::createFromDate($year, $month)->format('M');
-                                        $dpdValue = is_array($dpd['Days_Past_Due']) ? 0 : (int) $dpd['Days_Past_Due'];
-                                        $color = $dpdValue == 0 ? '#28a745' : '#f0ad4e'; // green or orange
-                                        $dpdText = str_pad($dpdValue, 3, '0', STR_PAD_LEFT);
-                                    @endphp
-                                    <div style="display: inline-block; text-align: center; margin-right: 8px;">
-                                        <div style="font-size: 12px; color: #007bff; margin-bottom: 3px;">{{ $monthName }}/{{ $year }}</div>
-                                        <div style="
-                                            width: 34px;
-                                            height: 34px;
-                                            line-height: 34px;
-                                            border-radius: 50%;
-                                            background-color: {{ $color }};
-                                            color: white;
-                                            font-weight: bold;
-                                            font-size: 12px;
-                                        ">
-                                            {{ $dpdText }}
+                                    @if(is_array($dpd) && isset($dpd['Month']))
+                                        @php
+                                            $month = $dpd['Month'] ?? '01';
+                                            $year = $dpd['Year'] ?? '2000';
+                                            $monthName = \Carbon\Carbon::createFromDate($year, $month)->format('M');
+                                            $dpdValue = is_array($dpd['Days_Past_Due']) ? 0 : (int) $dpd['Days_Past_Due'];
+                                            $color = $dpdValue == 0 ? '#28a745' : '#f0ad4e'; // green or orange
+                                            $dpdText = str_pad($dpdValue, 3, '0', STR_PAD_LEFT);
+                                        @endphp
+                                        <div style="display: inline-block; text-align: center; margin-right: 8px;">
+                                            <div style="font-size: 12px; color: #007bff; margin-bottom: 3px;">{{ $monthName }}/{{ $year }}</div>
+                                            <div style="
+                                                width: 34px;
+                                                height: 34px;
+                                                line-height: 34px;
+                                                border-radius: 50%;
+                                                background-color: {{ $color }};
+                                                color: white;
+                                                font-weight: bold;
+                                                font-size: 12px;
+                                            ">
+                                                {{ $dpdText }}
+                                            </div>
                                         </div>
-                                    </div>
+                                    @else
+                                        -
+                                    @endif
                                 @endforeach
                             </td>
                         </tr>
@@ -507,6 +514,129 @@
             <p>No details found.</p>
         @endif
     </div>
+
+
+    @else
+
+        @php
+        
+        $errorMessage = '';
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100001 (Please, provide further information)'){
+            $errorMessage = 'Verify that the name and address fields are correctly populated. If the issue pertains, contact the Experian Help Desk providing the enquiry details for further investigation.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100005 (Mandatory field missing)'){
+            $errorMessage = 'Verify that all required mandatory fields are populated.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007 (Invalid date)'){
+            $errorMessage = 'Verify that all dates are entered in the correct format CCYYMMDD.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007 (Invalid Enquiry reason/ Search Type)'){
+            $errorMessage = 'Verify that the entered coded values for Purpose Type and Finance Purpose are valid. Please refer to Web Enquiry specification section 10.6 Enquiry Type (Search type) & Finance Purpose (Financial Purpose) dependency.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007(Invalid PAN)'){
+            $errorMessage = 'Verify that the format of the entered PAN number is valid: PAN number validation rules: 1. If present it must be a minimum of 10 characters. 2. The first five characters must be letters, followed by four numbers, followed by a character. The fourth letter must be either P, F, C, A, H, B, L, J or R.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007 (PAN Expiration date should be later than Issue date)'){
+            $errorMessage = 'Ensure that the PAN issue date is before its expiration date.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007 (Invalid Mobile Number)'){
+            $errorMessage = 'Verify that the format of the entered Mobile Phone number is valid: Mobile Phone validation rules: If entered the Mobile phone number field must be minimum of 10 digits and should not contain the country phone code.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007 (Invalid Gender Code)'){
+            $errorMessage = 'Verify that the entered code value for Gender code is valid: Valid Codes for Gender: 1- Male, 2- Female';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007 (Invalid PIN Code)'){
+            $errorMessage = 'Verify that the format of the entered Postal Code is valid: Postal Code validation rules: 1. Postal Code length is not less than six digits. 2. Last three digits of the Postal Code are not 000';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100007 (Invalid State)'){
+            $errorMessage = 'Verify that the entered code value for State code is valid.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100009 (Purpose Type/ Finance Purpose
+not as per specification)'){
+            $errorMessage = 'Verify that the entered combination of coded values for Purpose Type and Finance Purpose is valid. Please refer to Web Enquiry specification section 10.6 Enquiry Type (Search type) & Finance Purpose (Financial Purpose) dependency.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100008 (Subscriber Code Empty)'){
+            $errorMessage = 'Please contact the Experian Helpdesk to verify this user accounts settings.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100009 (You do not have permission to pull a Client report)'){
+            $errorMessage = 'Please contact the Experian Helpdesk to verify this user accounts settings';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100099 (A technical error occurs, please try again)'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100009 (We are unable to deliver your report through this channel due to a very large number of accounts.)'){
+            $errorMessage = 'Please connect with Support team to get offline report.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'FAILURE'){
+            $errorMessage = 'The data for the consumer has integrity issues, please contact the Experian support team to correct the record.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00019 Login Error. Please contact our Technical Support Center (888.839.0119) if you need assistance decoding the error messages'){
+            $errorMessage = 'Check the User name and password are correct. If the issue pertains, contact the Experian Helpdesk to reset the password for the account.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00038 Application Error. Please contact our Technical Support Center (888.839.0119) if you need assistance decoding the error messages'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00600 Communication timeout. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Verify that the name and address fields are correctly populated. If the issue pertains, contact the Experian Help Desk providing the enquiry details for further investigation.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS100001 (Please, provide further information)'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00601 The server did not respond. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00602 Communication error. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00603 Communication error. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00604 Communication error. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00605 Communication error. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00606 Communication error. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00606 Communication error. Please contact Customer Support Helpdesk at +91 (0) 22 6641 9010 for technical assistance.'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time.';
+        }
+
+        if(isset($data['UserMessage']) && (string)($data['UserMessage']['UserMessageText']) == 'SYS00038 Application Error. Please contact our Technical Support Center (888.839.0119) if you need assistance decoding the error messages'){
+            $errorMessage = 'Please notify the Experian Helpdesk of the issue and retry the enquiry at a later time. (Comment: This error has been reported several times in the past both for Web and CPU enquiries. Investigation shows that the error occurred when enquiry data was not saved into APPCLIANTS table and Transact attempted to write another record with the very same SYS_RECORDKEY thus leading to primary key violation. 4121).';
+        }
+
+        @endphp
+        <p> {{ $errorMessage }} </p>
+    @endif
 
     <!-- FOOTER -->
     <div class="footer">

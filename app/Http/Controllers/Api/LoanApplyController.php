@@ -47,8 +47,15 @@ class LoanApplyController extends Controller
                 ->select('full_address')
                 ->first();
 
+            $enachData = DB::table('cashfree_enach_request_response_data')
+                ->where('subscription_id', $loans['loan_no'])
+                ->select('status')
+                ->orderBy('id', 'desc')
+                ->first();
+
             if ($loans) {
                 $loans["aadharAddress"] = $aadharAddress;
+                $loans["enachData"] = !empty($enachData) ? $enachData : '';
             }
 
             return response()->json(['status' => true, 'data' => $loans]);
@@ -642,7 +649,7 @@ class LoanApplyController extends Controller
                 "customer_bank_account_type" => "SAVINGS"
             ],
             "plan_details" => [
-                "plan_id" => "loanone22642",
+                "plan_id" => "100000",
                 "plan_name" => "LoanOne Repayment",
                 "plan_type" => "ON_DEMAND",
                 "plan_currency" => "INR",
@@ -696,7 +703,7 @@ class LoanApplyController extends Controller
 
             if ($loan) {
                 $loan->current_step = 'enachmandate';
-                $loan->next_step = 'loandisbursal';
+                $loan->next_step = 'cashfreeredirect';
                 $loan->save();
             }
 
