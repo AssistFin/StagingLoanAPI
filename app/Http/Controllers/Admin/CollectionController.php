@@ -87,7 +87,7 @@ class CollectionController extends Controller
 
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
-                    'Customer Mobile' => '="'. $lead->user->mobile.'"',
+                    'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
                     'Total Due' => number_format($totalDues, 0),
@@ -250,7 +250,7 @@ class CollectionController extends Controller
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount',
+                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                             (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) +
@@ -267,15 +267,21 @@ class CollectionController extends Controller
                 $totalDues = !empty($loans->total_dues) ? (int)$loans->total_dues : 0;
                 $daysAfterDue = !empty($loans->days_after_due) ? (int)$loans->days_after_due : 0;
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
+                
+                $userAddress = DB::table('aadhaar_data')->where('user_id', $lead->user->id)->first();
 
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
-                    'Customer Mobile' => '="'. $lead->user->mobile.'"',
+                    'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
                     'Total Due' => number_format($totalDues, 0),
+                    'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
                     'DPD' => $daysAfterDue,
+                    'Email' => $lead->user->email,
+                    'Loan Tenure' => $loans->loan_tenure_days ?? 0,
+                    'Full Address' => isset($userAddress) ? $userAddress->full_address : '',
                 ];
             }
 
