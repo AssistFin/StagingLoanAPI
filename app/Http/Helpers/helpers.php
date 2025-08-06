@@ -532,7 +532,7 @@ function sendMailViaSMTP($subject, $message, $to, $attachment = null){
         $mail->setFrom(config('services.smtp.address'), config('services.smtp.name'));
         if($to){
             $mail->addAddress($to);
-            $mail->addCC('tech.assistfin@gmail.com');
+            //$mail->addCC('tech.assistfin@gmail.com');
         }else{
             $mail->addAddress('tech.assistfin@gmail.com');
         }

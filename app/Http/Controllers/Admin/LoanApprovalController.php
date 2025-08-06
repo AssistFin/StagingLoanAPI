@@ -80,6 +80,12 @@ class LoanApprovalController extends Controller
             $loan->save();
         }
 
+        $adminData = auth('admin')->user();
+        
+        if ($adminData) {
+            eventLog($adminData->id, $request->user_id, 'Loan Approval - rejected', json_encode($request->all()));
+        }
+
         return redirect()->back()->with('success', 'Loan has been rejected successfully');
     }
 
@@ -135,6 +141,12 @@ class LoanApprovalController extends Controller
             $loan->admin_approval_status = "notinterested";
             $loan->admin_approval_date = now();
             $loan->save();
+        }
+
+        $adminData = auth('admin')->user();
+        
+        if ($adminData) {
+            eventLog($adminData->id, $request->user_id, 'Loan Approval - notinterested', json_encode($request->all()));
         }
 
         return redirect()->back()->with('success', 'Loan has been not interested successfully');
@@ -274,13 +286,13 @@ class LoanApprovalController extends Controller
         Thank you for choosing LoanOne,<br>
         powered by Altura Financial Services Ltd.";
         
-        $mailSend = sendMailViaSMTP($subject, $message, null, null);
+        $mailSend = sendMailViaSMTP($subject, $message, $user->email, null);
         Log::info("Mail Send Via SMTP For Loan Approval and the response is : {$mailSend}");
         //EOC By Ankit Tiwari
         $adminData = auth('admin')->user();
         
         if ($adminData) {
-            eventLog($adminData->id, $user->id, 'Loan Approval', json_encode($request->all()));
+            eventLog($adminData->id, $user->id, 'Loan Approval - '.$admin_approval_status, json_encode($request->all()));
         }
         return redirect()->back()->with('success', 'Loan Approved and KFS PDF Generated Successfully');
     }

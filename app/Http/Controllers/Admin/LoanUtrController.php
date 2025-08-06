@@ -90,7 +90,7 @@ Customer Support | LoanOne";
         // 3️⃣ Save PDF to storage if needed (optional)
         Storage::put('noc/'.$loanData->loan_no.'_noc.pdf', $pdf->output());
         $fullPathToPDF = storage_path('app/noc/'.$loanData->loan_no.'_noc.pdf');
-        $mailSend = sendMailViaSMTP($subject, $message, $to = null, $fullPathToPDF);
+        $mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
         //$mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
 
         Log::info("Mail Send Via SMTP and te response is : {$mailSend}");
