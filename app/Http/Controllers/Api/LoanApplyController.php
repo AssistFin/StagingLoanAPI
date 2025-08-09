@@ -658,7 +658,7 @@ class LoanApplyController extends Controller
                 "plan_max_cycles" => 10,
                 "plan_note" => "One-time charge manually triggered"
             ],
-            "subscription_id" => $request->loan_number.'-'.$cashfreeDataCount+1,
+            "subscription_id" => $request->loan_number.'999-'.$cashfreeDataCount+1,
             "authorization_details" => [
             "authorization_amount" => 100,
             "authorization_amount_refund" => true,

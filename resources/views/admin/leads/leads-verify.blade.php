@@ -653,9 +653,19 @@
                             @endif --}}
                             @if(!isset($loanDisbursal))
                                     <!-- Submit Button -->
-                                <div class="col-12 mt-3">
-                                    <button type="submit" id="loanApprovalForm_submitbtn" class="btn btn-primary">{{isset($loanApproval) && $loanApproval->status == "1" ? "Modify Loan" : "Approve Loan"}}</button>
-                                </div>
+
+                                @if(isset($loanApproval) && $loanApproval->status == "1")
+                                    <!-- Show modal trigger button -->
+                                    <div class="col-12 mt-3">
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#confirmModal">
+                                        Modify Loan</button>
+                                    </div>
+                                @else
+                                    <!-- Direct submit button -->
+                                    <div class="col-12 mt-3">
+                                        <button type="submit" id="loanApprovalForm_submitbtn" class="btn btn-primary">Approve Loan</button>
+                                    </div>
+                                @endif
                             @endif
                         </div>
                     </form>
@@ -1108,6 +1118,29 @@
   </div>
 </div>
 
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Confirm Loan Approval Modification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                Are you sure, you want to modify this approved loan ?
+            </div>
+
+            <div class="modal-footer">
+                <button type="submit" id="loanApprovalForm_submitbtn" value='1' class="btn btn-primary">Yes, Continue</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <!-- Form submission -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
   <div id="copyToast" class="toast align-items-center text-white bg-success border-0" role="alert">
     <div class="d-flex">
@@ -1144,7 +1177,12 @@
                 return;
             }
 
-            if (statusVal == '2') {
+            if (statusVal == '1') {
+                if ($("#loanApprovalForm").valid()) {
+                    $('#loanApprovalForm')[0].submit();
+                }
+
+            } else if (statusVal == '2') {
                 $("#loanApprovalForm").validate().resetForm();
                 $(".is-invalid").removeClass("is-invalid");
 
@@ -1631,7 +1669,7 @@
         } else if (!this.value.trim()) {
             principalError.textContent = 'Principal amount is required';
             principalError.classList.remove('error-message');
-        } else if (currentVal < remainingPrincipal) {
+        } else if (statusSelect.value === 'Closed' && currentVal < remainingPrincipal) {
             principalError.textContent = 'Principal amount cannot be less than the remaining principal amount {{ (!empty($loans->remaining_principal)) ? number_format($loans->remaining_principal, 2) : 0 }}';
             principalError.classList.remove('error-message');
         }
