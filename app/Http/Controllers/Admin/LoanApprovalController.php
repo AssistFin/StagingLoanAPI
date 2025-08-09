@@ -6,6 +6,7 @@ use App\Models\LoanApproval;
 use Illuminate\Http\Request;
 use App\Models\LoanApplication;
 use App\Models\LoanBankDetails;
+use App\Models\CashfreeEnachRequestResponse;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -181,7 +182,7 @@ class LoanApprovalController extends Controller
             'ifsccode' => 'required|string',
             'bank_name' => 'required|string',
         ]);
-        //dd($request->input('ifsccode'));
+        
         // Calculate financial details
         $approvalAmount = $request->input('approval_amount'); 
         $processingFeePercentage = $request->input('processing_fee'); 
@@ -195,50 +196,151 @@ class LoanApprovalController extends Controller
 
         // Fetch User & Loan Details
         $loan = LoanApplication::where([['user_id', $request->user_id], ['id', $request->loan_application_id]])->first();
-
         $user = $loan->user; // Assuming relationship exists
-
-        // Define Secure Storage Path
-        $securePath = config('services.docs.upload_kfs_doc') . "/documents/loan_" . $request->loan_application_id . "/kfs";
-        if (!file_exists($securePath)) {
-            mkdir($securePath, 0777, true);
-        }
-
-        $userAddress = DB::table('aadhaar_data')->where('user_id', $user->id)->first();
         
-        $loanAmount = $request->approval_amount;
-        $totalInterest = $request->repayment_amount - $request->approval_amount;
-        $loanTenureDays = $request->loan_tenure_days;
+        $bankData = DB::table('loan_bank_details')->where('loan_application_id', $request->loan_application_id)->first();
 
-        $fileName = "KFS_" . uniqid() . ".pdf";
+        $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $request->loan_application_id)->first();
 
-        if($request->status == "1") {
-            $apr = $this->calculateAPRUsingStandardFormula($loanAmount, $request->roi, $request->processing_fee, 18, 0, $loanTenureDays);
+        $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $loan->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
 
-            $pdf = Pdf::loadView('templates.kfs', [
-                'borrower_name' => $user->firstname . " " . $user->lastname,
-                'sanction_date' => now()->format('Y-m-d'),
-                'borrower_address' => isset($userAddress) ? $userAddress->full_address : "",
-                'loan_application_no' => $request->loan_number,
-                'application_date' => $loan->created_at->format('Y-m-d'),
-                'loan_amount' => $loanAmount,
-                'loan_sanctioned_amount' => $request->disbursal_amount,
-                'rate_of_interest' => $request->roi,
-                'loan_tenure' => $loanTenureDays,
-                'processing_fee' => $request->processing_fee,
-                'processingFeeAmount' => $processingFeeAmount,
-                'disbursal_amount' => $request->disbursal_amount,
-                'total_repayment_amount' => $request->repayment_amount,
-                'ECSGST' => $request->gst_amount,
-                'totalInterest' => $totalInterest,
-                'penal_charges' => 0, 
-                'apr' => round($apr, 2) 
-            ], ['encoding' => 'UTF-8'])->setPaper('A4')
-            ->setOption('defaultFont', 'Arial Unicode MS')
-            ->setOption('enable_local_file_access', true);
+        $bank_details = $approve_details = 0; 
 
-            $pdf->save($securePath . "/" . $fileName);
+        if($bankData->account_number != $request->input('bank_acc_no')){
+            $bank_details = 1;
         }
+
+        if($bankData->ifsc_code != $request->input('ifsccode')){
+            $bank_details = 1;
+        }
+
+        if($bankData->bank_name != $request->input('bank_name')){
+            $bank_details = 1;
+        }
+
+        if($loan->branch != $request->input('branch')){
+            $approve_details = 1;
+        }
+
+        if($loan->approval_amount != $request->input('approval_amount')){
+            $approve_details = 1;
+        }
+
+        if($loan->processing_fee != $request->input('processing_fee')){
+            $approve_details = 1;
+        }
+
+        if($loan->processing_fee_amount != $request->input('processing_fee_amount')){
+            $approve_details = 1;
+        }
+
+        if($loan->gst != $request->input('gst')){
+            $approve_details = 1;
+        }
+
+        if($loan->gst_amount != $request->input('gst_amount')){
+            $approve_details = 1;
+        }
+
+        if($loan->salary_date != $request->input('salary_date')){
+            $approve_details = 1;
+        }
+
+        if($loan->tentative_disbursal_date != $request->input('tentative_disbursal_date')){
+            $approve_details = 1;
+        }
+
+        if($loan->repay_date != $request->input('repay_date')){
+            $approve_details = 1;
+        }
+
+        if($loan->loan_tenure_days != $request->input('loan_tenure_days')){
+            $approve_details = 1;
+        }
+
+        if($loan->loan_tenure_date != $request->input('loan_tenure_date')){
+            $approve_details = 1;
+        }
+
+        if($loan->roi != $request->input('roi')){
+            $approve_details = 1;
+        }
+
+        if($loan->repayment_amount != $request->input('repayment_amount')){
+            $approve_details = 1;
+        }
+
+        if($loan->cibil_score != $request->input('cibil_score')){
+            $approve_details = 1;
+        }
+
+        if($loan->monthly_income != $request->input('monthly_income')){
+            $approve_details = 1;
+        }
+
+        if($loan->approval_date != $request->input('approval_date')){
+            $approve_details = 1;
+        }
+
+        if($loan->final_remark != $request->input('final_remark')){
+            $approve_details = 1;
+        }
+
+        if($loan->additional_remark != $request->input('additional_remark')){
+            $approve_details = 1;
+        }
+
+        $kfsDoc = $loanApprovalData->kfs_path;
+        $cashfreeData;
+
+        if($bank_details && $cashfreeData){
+            CashfreeEnachRequestResponse::where('subscription_id', $loan->loan_no)->delete();
+        }
+
+        if($approve_details && !empty($kfsDoc)){
+            $fileName = null;
+        }
+            // Define Secure Storage Path
+            $securePath = config('services.docs.upload_kfs_doc') . "/documents/loan_" . $request->loan_application_id . "/kfs";
+            if (!file_exists($securePath)) {
+                mkdir($securePath, 0777, true);
+            }
+
+            $userAddress = DB::table('aadhaar_data')->where('user_id', $user->id)->first();
+            
+            $loanAmount = $request->approval_amount;
+            $totalInterest = $request->repayment_amount - $request->approval_amount;
+            $loanTenureDays = $request->loan_tenure_days;
+
+            $fileName = "KFS_" . uniqid() . ".pdf";
+
+            if($request->status == "1") {
+                $apr = $this->calculateAPRUsingStandardFormula($loanAmount, $request->roi, $request->processing_fee, 18, 0, $loanTenureDays);
+
+                $pdf = Pdf::loadView('templates.kfs', [
+                    'borrower_name' => $user->firstname . " " . $user->lastname,
+                    'sanction_date' => now()->format('Y-m-d'),
+                    'borrower_address' => isset($userAddress) ? $userAddress->full_address : "",
+                    'loan_application_no' => $request->loan_number,
+                    'application_date' => $loan->created_at->format('Y-m-d'),
+                    'loan_amount' => $loanAmount,
+                    'loan_sanctioned_amount' => $request->disbursal_amount,
+                    'rate_of_interest' => $request->roi,
+                    'loan_tenure' => $loanTenureDays,
+                    'processing_fee' => $request->processing_fee,
+                    'processingFeeAmount' => $processingFeeAmount,
+                    'disbursal_amount' => $request->disbursal_amount,
+                    'total_repayment_amount' => $request->repayment_amount,
+                    'ECSGST' => $request->gst_amount,
+                    'totalInterest' => $totalInterest,
+                    'penal_charges' => 0, 
+                    'apr' => round($apr, 2) 
+                ], ['encoding' => 'UTF-8'])->setPaper('A4')
+                ->setOption('defaultFont', 'Arial Unicode MS')
+                ->setOption('enable_local_file_access', true);
+
+                $pdf->save($securePath . "/" . $fileName);
+            }
 
         // Save Loan Approval with KFS Path
         $loanApproval = LoanApproval::updateOrCreate(
@@ -286,8 +388,8 @@ class LoanApprovalController extends Controller
         Thank you for choosing LoanOne,<br>
         powered by Altura Financial Services Ltd.";
         
-        $mailSend = sendMailViaSMTP($subject, $message, $user->email, null);
-        Log::info("Mail Send Via SMTP For Loan Approval and the response is : {$mailSend}");
+        //$mailSend = sendMailViaSMTP($subject, $message, $user->email, null);
+        //Log::info("Mail Send Via SMTP For Loan Approval and the response is : {$mailSend}");
         //EOC By Ankit Tiwari
         $adminData = auth('admin')->user();
         

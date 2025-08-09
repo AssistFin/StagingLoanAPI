@@ -26,6 +26,7 @@ class ExperianCreditBureauController extends Controller
                 'kycDetails',
                 'loanDocument',
                 'bankDetails',
+                'addressDetails',
             ])
             ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'loan_applications.id')
             ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'loan_applications.id')
@@ -33,12 +34,13 @@ class ExperianCreditBureauController extends Controller
             ->join('loan_address_details', 'loan_address_details.loan_application_id', '=', 'loan_applications.id')
             ->leftJoin('aadhaar_data', 'aadhaar_data.user_id', '=', 'loan_applications.user_id')
             ->leftJoin(DB::raw('(
-                SELECT loan_application_id, SUM(collection_amt) as total_paid
+                SELECT loan_application_id, SUM(collection_amt) as total_paid, collection_date
                 FROM utr_collections
                 GROUP BY loan_application_id
             ) as uc'), 'uc.loan_application_id', '=', 'loan_applications.id')
             ->whereNotIn('loan_applications.user_id', $excludedUserIds)
-            //->where('loan_applications.loan_closed_status', 'pending')
+            ->where('loan_applications.admin_approval_status', 'approved')
+            ->where('loan_applications.loan_disbursal_status', 'disbursed')
             ->orderByDesc('loan_applications.user_id')
             ->select(
                 'loan_applications.*',
@@ -47,7 +49,9 @@ class ExperianCreditBureauController extends Controller
                 'pan_data.pan as pan',
                 'pan_data.date_of_birth as date_of_birth',
                 'aadhaar_data.aadhaar_number as aadhaar_number',
+                'aadhaar_data.gender as gender',
                 'uc.total_paid as total_paid',
+                'uc.collection_date as collection_date',
                 'loan_address_details.house_no as house_no',
                 'loan_address_details.city as city',
                 'loan_address_details.state as state',
@@ -62,8 +66,21 @@ class ExperianCreditBureauController extends Controller
 
             foreach ($userRecords as $lead) {
                 $todayDate = $today;
-                //dd($lead->addressDetails);
+                $closedDate = !empty($lead->loan_closed_date) ? Carbon::parse($lead->loan_closed_date)->toDateString() : null;
+
+                if ($closedDate) {
+                    $dpdExpression = DB::raw('
+                        IF(DATE("' . $lead->collection_date . '") > lap.repay_date,
+                            DATEDIFF(DATE("' . $lead->collection_date . '"), lap.repay_date),
+                            0
+                        ) as dpd
+                    ');
+                } else {
+                    $dpdExpression = DB::raw('0 as dpd');
+                }
+
                 $loan = DB::table('loan_applications as la')
+                    ->select('loan_applications.admin_approval_status','loan_applications.loan_disbursal_status')
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                     ->leftJoin(DB::raw('(
@@ -72,6 +89,7 @@ class ExperianCreditBureauController extends Controller
                         GROUP BY loan_application_id
                     ) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
+                        'lap.repay_date',
                         DB::raw("DATEDIFF('$todayDate', ld.created_at) as days_since_disbursal"),
                         DB::raw("DATEDIFF('$todayDate', lap.repay_date) as days_after_due"),
                         DB::raw('IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount) as remaining_principal'),
@@ -88,13 +106,22 @@ class ExperianCreditBureauController extends Controller
                             IF(DATEDIFF("' . $todayDate . '", lap.repay_date) > 0,
                                 (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $todayDate . '", lap.repay_date),
                                 0
-                            ) as total_dues')
+                            ) as total_dues'),
+                            $dpdExpression,
                     ])
                     ->where('la.id', $lead->id)
-                    //->where('la.loan_closed_status', 'pending')
+                    ->where('la.admin_approval_status', 'approved')
+                    ->where('la.loan_disbursal_status', 'disbursed')
                     ->first();
 
                 $daysAfterDue = is_numeric($loan->days_after_due ?? null) && $loan->days_after_due > 0 ? $loan->days_after_due : 0;
+                
+                if(!empty($lead->loan_closed_date) && !empty($loan->repay_date)){
+                    $daysAfterDue = $loan->dpd;
+                }else{
+                    $daysAfterDue = $daysAfterDue;
+                }
+
                 $totalDues = $loan->total_dues ?? 0;
 
                 $full_address = $lead->house_no ? $lead->house_no.', '.$lead->city : '';
@@ -108,9 +135,12 @@ class ExperianCreditBureauController extends Controller
                 elseif ($daysAfterDue > 90) $asset_classification = 'NPA';
 
                 $csvData[] = [
+                    // 'Repay Date' => !empty($loan->repay_date) ? $loan->repay_date : '',
+                    // 'Closed Date' => !empty($lead->loan_closed_date) ? $lead->loan_closed_date : '',
+                    // 'Dpd' => $loan->dpd,
                     'Consumer Name' => $lead->user->firstname.' '.$lead->user->lastname,
                     'Date of Birth' => '="'.$lead->date_of_birth.'"',
-                    'Gender' => $lead->gender,
+                    'Gender' => !empty($lead->gender) && $lead->gender == 'M' ? 'Male' : 'Female',
                     'Income Tax ID Number' => '="'.$lead->pan.'"',
                     'Passport Number' => '',
                     'Passport Issue Date' => '',
@@ -152,7 +182,7 @@ class ExperianCreditBureauController extends Controller
                     'Date Reported' => $todayDate,
                     'High Credit/Sanctioned Amt' => $lead->approval_amount,
                     'Current Balance' => empty($lead->loan_closed_date) ? number_format($loan->remaining_principal ?? 0, 2) : 0,
-                    'Amt Overdue' => number_format($totalDues ?? 0, 2),
+                    'Amt Overdue' => empty($lead->loan_closed_date) ? number_format($totalDues ?? 0, 2) : 0,
                     'No of Days Past Due' => $daysAfterDue,
                     'Old Mbr Code' => '',
                     'Old Mbr Short Name' => '',
