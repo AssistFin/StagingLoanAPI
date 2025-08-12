@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Models\LoanEmploymentDetails;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class LoanApplyController extends Controller
 {
@@ -47,15 +48,44 @@ class LoanApplyController extends Controller
                 ->select('full_address')
                 ->first();
 
-            $enachData = DB::table('cashfree_enach_request_response_data')
+            if ($loans) {
+                $enachData = DB::table('cashfree_enach_request_response_data')
                 ->where('subscription_id', $loans['loan_no'])
-                ->select('status')
+                ->select('status', 'created_at')
                 ->orderBy('id', 'desc')
                 ->first();
 
-            if ($loans) {
+                if (!empty($enachData)) {
+                    $status = $enachData->status;
+                    $createdAt = Carbon::parse($enachData->created_at);
+                    $now = Carbon::now();
+
+                    // Check if status is INITIALIZED and time diff > 60 seconds
+                    if ($status === 'INITIALIZED' && $createdAt->diffInSeconds($now) > 60) {
+                        $status = 'FAILED';
+                    }
+
+                    $loans["enachData"] = [
+                        'status' => $status,
+                        'created_at' => $createdAt
+                    ];
+                } else {
+                    $loans["enachData"] = '';
+                }
                 $loans["aadharAddress"] = $aadharAddress;
-                $loans["enachData"] = !empty($enachData) ? $enachData : '';
+            }
+
+            $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
+            if(!empty($loanApprovalData->kfs_path)){
+                $loanNo = $loans['id'];
+                $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
+                if (!file_exists($outputPath)) {
+                    $arrayData["loan_application_id"] = $loans['id'];
+                    $arrayData["current_step"] = 'loanstatus';
+                    $arrayData["next_step"] = 'viewloan';
+                    $requestObj = Request::create('', 'POST', $arrayData);
+                    $this->updateLoanStep($requestObj);
+                }
             }
 
             return response()->json(['status' => true, 'data' => $loans]);
@@ -565,17 +595,45 @@ class LoanApplyController extends Controller
 
         $pdf->Output($outputPath, 'F');
 
-        $approval = LoanApplication::where([
-            ['id', $request->loan_application_id],
-            ['user_id', $request->user_id],
-            ['loan_no', $request->loan_number],
-        ])->update([
-            "current_step" => "viewloan",
-            "next_step" => "enachmandate",
-            "user_acceptance_status" => "accepted",
-            "user_acceptance_date" => now()
-        ]);
+        $cashfreeExistingData = CashfreeEnachRequestResponse::where('subscription_id', $request->loan_number)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
 
+        if($cashfreeExistingData && $cashfreeExistingData->status == 'ACTIVE'){
+            $approval = LoanApplication::where([
+                ['id', $request->loan_application_id],
+                ['user_id', $request->user_id],
+                ['loan_no', $request->loan_number],
+            ])->update([
+                "current_step" => "viewloan",
+                "next_step" => "loandisbursal",
+                "user_acceptance_status" => "accepted",
+                "user_acceptance_date" => now()
+            ]);
+        }else{
+            $approval = LoanApplication::where([
+                ['id', $request->loan_application_id],
+                ['user_id', $request->user_id],
+                ['loan_no', $request->loan_number],
+            ])->update([
+                "current_step" => "viewloan",
+                "next_step" => "enachmandate",
+                "user_acceptance_status" => "accepted",
+                "user_acceptance_date" => now()
+            ]);
+        }
+
+        $LoanApproval = LoanApproval::where([
+                ['user_id', auth()->id()],
+                ['loan_application_id', $request->loan_application_id]
+            ])->first();
+
+            if ($LoanApproval) {
+                $LoanApproval->loan_purpose = 'yes';
+                $LoanApproval->save();
+            }
+
+        if($cashfreeExistingData){
+            return response()->json(['status' => false, 'message' => 'Loan offer accepted.', 'data' => $approval]);
+        }
         return response()->json(['status' => true, 'message' => 'Loan offer accepted.', 'data' => $approval]);
     }
 
@@ -621,6 +679,26 @@ class LoanApplyController extends Controller
 
     public function createEnachMandate(Request $request)
     {
+        $loanId = $request->loan_number;
+        $parts = explode('-', $loanId);
+        $lastPart = end($parts); 
+        $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $lastPart)->first();
+        if(!empty($loanApprovalData->kfs_path)){
+            $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$lastPart}/kfs/updated_{$loanApprovalData->kfs_path}";
+            if (!file_exists($outputPath) || $loanApprovalData->loan_purpose == 'no' ) {
+                $arrayData["loan_application_id"] = $lastPart;
+                $arrayData["current_step"] = 'loanstatus';
+                $arrayData["next_step"] = 'viewloan';
+                $requestObj = Request::create('', 'POST', $arrayData);
+                $this->updateLoanStep($requestObj);
+
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Due to modify loan',
+                ]);
+            }
+        }
+
         $cashfreeData = DB::table('cashfree_enach_request_response_data')
                 ->where('subscription_id', $request->loan_number)
                 ->get();
@@ -658,7 +736,7 @@ class LoanApplyController extends Controller
                 "plan_max_cycles" => 10,
                 "plan_note" => "One-time charge manually triggered"
             ],
-            "subscription_id" => $request->loan_number.'999-'.$cashfreeDataCount+1,
+            "subscription_id" => $request->loan_number.'-'.$cashfreeDataCount+100,
             "authorization_details" => [
             "authorization_amount" => 100,
             "authorization_amount_refund" => true,
@@ -709,7 +787,7 @@ class LoanApplyController extends Controller
 
             $cashfreeData = CashfreeEnachRequestResponse::create([
                 'subscription_id' => $request->loan_number,
-                'alt_subscription_id' => $request->loan_number.'-'.$cashfreeDataCount+1,
+                'alt_subscription_id' => $request->loan_number.'-'.$cashfreeDataCount+100,
                 'request_data' => json_encode($data),
                 'status' => 'INITIALIZED',
             ]);

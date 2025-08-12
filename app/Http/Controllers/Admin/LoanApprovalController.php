@@ -290,11 +290,16 @@ class LoanApprovalController extends Controller
             $approve_details = 1;
         }
 
-        $kfsDoc = $loanApprovalData->kfs_path;
-        $cashfreeData;
+        if(!empty($loanApprovalData->kfs_path)){
+            $kfsDoc = $loanApprovalData->kfs_path;
+        }
 
         if($bank_details && $cashfreeData){
-            CashfreeEnachRequestResponse::where('subscription_id', $loan->loan_no)->delete();
+            $cashfreeExistingData = CashfreeEnachRequestResponse::where('subscription_id', $loan->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
+            if ($cashfreeExistingData) {
+                $cashfreeExistingData->status = 'INACTIVE';
+                $cashfreeExistingData->save();
+            }
         }
 
         if($approve_details && !empty($kfsDoc)){
@@ -343,13 +348,23 @@ class LoanApprovalController extends Controller
             }
 
         // Save Loan Approval with KFS Path
-        $loanApproval = LoanApproval::updateOrCreate(
-            [
-                'loan_application_id' => $request->loan_application_id,
-                'user_id' => $request->user_id
-            ],
-            array_merge($request->all(), ['kfs_path' => $fileName])
-        );
+        if( $approve_details ){
+            $loanApproval = LoanApproval::updateOrCreate(
+                [
+                    'loan_application_id' => $request->loan_application_id,
+                    'user_id' => $request->user_id
+                ],
+                array_merge($request->all(), ['kfs_path' => $fileName, 'loan_purpose' => 'no'])
+            );
+        }else{
+            $loanApproval = LoanApproval::updateOrCreate(
+                [
+                    'loan_application_id' => $request->loan_application_id,
+                    'user_id' => $request->user_id
+                ],
+                array_merge($request->all(), ['kfs_path' => $fileName])
+            );
+        }
 
         if($request->status == "0"){
             $next_step = 'loanstatus';
