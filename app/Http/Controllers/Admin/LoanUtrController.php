@@ -56,7 +56,7 @@ class LoanUtrController extends Controller
             'created_by' => $request->created_by, 
         ]);
 
-        if($request->status === "Closed") {
+        if($request->status === "Closed" || $request->status === "Settlement") {
         
         $loanData = LoanApplication::where([['user_id', $request->user_id], ['id', $request->loan_application_id]])->first();
         $approvalData = LoanApproval::where('loan_application_id', $request->loan_application_id)->first();

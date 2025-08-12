@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\ScoreMeWebhookController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\EventLogController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\OSReportController;
 
 Route::controller(LoginController::class)->group(function () {
     Route::get('/', 'showLoginForm')->name('login');
@@ -546,6 +547,13 @@ Route::middleware('admin')->group(function () {
         ->name('eventlog.')
         ->group(function () {
             Route::get('eventlog/index', 'index')->name('index');
+
+    });
+
+    Route::controller(OSReportController::class)
+        ->name('osreport.')
+        ->group(function () {
+            Route::get('osreport/index', 'index')->name('index');
 
     });
 

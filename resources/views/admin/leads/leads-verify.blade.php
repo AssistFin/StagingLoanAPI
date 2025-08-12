@@ -982,7 +982,7 @@
                                     <th>Payment Link</th>
                                 </tr>
                             </thead>
-                            @if($loans)
+                            @if($loans && !$settlementStatus)
                             <tbody>
                                 <tr>
                                     <td>{{ $loans->loan_no }}</td>

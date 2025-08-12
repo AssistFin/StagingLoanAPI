@@ -905,6 +905,8 @@ class LeadController extends Controller
             $selfieDoc = LoanDocument::where('loan_application_id', $preloanData->id)->first();
         }
 
+        $settlementStatus = UtrCollection::where('loan_application_id', $id)->where('status','Settlement')->first();
+
         $loanUtrCollections = UtrCollection::select(
             'utr_collections.*',
             'loan_applications.loan_no',
@@ -956,7 +958,7 @@ class LeadController extends Controller
 
                 DB::raw('
                     IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
-                        (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
+                        (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
                         0
                     ) as penal_interest'),
 
@@ -964,7 +966,7 @@ class LeadController extends Controller
                     (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
                     + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, ld.created_at)))
                     + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
-                        (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
+                        (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
                         0
                     ) as total_dues
                 ')
@@ -994,7 +996,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','settlementStatus'));
     }
 
     public function deleteLead($id)
