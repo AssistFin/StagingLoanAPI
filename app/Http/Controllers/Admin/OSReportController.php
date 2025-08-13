@@ -21,7 +21,7 @@ class OSReportController extends Controller
 {
     public function index(Request $request)
     {
-        $excludedUserIds = ['591','592','593','594','595','697','1003','1680'];
+        $excludedUserIds = ['591','592','593','594','595','697','1003','601','1379','1680'];
         // Step 1: Fetch all loan_application_ids which have KYC details
         $usersWithKyc = DB::table('loan_kyc_details')
             ->pluck('loan_application_id');
@@ -33,7 +33,7 @@ class OSReportController extends Controller
             ->toArray();
 
         // Step 3: Start building the loan applications query
-        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','loanApproval'])
+        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','loanApproval','loanDisbursal'])
             ->withExists([
                 'personalDetails',
                 'employmentDetails',
@@ -140,10 +140,10 @@ class OSReportController extends Controller
             if ($loanType) {
                 switch ($loanType) {
                     case 'active_loan':
-                        $query->where('loan_closed_status', 'pending')->where('loan_disbursal_status', 'disbursed');
+                        $query->where('loan_closed_status', 'pending');
                         break;
                     case 'overdue_loan':
-                        $query->where('loan_closed_status', 'pending')->where('loan_disbursal_status', 'disbursed');
+                        $query->where('loan_closed_status', 'pending');
                         $query->whereHas('loanApproval', function ($q) {
                             $q->whereDate('repay_date', '<', now());
                         })->whereHas('loanDisbursal');
