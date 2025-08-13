@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\ScoreMeWebhookController;
 
 Route::post('/scoreme/webhook', [ScoreMeWebhookController::class, 'handle']);
 Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
+Route::get('/pay/{id}', [LoanPaymentController::class, 'generatePaymentLink']);
 /*
 |--------------------------------------------------------------------------
 | API Routes

@@ -84,6 +84,7 @@ class CollectionController extends Controller
 
                 $totalDues = !empty($loans->total_dues) ? (int)$loans->total_dues : 0;
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
+                $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
@@ -93,7 +94,7 @@ class CollectionController extends Controller
                     'Total Due' => number_format($totalDues, 0),
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
-                    
+                    'Payment Link' => $paymentLink,
                 ];
             }
 
@@ -186,11 +187,12 @@ class CollectionController extends Controller
 
             // Add to the lead
             $lead->total_dues = $totalDues;
+            $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
             return $lead;
         });
 
-        return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
+        return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount','paymentLink'));
     }
 
     public function collectionOverdue(Request $request)
@@ -269,6 +271,7 @@ class CollectionController extends Controller
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
                 
                 $userAddress = DB::table('aadhaar_data')->where('user_id', $lead->user->id)->first();
+                $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
@@ -278,6 +281,7 @@ class CollectionController extends Controller
                     'Total Due' => number_format($totalDues, 0),
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
+                    'Payment Link' => $paymentLink,
                     'DPD' => $daysAfterDue,
                     'Email' => $lead->user->email,
                     'Loan Tenure' => $loans->loan_tenure_days ?? 0,
@@ -375,11 +379,12 @@ class CollectionController extends Controller
             // Add to the lead
             $lead->total_dues = $totalDues;
             $lead->dpd = $days_after_due;
+            $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
             return $lead;
         });
 
-        return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
+        return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount','paymentLink'));
     }
 
 

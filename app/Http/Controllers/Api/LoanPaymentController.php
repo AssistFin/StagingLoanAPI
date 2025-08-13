@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use App\Models\UtrCollection;
 use App\Models\LoanApplication;
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class LoanPaymentController extends Controller
 {
@@ -266,6 +268,88 @@ class LoanPaymentController extends Controller
                 'message' => $e->getMessage(),
                 'order_id' => $orderId
             ], 500);
+        }
+    }
+
+    public function generatePaymentLink($id)
+    {
+        $lead = LoanApplication::with(['user'])->where('id', base64_decode($id))->first();
+
+        if(empty($lead->loan_no)){
+            return response()->json([
+                'status' => false,
+                'message' => 'You do not have a application no...',
+            ]);
+        }
+
+        $today = Carbon::today()->toDateString();
+
+        $loans = DB::table('loan_applications as la')
+        ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
+        ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
+        ->leftJoin(DB::raw('(
+            SELECT 
+                loan_application_id,
+                SUM(collection_amt) as total_paid,
+                SUM(principal) as total_principal_paid,
+                SUM(interest) as total_interest_paid,
+                MAX(created_at) as last_payment_date
+            FROM utr_collections
+            GROUP BY loan_application_id
+        ) as uc'), 'uc.loan_application_id', '=', 'la.id')
+        ->select([
+            'la.loan_no',
+            'ld.loan_disbursal_number',
+            'lap.approval_amount',
+            DB::raw("DATEDIFF('$today', ld.created_at) as days_since_disbursal"),
+            DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
+            DB::raw('IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) as remaining_principal'),
+
+            DB::raw("DATEDIFF('$today', IFNULL(uc.last_payment_date, ld.created_at)) as days_since_payment"),
+
+            DB::raw('(
+                (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100)
+                * DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, ld.created_at))
+            ) as interest'),
+
+            DB::raw('
+                IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                    (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
+                    0
+                ) as penal_interest'),
+
+            DB::raw('
+                (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
+                + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, ld.created_at)))
+                + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                    (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
+                    0
+                ) as total_dues
+            ')
+        ])
+        ->where('la.id', $lead->id)
+        ->where('la.loan_closed_status', 'pending')
+        ->first();
+
+        $paymentData = [
+            'order_id' => 'LNPAY-' . time() . Str::random(4),
+            'amount' => (!empty($loans->total_dues)) ? (int)$loans->total_dues : 0,
+            'name' => $lead->user->firstname.' '.$lead->user->lastname,
+            'email' => $lead->user->email,
+            'mobile' => $lead->user->mobile,
+            'loan_application_id' => $lead->id,
+        ];
+
+        $cashfreeResult = $this->generateCashfreeUrl($paymentData);
+        //dd($cashfreeResult);
+        if(!empty($cashfreeResult['payment_link'])){
+            $paymentLink = $cashfreeResult['payment_link'];
+            return redirect()->away($paymentLink);
+        }else{
+            return response()->json([
+                'status' => false,
+                'message' => 'No payment link available'
+            ]);
         }
     }
 

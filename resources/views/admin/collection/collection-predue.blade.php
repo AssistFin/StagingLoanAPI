@@ -119,7 +119,7 @@
                                     <td>{{ number_format($lead->loanApproval->approval_amount,0) }}</td>
                                     <td>{{ $lead->total_dues }}</td>
                                     <td>{{ $lead->loanApproval->repay_date }}</td>
-                                    <td></td>
+                                    <td>{{ $lead->paymentLink }}</td>
                                     <td><button type="button" class="btn btn-success">Send SMS</button><button type="button" class="btn btn-danger">Send Email</button></td>
                                 </tr>
                             @empty

@@ -70,6 +70,7 @@ return [
 
     'docs' => [
         'upload_kfs_doc' => env('UPLOAD_FILE'),
+        'app_url' => env('APP_URL'),
     ],
     'equence' => [
         'send_sms_url' => env('EQUENCE_URL'),

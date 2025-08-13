@@ -985,14 +985,16 @@ class LeadController extends Controller
                 'mobile' => $lead->user->mobile,
                 'loan_application_id' => $id,
             ];
+
+            $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
             
-            $cashfreeResult = $this->generateCashfreeUrlFromHistory($paymentData);
+            /*$cashfreeResult = $this->generateCashfreeUrlFromHistory($paymentData);
            // dd($cashfreeResult);
             if(!empty($cashfreeResult['payment_link'])){
                 $paymentLink = $cashfreeResult['payment_link'];
             }else{
                 $paymentLink = "No Link Available";
-            }
+            }*/
         }
         //EOC for check current dues of customer
         
