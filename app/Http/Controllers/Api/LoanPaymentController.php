@@ -102,9 +102,16 @@ class LoanPaymentController extends Controller
     }
 
 
-    private function generateCashfreeUrl(array $paymentData)
+    private function generateCashfreeUrl(array $paymentData, $platform = null)
     {
         try {
+
+            if(empty($platform)){
+              $returnUrl = config('services.cashfree.app_url') . 'payment/status?payment_reference={order_id}';
+            }else{
+              $returnUrl = config('services.cashfree.app_url') . 'paymentstatus?payment_reference={order_id}';
+            }
+
             $url = config('services.cashfree.base_url') . '/pg/orders';
 
             $headers = [
@@ -125,7 +132,7 @@ class LoanPaymentController extends Controller
                     'customer_phone' => $paymentData['mobile'],
                 ],
                 'order_meta' => [
-                    'return_url' => config('services.cashfree.app_url') . 'payment/status?payment_reference={order_id}',
+                    'return_url' => $returnUrl,
                     'notify_url' => config('services.cashfree.app_url') . 'payment/webhook',  
                 ],
                 'order_note' => 'Loan repayment for account: ' . $paymentData['loan_application_id'],
@@ -331,8 +338,38 @@ class LoanPaymentController extends Controller
         ->where('la.loan_closed_status', 'pending')
         ->first();
 
+        $loan = LoanApplication::where('id', base64_decode($id))
+                    ->with(['loanDisbursal']) 
+                    ->firstOrFail();
+
+        $disbursal = $loan->loanDisbursal;
+        $user = $loan->user;
+
+        $payment_reference = 'LNPAY-' . time() . Str::random(4);
+
+        // Create payment record
+        $payment = LoanPayment::create([
+            'user_id' => $user->id,
+            'loan_application_id' => $loan->id,
+            'loan_application_no' => $loan->loan_no,
+            'loan_disbursal_id' => $disbursal->id,
+            'loan_disbursal_no' => $disbursal->loan_disbursal_number,
+            'payment_reference' => $payment_reference,
+            'name' => $user->firstname . " " . $user->lastname,
+            'email' => $user->email,
+            'mobile' => $user->mobile,
+            'current_repayment_amount' => (!empty($loans->total_dues)) ? (int)$loans->total_dues : 0,
+            'repayment_amount' => (!empty($loans->total_dues)) ? (int)$loans->total_dues : 0,
+            'loan_amount' => (!empty($loans->approval_amount)) ? (int)$loans->approval_amount : 0,
+            'overdue_amount' => (!empty($loans->approval_amount)) ? ($loans->total_dues - $loans->approval_amount) : 0,
+            'interestAmount' => (!empty($loans->interest)) ? (int)$loans->interest : 0,
+            'penalAmount' => (!empty($loans->penal_interest)) ? (int)$loans->penal_interest : 0,
+            'currency' => 'INR',
+            'status' => 'pending',
+        ]);
+
         $paymentData = [
-            'order_id' => 'LNPAY-' . time() . Str::random(4),
+            'order_id' => $payment_reference,
             'amount' => (!empty($loans->total_dues)) ? (int)$loans->total_dues : 0,
             'name' => $lead->user->firstname.' '.$lead->user->lastname,
             'email' => $lead->user->email,
@@ -340,7 +377,7 @@ class LoanPaymentController extends Controller
             'loan_application_id' => $lead->id,
         ];
 
-        $cashfreeResult = $this->generateCashfreeUrl($paymentData);
+        $cashfreeResult = $this->generateCashfreeUrl($paymentData, $platform = 'unique');
         //dd($cashfreeResult);
         if(!empty($cashfreeResult['payment_link'])){
             $paymentLink = $cashfreeResult['payment_link'];

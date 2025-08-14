@@ -159,6 +159,7 @@ class CollectionController extends Controller
                 ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                 ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                 ->select([
+                    'la.id',
                     'la.loan_no',
                     'ld.loan_disbursal_number',
                     'lap.approval_amount',
@@ -187,12 +188,13 @@ class CollectionController extends Controller
 
             // Add to the lead
             $lead->total_dues = $totalDues;
-            $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
+            $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($loans->id);
+            $lead->paymentLink = $paymentLink;
 
             return $lead;
         });
 
-        return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount','paymentLink'));
+        return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
 
     public function collectionOverdue(Request $request)
@@ -349,6 +351,7 @@ class CollectionController extends Controller
                 ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                 ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                 ->select([
+                    'la.id',
                     'la.loan_no',
                     'ld.loan_disbursal_number',
                     'lap.approval_amount',
@@ -379,12 +382,13 @@ class CollectionController extends Controller
             // Add to the lead
             $lead->total_dues = $totalDues;
             $lead->dpd = $days_after_due;
-            $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
+            $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($loans->id);
+            $lead->paymentLink = $paymentLink;
 
             return $lead;
         });
 
-        return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount','paymentLink'));
+        return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
 
 
