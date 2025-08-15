@@ -77,7 +77,12 @@ return [
         'send_sms_user' => env('EQUENCE_USERNAME'),
         'send_sms_pass' => env('EQUENCE_PASSWORD'),
         'send_sms_from' => env('EQUENCE_FROM'),
-    ]
+    ],
+    'digitap' => [
+        'base_url'      => env('DIGITAP_BASE_URL', 'https://digitap-uat-url.com'), // change to PROD when needed
+        'client_id'     => env('DIGITAP_CLIENT_ID'),
+        'client_secret' => env('DIGITAP_CLIENT_SECRET'),
+    ],
 
 
 ];

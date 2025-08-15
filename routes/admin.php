@@ -417,7 +417,7 @@ Route::middleware('admin')->group(function () {
     Route::name('creditbureau.')->prefix('creditbureau')->controller(CreditBureauController::class)->group(function () {
         Route::get('/index', 'index')->name('index');
         Route::get('/checkReport', 'checkReportByExperian')->name('checkReport');
-        Route::get('/checkBankAccNo', 'checkBankAccNoByApproval')->name('checkBankAccNo');
+        Route::get('/checkBankAccNo', 'checkBankAccNo')->name('checkBankAccNo');
         Route::get('/show/{id}', 'show')->name('show');
 
     });
@@ -430,6 +430,7 @@ Route::middleware('admin')->group(function () {
         Route::post('/scoremeuploaddoc', 'checkBSAReportByScoreMe')->name('scoremeuploaddoc');
     });
     
+    Route::post('/digitap/callback', [ScoreMeWebhookController::class, 'callback'])->name('digitap.callback');
 
     //============Loan================//
     Route::name('loan.')->prefix('loan')->controller(LoanController::class)->group(function () {

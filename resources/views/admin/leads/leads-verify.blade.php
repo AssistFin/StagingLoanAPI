@@ -78,7 +78,7 @@
 
                     <button class="nav-link" id="Creditbureau-tab" data-bs-toggle="tab" data-bs-target="#Creditbureau" type="button" role="tab" aria-controls="Creditbureau" aria-selected="false">Credit Bureau</button>
 
-                    <button class="nav-link {{ $loanApprovalStatus ? '' : 'disabled' }}" id="Bsareport-tab" data-bs-toggle="tab" data-bs-target="#Bsareport" type="button" role="tab" aria-controls="Bsareport" aria-selected="false" {{ $loanApprovalStatus ? '' : 'disabled' }}>BSA Report</button>
+                    <button class="nav-link" id="Bsareport-tab" data-bs-toggle="tab" data-bs-target="#Bsareport" type="button" role="tab" aria-controls="Bsareport" aria-selected="false" >BSA Report</button>
                 </div>
             </nav>
         
@@ -1054,7 +1054,7 @@
                 </div>
 
                 <div class="tab-pane fade" id="Bsareport" role="tabpanel" aria-labelledby="Bsareport-tab">
-                    <h3>Score Me BSA Report</h3>
+                    <h3>BSA Report</h3>
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <thead>
