@@ -206,6 +206,9 @@ class CollectionController extends Controller
             ->whereHas('loanApproval', function ($query) use ($today) {
                 $query->whereDate('repay_date', '<', $today);
             })
+            ->whereDoesntHave('collections', function ($q) {
+                $q->whereIn('status', ['Closed', 'Settlement']);
+            })
             ->with([
                 'user',
                 'personalDetails',
