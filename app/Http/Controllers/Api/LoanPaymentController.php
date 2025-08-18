@@ -316,7 +316,7 @@ class LoanPaymentController extends Controller
 
             DB::raw('(
                 (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100)
-                * DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, ld.created_at))
+                * DATEDIFF("' . $today . '", ld.created_at) - IFNULL(uc.total_interest_paid, 0)
             ) as interest'),
 
             DB::raw('
@@ -327,7 +327,7 @@ class LoanPaymentController extends Controller
 
             DB::raw('
                 (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
-                + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, ld.created_at)))
+                + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", ld.created_at) - IFNULL(uc.total_interest_paid, 0))
                 + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
                     (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
                     0
