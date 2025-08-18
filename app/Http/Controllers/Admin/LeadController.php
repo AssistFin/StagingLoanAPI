@@ -831,7 +831,7 @@ class LeadController extends Controller
         // If you want to inspect SQL:
         // dd($query->toSql(), $query->getBindings());
 
-        $leads = $query->orderByDesc('created_at')->paginate(25);
+        $leads = $query->orderBy('created_at','asc')->paginate(25);
         return view('admin.leads.leads-bsa', compact('leads', 'userIdsWithKyc'));
     }
 

@@ -1720,7 +1720,7 @@
                 },
                 success: function(response) {
                     alert("Success");
-                    //location.reload();
+                    location.reload();
                 }
             });
         }else{
