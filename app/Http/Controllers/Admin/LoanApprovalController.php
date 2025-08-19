@@ -163,26 +163,28 @@ class LoanApprovalController extends Controller
             return $this->handleNotInterestedLoan($request);
         }
 
-        $request->validate([
-            'loan_type' => 'required|string',
-            'branch' => 'required|string',
-            'approval_amount' => 'required|numeric|min:0',
-            'roi' => 'required|numeric|min:0',
-            'salary_date' => 'required|date',
-            'repay_date' => 'required|date|after_or_equal:salary_date',
-            'processing_fee' => 'nullable|numeric|min:0',
-            'cibil_score' => 'nullable|numeric|min:300|max:900',
-            'monthly_income' => 'nullable|numeric|min:0',
-            'status' => 'required|in:0,1,2,3,4',
-            'approval_date' => 'nullable|date',
-            'loan_purpose' => 'nullable|string',
-            'final_remark' => 'nullable|string',
-            'additional_remark' => 'nullable|string',
-            'bank_acc_no' => 'required|string',
-            'ifsccode' => 'required|string',
-            'bank_name' => 'required|string',
-        ]);
-        
+        if ($request->status != "0") {
+            $request->validate([
+                'loan_type' => 'required|string',
+                'branch' => 'required|string',
+                'approval_amount' => 'required|numeric|min:0',
+                'roi' => 'required|numeric|min:0',
+                'salary_date' => 'required|date',
+                'repay_date' => 'required|date|after_or_equal:salary_date',
+                'processing_fee' => 'nullable|numeric|min:0',
+                'cibil_score' => 'nullable|numeric|min:300|max:900',
+                'monthly_income' => 'nullable|numeric|min:0',
+                'status' => 'required|in:0,1,2,3,4',
+                'approval_date' => 'nullable|date',
+                'loan_purpose' => 'nullable|string',
+                'final_remark' => 'nullable|string',
+                'additional_remark' => 'nullable|string',
+                'bank_acc_no' => 'required|string',
+                'ifsccode' => 'required|string',
+                'bank_name' => 'required|string',
+            ]);
+        }
+
         // Calculate financial details
         $approvalAmount = $request->input('approval_amount'); 
         $processingFeePercentage = $request->input('processing_fee'); 
@@ -206,15 +208,15 @@ class LoanApprovalController extends Controller
 
         $bank_details = $approve_details = 0; 
 
-        if($bankData->account_number != $request->input('bank_acc_no')){
+        if(!empty($bankData->account_number) != $request->input('bank_acc_no')){
             $bank_details = 1;
         }
 
-        if($bankData->ifsc_code != $request->input('ifsccode')){
+        if(!empty($bankData->ifsc_code) != $request->input('ifsccode')){
             $bank_details = 1;
         }
 
-        if($bankData->bank_name != $request->input('bank_name')){
+        if(!empty($bankData->bank_name) != $request->input('bank_name')){
             $bank_details = 1;
         }
 

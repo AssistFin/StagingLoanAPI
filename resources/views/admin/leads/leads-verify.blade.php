@@ -429,7 +429,7 @@
                             <!-- Branch -->
                             <div class="col-md-6">
                                 <label for="branch" class="form-label">Branch</label>
-                                <input type="text" class="form-control" id="branch" name="branch" required value="{{isset($loanApproval) ? $loanApproval->branch : ""}}">
+                                <input type="text" class="form-control" id="branch" name="branch" value="{{isset($loanApproval) ? $loanApproval->branch : ""}}">
                                 <span class="error-message text-danger"></span>
                             </div>
                 
@@ -578,15 +578,16 @@
                             <!-- Bank Acc No -->
                             <div class="col-md-6">
                                 <label for="bank_acc_no" class="form-label">Bank Account No</label>
-                                <input type="number" class="form-control" id="bank_acc_no" name="bank_acc_no" required step="0.01" value="{{ $lead->bankDetails->account_number ?? '' }}">
+                                <input type="number" class="form-control" id="bank_acc_no" name="bank_acc_no" step="0.01" value="{{ $lead->bankDetails->account_number ?? '' }}">
                                 <input type="hidden" id="bank_lead_id" value="{{ $lead->id }}">
+                                <input type="hidden" id="bank_loan_id" name="loan_application_id" value="{{ $lead->id}}">
                                 <input type="hidden" id="bank_user_id" value="{{ $lead->user_id }}">
                                 <span id="bankError" class="error-message text-danger"></span>
                             </div>
 
                             <div class="col-md-6">
                                 <label for="ifsccode" class="form-label">IFSC Code</label>
-                                <input type="text" class="form-control" id="ifsccode" name="ifsccode" required value="{{ $lead->bankDetails->ifsc_code ?? '' }}">
+                                <input type="text" class="form-control" id="ifsccode" name="ifsccode" value="{{ $lead->bankDetails->ifsc_code ?? '' }}">
                                 <span class="error-message text-danger"></span>
                             </div>
                             
@@ -596,6 +597,7 @@
                                         <option value="">Select a Bank</option>
                                         <option value="Axis" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Axis" ? "selected" : "" }}>Axis Bank</option>
                                         <option value="Baroda" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Baroda" ? "selected" : "" }}>Bank of Baroda</option>
+                                        <option value="Axis" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "BOI" ? "selected" : "" }}>Bank Of India</option>
                                         <option value="Maharashtra" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Maharashtra" ? "selected" : "" }}>Bank of Maharashtra</option>
                                         <option value="Canara" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Canara" ? "selected" : "" }}>Canara Bank</option>
                                         <option value="Federal" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "Federal" ? "selected" : "" }}>Federal Bank</option>
@@ -1197,67 +1199,89 @@
                     $('#loanApprovalForm')[0].submit();
                 }
             }
-        });
 
-        $("#loanApprovalForm").validate({
-            errorClass: "is-invalid", 
-            errorElement: "span",
-            errorPlacement: function(error, element) {
-                error.addClass("text-danger"); 
-                element.closest("div").find(".error-message").html(error); 
-            },
-            highlight: function(element) {
-                $(element).addClass("is-invalid");
-            },
-            unhighlight: function(element) {
-                $(element).removeClass("is-invalid");
-                $(element).closest("div").find(".error-message").html(""); 
-            },
-            rules: {
-                approval_amount: {
-                    required: true,
-                    min: 1000,
-                    max: 100000
-                },
-                roi: {
-                    required: true,
-                    min: 0.1,
-                    max: 100
-                },
-                salary_date: {
-                    required: true,
-                    date: true
-                },
-                repay_date: {
-                    required: true,
-                    date: true
-                }
-            },
-            messages: {
-                approval_amount: {
-                    required: "Approval amount is required",
-                    min: "Minimum amount is 1000",
-                    max: "Maximum amount is 100000"
-                },
-                roi: {
-                    required: "Rate of Interest is required",
-                    min: "Minimum ROI is 1%",
-                    max: "Maximum ROI is 50%"
-                },
-                salary_date: {
-                    required: "Salary date is required",
-                    date: "Enter a valid date"
-                },
-                repay_date: {
-                    required: "Repay date is required",
-                    date: "Enter a valid date"
-                }
+            if(statusVal != '0'){
+                $("#loanApprovalForm").validate({
+                    
+                    errorClass: "is-invalid", 
+                    errorElement: "span",
+                    errorPlacement: function(error, element) {
+                        error.addClass("text-danger"); 
+                        element.closest("div").find(".error-message").html(error); 
+                    },
+                    highlight: function(element) {
+                        $(element).addClass("is-invalid");
+                    },
+                    unhighlight: function(element) {
+                        $(element).removeClass("is-invalid");
+                        $(element).closest("div").find(".error-message").html(""); 
+                    },
+                    rules: {
+                        approval_amount: { 
+                            required: true, 
+                            min: 1000, 
+                            max: 100000 
+                        }, 
+                        roi: { 
+                            required: true, 
+                            min: 0.1, 
+                            max: 100 
+                        }, 
+                        salary_date: { 
+                            required: true, 
+                            date: true 
+                        }, 
+                        repay_date: { 
+                            required: true, 
+                            date: true 
+                        },
+                        branch: {
+                            required:true,
+                        },
+                        bank_acc_no: {
+                            required:true,
+                        },
+                        ifsccode: {
+                            required:true,
+                        },
+                    },
+                    messages: {
+                        approval_amount: {
+                            required: "Approval amount is required",
+                            min: "Minimum amount is 1000",
+                            max: "Maximum amount is 100000"
+                        },
+                        roi: {
+                            required: "Rate of Interest is required",
+                            min: "Minimum ROI is 1%",
+                            max: "Maximum ROI is 50%"
+                        },
+                        salary_date: {
+                            required: "Salary date is required",
+                            date: "Enter a valid date"
+                        },
+                        repay_date: {
+                            required: "Repay date is required",
+                            date: "Enter a valid date"
+                        },
+                        branch: {
+                            required: "Branch is required"
+                        },
+                        bank_acc_no: {
+                            required: "Bank Account No is required"
+                        },
+                        ifsccode: {
+                            required: "IFSC Code is required"
+                        }
+                    }
+                });
             }
-        });
 
-        $.validator.addMethod("ifscRegex", function(value, element) {
-            return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
-        }, "Enter a valid IFSC code.");
+
+            $.validator.addMethod("ifscRegex", function(value, element) {
+                return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
+            }, "Enter a valid IFSC code.");
+        });
 
         $("#loanDisbursalForm").validate({
             errorClass: "is-invalid", 
