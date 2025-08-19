@@ -73,18 +73,18 @@ class LoanApplyController extends Controller
                     $loans["enachData"] = '';
                 }
                 $loans["aadharAddress"] = $aadharAddress;
-            }
 
-            $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
-            if(!empty($loanApprovalData->kfs_path)){
-                $loanNo = $loans['id'];
-                $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
-                if (!file_exists($outputPath)) {
-                    $arrayData["loan_application_id"] = $loans['id'];
-                    $arrayData["current_step"] = 'loanstatus';
-                    $arrayData["next_step"] = 'viewloan';
-                    $requestObj = Request::create('', 'POST', $arrayData);
-                    $this->updateLoanStep($requestObj);
+                $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
+                if(!empty($loanApprovalData->kfs_path)){
+                    $loanNo = $loans['id'];
+                    $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
+                    if (!file_exists($outputPath)) {
+                        $arrayData["loan_application_id"] = $loans['id'];
+                        $arrayData["current_step"] = 'loanstatus';
+                        $arrayData["next_step"] = 'viewloan';
+                        $requestObj = Request::create('', 'POST', $arrayData);
+                        $this->updateLoanStep($requestObj);
+                    }
                 }
             }
 

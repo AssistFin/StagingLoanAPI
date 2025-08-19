@@ -10,6 +10,14 @@ use App\Models\LoanApplication;
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\LoanApproval;
+use App\Models\LoanAddressDetails;
+use App\Models\LoanKYCDetails;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class LoanPaymentController extends Controller
 {
@@ -261,6 +269,40 @@ class LoanPaymentController extends Controller
                     $loan->loan_closed_date = now();
                     $loan->save();
                 }
+
+                $loanData = LoanApplication::where([['user_id', $payment->user_id], ['id', $payment->loan_application_id]])->first();
+                $approvalData = LoanApproval::where('loan_application_id', $payment->loan_application_id)->first();
+                $userData = User::where('id', $payment->user_id)->first();
+                $loanAddressDetailsData = LoanAddressDetails::where('loan_application_id', $payment->loan_application_id)->first();
+                $pandata = DB::table('pan_data')->where('user_id', $payment->user_id)->first();
+        
+
+                $subject = "Loan Closure Confirmation - NOC Attached | Loan Application No. $loanData->loan_no";
+                $message = "Dear $userData->firstname $userData->lastname,<br><br>
+We are pleased to inform you that your loan amount of Rs. ".number_format(($approvalData->approval_amount), 0)." has been successfully repaid and your loan account has been closed with all dues cleared. Please find the attached No Objection Certificate (NOC) confirming the closure of your loan account.<br><br>
+We thank you for choosing LoanOne powered by Altura Financial Services Ltd. and look
+forward to serving you again.<br><br>
+Warm regards,<br>
+Customer Support | LoanOne";
+
+                $data = [
+                    'date' => now()->format('d/m/Y'),
+                    'borrower_name' => $userData->firstname.' '.$userData->lastname,
+                    'address' => $loanAddressDetailsData->house_no.' '.$loanAddressDetailsData->city.' '.$loanAddressDetailsData->state.' '.$loanAddressDetailsData->pincode,
+                    'loan_app_no' => $loanData->loan_no,
+                    'loan_disbursement_date' =>Carbon::parse($approvalData->approval_date)->format('d/m/Y'),
+                    'loan_closure_date' => now()->format('d/m/Y'),
+                    'ref_no' => $this->generateRefNo(),
+                    'pan_number' => $pandata->pan,
+                ];
+
+                $pdf = Pdf::loadView('admin.leads.noc', $data);
+
+                Storage::put('noc/'.$loanData->loan_no.'_noc.pdf', $pdf->output());
+                $fullPathToPDF = storage_path('app/noc/'.$loanData->loan_no.'_noc.pdf');
+                $mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
+
+                Log::info("Mail Send Via SMTP and te response is : {$mailSend}");
             }
 
             return response()->json([
@@ -388,6 +430,38 @@ class LoanPaymentController extends Controller
                 'message' => 'No payment link available'
             ]);
         }
+    }
+
+    private function generateRefNo()
+    {
+        // Get current financial year
+        $now = Carbon::now();
+        $month = $now->month;
+
+        if ($month >= 4) {
+            // FY starts in April
+            $fyStart = $now->year;
+            $fyEnd = $now->year + 1;
+        } else {
+            $fyStart = $now->year - 1;
+            $fyEnd = $now->year;
+        }
+
+        $fyString = $fyStart . '-' . substr($fyEnd, -2); // e.g. 2024-25
+
+        $currentMonth = str_pad($month, 2, '0', STR_PAD_LEFT);
+
+        // Count closed loans this FY + month
+        $count = DB::table('loan_applications')
+            ->where('loan_closed_status', 'closed')
+            ->whereYear('loan_closed_date', '>=', $fyStart)
+            ->whereYear('loan_closed_date', '<=', $fyEnd)
+            ->whereMonth('loan_closed_date', $month)
+            ->count();
+
+        $next = str_pad($count + 1, 5, '0', STR_PAD_LEFT);
+
+        return "{$fyString}/{$currentMonth}/{$next}";
     }
 
 }
