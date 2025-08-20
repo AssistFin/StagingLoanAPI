@@ -208,15 +208,15 @@ class LoanApprovalController extends Controller
 
         $bank_details = $approve_details = 0; 
 
-        if(!empty($bankData->account_number) != $request->input('bank_acc_no')){
+        if(!empty($bankData->account_number) && $bankData->account_number != $request->input('bank_acc_no')){
             $bank_details = 1;
         }
 
-        if(!empty($bankData->ifsc_code) != $request->input('ifsccode')){
+        if(!empty($bankData->ifsc_code) && $bankData->ifsc_code != $request->input('ifsccode')){
             $bank_details = 1;
         }
 
-        if(!empty($bankData->bank_name) != $request->input('bank_name')){
+        if(!empty($bankData->bank_name) && $bankData->bank_name != $request->input('bank_name')){
             $bank_details = 1;
         }
 
@@ -297,10 +297,33 @@ class LoanApprovalController extends Controller
         }
 
         if($bank_details && $cashfreeData){
+
             $cashfreeExistingData = CashfreeEnachRequestResponse::where('subscription_id', $loan->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
             if ($cashfreeExistingData) {
                 $cashfreeExistingData->status = 'INACTIVE';
                 $cashfreeExistingData->save();
+            }
+            
+            $cashfreeExistingActiveData = CashfreeEnachRequestResponse::where('subscription_id', $loan->loan_no)->where('reference_id', '!=', '')->where('status', 'INACTIVE')->orderBy('id','desc')->get();
+
+            if(!empty($cashfreeExistingActiveData)){
+                foreach($cashfreeExistingActiveData as $key => $value){
+                    $new_subscription_id = $value['subscription_id'];
+                    $new_alt_subscription_id = $value['alt_subscription_id'];
+                    $response_data = json_decode($value['response_data'], true);
+                    $status = $response_data['authorization_details']['authorization_status'] ?? '';
+                    $bank_account_no = $response_data['authorization_details']['payment_method']['enach']['account_number'] ?? '';
+
+                    if($status == 'ACTIVE' && $request->input('bank_acc_no') == $bank_account_no){
+                        $loanApproval = CashfreeEnachRequestResponse::updateOrCreate(
+                            [
+                                'subscription_id' => $new_subscription_id,
+                                'alt_subscription_id' => $new_alt_subscription_id
+                            ],
+                            ['status' => 'ACTIVE']
+                        );
+                    }
+                }
             }
         }
 
@@ -405,8 +428,8 @@ class LoanApprovalController extends Controller
         Thank you for choosing LoanOne,<br>
         powered by Altura Financial Services Ltd.";
         
-        //$mailSend = sendMailViaSMTP($subject, $message, $user->email, null);
-        //Log::info("Mail Send Via SMTP For Loan Approval and the response is : {$mailSend}");
+        $mailSend = sendMailViaSMTP($subject, $message, $user->email, null);
+        Log::info("Mail Send Via SMTP For Loan Approval and the response is : {$mailSend}");
         //EOC By Ankit Tiwari
         $adminData = auth('admin')->user();
         

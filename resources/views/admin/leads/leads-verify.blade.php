@@ -680,7 +680,7 @@
                             View KFS Signed Document
                         </a>
 
-                        <a class="btn btn-{{isset($cashfreeData) && $cashfreeData->status == 'ACTIVE' ? 'success' : 'danger'}}" href="#">
+                        <a class="btn btn-{{isset($cashfreeData) && $cashfreeData->status == 'ACTIVE' ? 'success' : 'danger'}}" href="#">{{ dd($cashfreeData)}}
                             e-NACH Status - {{isset($cashfreeData) ? $cashfreeData->status : ''}} 
                             @if(isset($cashfreeData) && $cashfreeData->status == 'FAILED')
                                 @php

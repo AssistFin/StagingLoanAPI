@@ -889,6 +889,23 @@ class LeadController extends Controller
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
+
+        $cashfreeExistingActiveData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->where('status', 'ACTIVE')->orderBy('id','desc')->get();
+        //dd($cashfreeExistingActiveData);
+        if(!empty($cashfreeExistingActiveData)){
+            foreach($cashfreeExistingActiveData as $key => $value){
+                $new_alt_subscription_id = $value['alt_subscription_id'];
+                $response_data = json_decode($value['response_data'], true);
+                $status = $response_data['authorization_details']['authorization_status'] ?? '';
+                $bank_account_no = $response_data['authorization_details']['payment_method']['enach']['account_number'] ?? '';
+
+                if($status == 'ACTIVE' && $lead->bankDetails->account_number == $bank_account_no){
+                    $cashfreeData = CashfreeEnachRequestResponse::where('alt_subscription_id', $new_alt_subscription_id)->first();
+                    //dd($cashfreeData);
+                    break;
+                }
+            }
+        }
         
         $hasPreviousClosedLoan = LoanApplication::where('user_id', $lead->user->id)
         ->where('id', '!=', $lead->id) // Exclude current loan
