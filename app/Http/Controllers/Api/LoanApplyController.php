@@ -597,7 +597,34 @@ class LoanApplyController extends Controller
 
         $cashfreeExistingData = CashfreeEnachRequestResponse::where('subscription_id', $request->loan_number)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
 
-        if($cashfreeExistingData && $cashfreeExistingData->status == 'ACTIVE'){
+        $cashfreeExistingActiveDataStatus = 0;
+
+        $bankDetails = LoanBankDetails::where('loan_application_id', $request->loan_application_id)->first();
+
+        $cashfreeExistingActiveData = CashfreeEnachRequestResponse::where('subscription_id', $request->loan_number)->where('reference_id', '!=', '')->where('status', 'INACTIVE')->orderBy('id','desc')->get();
+
+            if(!empty($cashfreeExistingActiveData)){
+                foreach($cashfreeExistingActiveData as $key => $value){
+                    $new_subscription_id = $value['subscription_id'];
+                    $new_alt_subscription_id = $value['alt_subscription_id'];
+                    $response_data = json_decode($value['response_data'], true);
+                    $status = $response_data['authorization_details']['authorization_status'] ?? '';
+                    $bank_account_no = $response_data['authorization_details']['payment_method']['enach']['account_number'] ?? '';
+
+                    if($status == 'ACTIVE' && $bankDetails->account_number == $bank_account_no){
+                        $loanApproval = CashfreeEnachRequestResponse::updateOrCreate(
+                            [
+                                'subscription_id' => $new_subscription_id,
+                                'alt_subscription_id' => $new_alt_subscription_id
+                            ],
+                            ['status' => 'ACTIVE']
+                        );
+                        $cashfreeExistingActiveDataStatus = 1;
+                    }
+                }
+            }
+
+        if(($cashfreeExistingData && $cashfreeExistingData->status == 'ACTIVE') || $cashfreeExistingActiveDataStatus){
             $approval = LoanApplication::where([
                 ['id', $request->loan_application_id],
                 ['user_id', $request->user_id],
@@ -810,9 +837,11 @@ class LoanApplyController extends Controller
 
     public function handleWebhook(Request $request)
     {
-        // Log it for debug
-        //\Log::info('Cashfree Webhook Received', [$request->all()]);
-        Log::channel('webhook')->info('Cashfree Enach Webhook Response', $request->all());
+        Log::channel('webhook')->info(
+            "========== Cashfree Enach Webhook Response ==========\n\n" .
+            json_encode($request->all(), JSON_PRETTY_PRINT) .
+            "\n\n===================================================="
+        );
 
         $data = $request->input('data');
         $subscription_id = isset($data['subscription_id']) ? $data['subscription_id'] : ($data['subscription_details']['subscription_id'] ?? null);
