@@ -84,7 +84,7 @@ class ExperianCreditBureauController extends Controller
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                     ->leftJoin(DB::raw('(
-                        SELECT loan_application_id, SUM(collection_amt) as total_paid
+                        SELECT loan_application_id, SUM(collection_amt) as total_paid, SUM(principal) as total_principal_paid
                         FROM utr_collections
                         GROUP BY loan_application_id
                     ) as uc'), 'uc.loan_application_id', '=', 'la.id')
@@ -92,7 +92,7 @@ class ExperianCreditBureauController extends Controller
                         'lap.repay_date',
                         DB::raw("DATEDIFF('$todayDate', ld.created_at) as days_since_disbursal"),
                         DB::raw("DATEDIFF('$todayDate', lap.repay_date) as days_after_due"),
-                        DB::raw('IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount) as remaining_principal'),
+                        DB::raw('IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) as remaining_principal'),
                         DB::raw('
                             (lap.approval_amount * lap.roi / 100 ) * DATEDIFF("' . $todayDate . '", ld.created_at) as interest'),
                         DB::raw('

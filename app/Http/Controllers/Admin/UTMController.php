@@ -44,6 +44,7 @@ class UTMController extends Controller
         $fromDate = $request->get('from_date');
         $toDate = $request->get('to_date');
         $source = $request->get('source');
+        $campaignId = $request->get('campaign_id');
 
         // Filter by Date Range
         if ($dateRange) {
@@ -85,7 +86,7 @@ class UTMController extends Controller
                 }
             }else{
                 if ($dateRange === 'today') {
-                $query->whereDate('utm_tracking.created_at', now()->today());
+                    $query->whereDate('utm_tracking.created_at', now()->today());
                 } elseif ($dateRange === 'yesterday') {
                     $query->whereDate('utm_tracking.created_at', now()->yesterday());
                 } elseif ($dateRange === 'last_3_days') {
@@ -127,6 +128,10 @@ class UTMController extends Controller
             $query->where(function ($q) use ($source) {
                 $q->where('utm_tracking.utm_source', 'like', "%{$source}%");
             });
+        }
+
+        if ($campaignId) {
+            $query->where('utm_tracking.utm_campaign', $campaignId);
         }
 
         // Search functionality
@@ -257,9 +262,16 @@ class UTMController extends Controller
             return Response::stream($callback, 200, $headers);
         } 
         //echo 'test 3 - '.$totalRecords;
+        $campaignIds = (clone $query)
+            ->whereNotNull('utm_tracking.utm_campaign') 
+            ->where('utm_tracking.utm_source', 'google')// or gclid if you're using that
+            ->pluck('utm_tracking.utm_campaign')
+            ->unique()
+            ->values()
+            ->toArray();
         $utmRecords = $query->paginate(25);
 
-        return view('admin.leads.utm-details', compact('pageTitle', 'utmRecords', 'totalRecords'));
+        return view('admin.leads.utm-details', compact('pageTitle', 'utmRecords', 'totalRecords','campaignIds'));
     }
 
     // Store UTM data for anonymous users

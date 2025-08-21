@@ -81,7 +81,15 @@
                                 <option value="">Select Source</option>
                                 <option value="fb">Facebook</option>
                                 <option value="google">Google</option>
+                                <option value="vortexia">Vortexia</option>
                                 <option value="digisoftnexus">Digisoftnexus</option>
+                            </select>
+
+                            <select name="campaign_id" id="campaign_id" class="form-control">
+                                <option value="">All Campaigns</option>
+                                @foreach($campaignIds as $id)
+                                    <option value='{{ $id }}' {{ request('campaign_id') == $id ? 'selected' : '' }}>{{ $id }}</option>
+                                @endforeach
                             </select>
                             
                             <select id="utm_records" name="utm_records" class="form-control">
@@ -216,6 +224,7 @@
         const toDate = $('#to_date').val();
         const utm_records = $('#utm_records').val();
         const source = $('#source').val();
+        const campaign_id = $('#campaign_id').val();
         const searchTerm = $('#utm-search-input').val();
 
         $.ajax({
@@ -228,6 +237,7 @@
                 to_date: toDate,
                 utm_records: utm_records,
                 source : source,
+                campaign_id : campaign_id,
                 search: searchTerm
             },
             success: function(response) {
@@ -239,7 +249,7 @@
     }
 
     $(document).ready(function () {
-        $('#date_range, #utm_records, #source').on('change', () => fetchUTMLeads());
+        $('#date_range, #utm_records, #source, #campaign_id').on('change', () => fetchUTMLeads());
         $('#utm-search-input').on('keyup', () => fetchUTMLeads());
 
         $('#date_range').on('change', function () {
@@ -250,7 +260,6 @@
 
             $("#from_date").datepicker({
                 dateFormat: "yy-mm-dd",
-                maxDate: -1, // disable today and future
                 onSelect: function (selectedDate) {
                     const fromDate = $(this).datepicker("getDate");
 
@@ -258,16 +267,15 @@
                     const minToDate = new Date(fromDate);
                     minToDate.setDate(minToDate.getDate() + 1);
 
-                    $("#to_date").datepicker("option", "minDate", minToDate);
-                    $("#to_date").datepicker("option", "maxDate", today);
+                    //$("#to_date").datepicker("option", "minDate", minToDate);
+                    //$("#to_date").datepicker("option", "maxDate", today);
 
                     setTimeout(() => $("#to_date").datepicker("show"), 300);
                 }
             });
 
             $("#to_date").datepicker({
-                dateFormat: "yy-mm-dd",
-                maxDate: today
+                dateFormat: "yy-mm-dd"
             });
 
             if ($(this).val() === 'custom') {
@@ -313,6 +321,7 @@
                 to_date: $('#to_date').val(),
                 utm_records: $('#utm_records').val(),
                 source: $('#source').val(),
+                campaign_id:$('#campaign_id').val(),
                 search: $('#utm-search-input').val(),
                 export: 'csv'
             };

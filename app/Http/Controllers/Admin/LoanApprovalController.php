@@ -195,7 +195,7 @@ class LoanApprovalController extends Controller
         $disbursalAmount = $approvalAmount - $processingFeeAmount - $gstAmount;
 
         $request->merge(['disbursal_amount' => $disbursalAmount]);
-        $cashfreeExistingActiveDataStatus = 0;
+
         // Fetch User & Loan Details
         $loan = LoanApplication::where([['user_id', $request->user_id], ['id', $request->loan_application_id]])->first();
         $user = $loan->user; // Assuming relationship exists
@@ -322,7 +322,6 @@ class LoanApprovalController extends Controller
                             ],
                             ['status' => 'ACTIVE']
                         );
-                        $cashfreeExistingActiveDataStatus = 1;
                     }
                 }
             }
@@ -397,9 +396,6 @@ class LoanApprovalController extends Controller
             $admin_approval_status = 'pending';
         }else if($request->status == "1"){
             $next_step = 'viewloan';
-            if($cashfreeExistingActiveDataStatus == 1){
-                $next_step = 'loandisbursal';
-            }
             $admin_approval_status = 'approved';
         }else if($request->status == "2"){
             $next_step = 'noteligible';
@@ -414,8 +410,10 @@ class LoanApprovalController extends Controller
 
         // Update Loan Application Steps
         if ($loan) {
-            $loan->current_step = "loanstatus";
-            $loan->next_step = $next_step;
+            if($request->status != "3"){
+                $loan->current_step = "loanstatus";
+                $loan->next_step = $next_step;
+            }
             $loan->admin_approval_status = $admin_approval_status;
             $loan->admin_approval_date = now();
             $loan->save();
