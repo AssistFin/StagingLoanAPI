@@ -262,9 +262,15 @@ class UTMController extends Controller
             return Response::stream($callback, 200, $headers);
         } 
         //echo 'test 3 - '.$totalRecords;
-        $campaignIds = (clone $query)
-            ->whereNotNull('utm_tracking.utm_campaign') 
-            ->where('utm_tracking.utm_source', 'google')// or gclid if you're using that
+        $campaignIdsQuery = (clone $query)
+            ->whereNotNull('utm_tracking.utm_campaign');
+
+        if (!empty($source)) {
+            // If source is selected, filter by it
+            $campaignIdsQuery->where('utm_tracking.utm_source', $source);
+        }
+
+        $campaignIds = $campaignIdsQuery
             ->pluck('utm_tracking.utm_campaign')
             ->unique()
             ->values()
@@ -361,5 +367,24 @@ class UTMController extends Controller
             Log::error('UTM user linking error: ' . $e->getMessage());
             return response()->json(['status' => 'error'], 500);
         }
+    }
+
+    public function getCampaignIds(Request $request)
+    {
+        $source = $request->get('source');
+
+        $campaignIdsQuery = DB::table('utm_tracking')
+            ->whereNotNull('utm_campaign');
+
+        if (!empty($source)) {
+            $campaignIdsQuery->where('utm_source', $source);
+        }
+
+        $campaignIds = $campaignIdsQuery
+            ->distinct()
+            ->pluck('utm_campaign')
+            ->values();
+
+        return response()->json($campaignIds);
     }
 }

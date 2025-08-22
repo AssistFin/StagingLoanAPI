@@ -64,63 +64,74 @@
                 <div class="card-body">
                     
                     <div class="flex flex-wrap items-center gap-3 py-4">
-                        <div class="filter-row">
-                            <select id="date_range" name="date_range" class="form-control">
-                                <option value="">Select Date Range</option>
-                                <option value="today">Today</option>
-                                <option value="yesterday">Yesterday</option>
-                                <option value="last_3_days">Last 3 Days</option>
-                                <option value="last_7_days">Last 7 Days</option>
-                                <option value="last_15_days">Last 15 Days</option>
-                                <option value="current_month">Current Month</option>
-                                <option value="previous_month">Previous Month</option>
-                                <option value="custom">Custom Range</option>
-                            </select>
+                        <form id="filterForm" method="GET" action="{{ route('admin.utm.tracking') }}">
+                            <div class="filter-row">
+                                <select id="date_range" name="date_range" class="form-control">
+                                    <option value="">Select Date Range</option>
+                                    <option value="today" {{ request('date_range') == 'today' ? 'selected' : '' }}>Today</option>
+                                    <option value="yesterday" {{ request('date_range') == 'yesterday' ? 'selected' : '' }}>Yesterday</option>
+                                    <option value="last_3_days" {{ request('date_range') == 'last_3_days' ? 'selected' : '' }}>Last 3 Days</option>
+                                    <option value="last_7_days" {{ request('date_range') == 'last_7_days' ? 'selected' : '' }}>Last 7 Days</option>
+                                    <option value="last_15_days" {{ request('date_range') == 'last_15_days' ? 'selected' : '' }}>Last 15 Days</option>
+                                    <option value="current_month" {{ request('date_range') == 'current_month' ? 'selected' : '' }}>Current Month</option>
+                                    <option value="previous_month" {{ request('date_range') == 'previous_month' ? 'selected' : '' }}>Previous Month</option>
+                                    <option value="custom">Custom Range</option>
+                                </select>
 
-                            <select id="source" name="source" class="form-control">
-                                <option value="">Select Source</option>
-                                <option value="fb">Facebook</option>
-                                <option value="google">Google</option>
-                                <option value="vortexia">Vortexia</option>
-                                <option value="digisoftnexus">Digisoftnexus</option>
-                            </select>
+                                <select id="source" name="source" class="form-control">
+                                    <option value="">Select Source</option>
+                                    <option value="fb" {{ request('source') == 'fb' ? 'selected' : '' }}>Facebook</option>
+                                    <option value="google" {{ request('source') == 'google' ? 'selected' : '' }}>Google</option>
+                                    <option value="vortexia" {{ request('source') == 'vortexia' ? 'selected' : '' }}>Vortexia</option>
+                                    <option value="digisoftnexus" {{ request('source') == 'digisoftnexus' ? 'selected' : '' }}>Digisoftnexus</option>
+                                </select>
 
-                            <select name="campaign_id" id="campaign_id" class="form-control">
-                                <option value="">All Campaigns</option>
-                                @foreach($campaignIds as $id)
-                                    <option value='{{ $id }}' {{ request('campaign_id') == $id ? 'selected' : '' }}>{{ $id }}</option>
-                                @endforeach
-                            </select>
-                            
-                            <select id="utm_records" name="utm_records" class="form-control">
-                                <option value="">Select UTM Records</option>
-                                <option value="tur">Total UTM Records</option>
-                                <option value="tusr">Total Userwise Records</option>
-                                <option value="tca">Total Complete Application</option>
-                                <option value="taa">Total Approved Application</option>
-                                <option value="tra">Total Rejected Application</option>
-                                <option value="tda">Total Disbursed Application</option>
-                            </select>
+                                <select name="campaign_id" id="campaign_id" class="form-control">
+                                    <option value="">All</option>
+                                    @if(!empty($campaignIds))
+                                        @foreach($campaignIds as $id)
+                                            <option value="{{ $id }}" {{ request('campaign_id') == $id ? 'selected' : '' }}>
+                                                {{ $id }}
+                                            </option>
+                                        @endforeach
+                                    @endif
+                                </select>
+                                
+                                <select id="utm_records" name="utm_records" class="form-control">
+                                    <option value="">Select UTM Records</option>
+                                    <option value="tur" {{ request('utm_records') == 'tur' ? 'selected' : '' }}>Total UTM Records</option>
+                                    <option value="tusr" {{ request('utm_records') == 'tusr' ? 'selected' : '' }}>Total Userwise Records</option>
+                                    <option value="tca" {{ request('utm_records') == 'tca' ? 'selected' : '' }}>Total Complete Application</option>
+                                    <option value="taa" {{ request('utm_records') == 'taa' ? 'selected' : '' }}>Total Approved Application</option>
+                                    <option value="tra" {{ request('utm_records') == 'tra' ? 'selected' : '' }}>Total Rejected Application</option>
+                                    <option value="tda" {{ request('utm_records') == 'tda' ? 'selected' : '' }}>Total Disbursed Application</option>
+                                </select>
 
-                            <input type="text" id="utm-search-input" class="form-control" 
-                            placeholder="Search by Mobile No" 
-                            style="max-width: 400px;">
+                                <input type="text" id="utm-search-input" value="{{ request('search') }}" class="form-control" 
+                                placeholder="Search by Mobile No" 
+                                style="max-width: 400px;">
 
-                            <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >
+                                <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >
 
-                            <button type="button" id="utm_export" class="btn btn-primary form-control">Export CSV</button>
-                        </div>
-
-                        {{-- Custom Date Row --}}
-                        <div id="customDateSection" class="custom-date-container" style="margin-top: 10px;">
-                            <div class="section-heading">Select Custom Date Range:</div>
-                            <div class="flex gap-3">
-                                <input type="text" id="from_date" name="from_date" class="datepicker" placeholder="From Date" autocomplete="off" />
-                                <input type="text" id="to_date" name="to_date" class="datepicker" placeholder="To Date" autocomplete="off" />
+                                <button type="button" id="utm_export" class="btn btn-primary form-control">Export CSV</button>
                             </div>
-                        </div>
-                        
+
+                            {{-- Custom Date Row --}}
+                            <div id="customDateSection" class="custom-date-container" style="margin-top: 10px;">
+                                <div class="section-heading">Select Custom Date Range:</div>
+                                <div class="flex gap-3">
+                                    <input type="text" id="from_date" name="from_date" class="datepicker" placeholder="From Date" autocomplete="off" />
+                                    <input type="text" id="to_date" name="to_date" class="datepicker" placeholder="To Date" autocomplete="off" />
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">Apply Filter</button>
+                                <a href="{{ route('admin.utm.tracking') }}" class="btn btn-secondary ml-2">Reset</a>
+                            </div>
+                        </form>
                     </div>
+
                     <div class="table-responsive--md  table-responsive">
                         <table class="table table--light style--two">
                             <thead>
@@ -249,8 +260,11 @@
     }
 
     $(document).ready(function () {
-        $('#date_range, #utm_records, #source, #campaign_id').on('change', () => fetchUTMLeads());
-        $('#utm-search-input').on('keyup', () => fetchUTMLeads());
+
+    });
+
+        //$('#date_range, #utm_records, #source, #campaign_id').on('change', () => fetchUTMLeads());
+        //$('#utm-search-input').on('keyup', () => fetchUTMLeads());
 
         $('#date_range').on('change', function () {
             // Initialize datepickers but don't show them immediately
@@ -290,13 +304,13 @@
             }
         });
 
-        $('#from_date, #to_date').on('change', function () {
+        /*$('#from_date, #to_date').on('change', function () {
             const fromDate = $('#from_date').val();
             const toDate = $('#to_date').val();
             if (fromDate && toDate && new Date(toDate) >= new Date(fromDate)) {
                 fetchUTMLeads();
             }
-        });
+        }); */
 
         $('#utmpaginationLinks').on('click', '.pagination .page-item .page-link', function (e) {
             e.preventDefault();
@@ -327,6 +341,27 @@
             };
             const query = $.param(params);
             window.location.href = "{{ route('admin.utm.tracking') }}?" + query;
+        });
+
+    $(document).ready(function () {
+    $('#source').on('change', function () {
+        let source = $(this).val();
+        let selectedCampaignId = "{{ request('campaign_id') }}";
+            $.ajax({
+                url: "{{ route('admin.campaign.ids') }}",
+                type: "GET",
+                data: { source: source },
+                success: function (data) {
+                    let campaignSelect = $('#campaign_id');
+                    campaignSelect.empty();
+                    campaignSelect.append('<option value="">All</option>');
+
+                    $.each(data, function (index, value) {
+                        let isSelected = (value === selectedCampaignId) ? 'selected' : '';
+                        campaignSelect.append('<option value="' + value + '" ' + isSelected + '>' + value + '</option>');
+                    });
+                }
+            });
         });
     });
 </script>
