@@ -24,9 +24,16 @@
                         <input type="text" id="bsa-lead-search-input" class="form-control" 
                             placeholder="Search by Name / Mobile No / Loan App No / Email..." 
                             style="max-width: 300px;">&nbsp;&nbsp;
-                            <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >&nbsp;&nbsp;
+                            @php
+                                $allowedRoles = ['Admin', 'Superadmin', 'Sub Admin', 'Chief Technical Officer'];
+                                $user = auth('admin')->user();
+                                //dd(auth('admin'));
+                            @endphp
+                            @if($user && $user->roles()->whereIn('name', $allowedRoles)->exists())
+                                <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >&nbsp;&nbsp;
 
-                            <button type="button" id="bsa_lead_export" class="btn btn-primary form-control">Export CSV</button>
+                                <button type="button" id="bsa_lead_export" class="btn btn-primary form-control">Export CSV</button>
+                            @endif
                     </div>
                     <div class="table-responsive--md  table-responsive">
                         <table class="table table--light style--two">

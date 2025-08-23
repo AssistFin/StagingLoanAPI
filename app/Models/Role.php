@@ -19,4 +19,9 @@ class Role extends Model
     public function submenus() {
         return $this->belongsToMany(Submenu::class, 'submenu_role');
     }
+
+    public function admins()
+    {
+        return $this->belongsToMany(Admin::class, 'role_user', 'role_id', 'user_id');
+    }
 }
