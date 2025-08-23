@@ -23,7 +23,10 @@
                     <div class="d-flex justify-content-end mb-3">
                         <input type="text" id="bsa-lead-search-input" class="form-control" 
                             placeholder="Search by Name / Mobile No / Loan App No / Email..." 
-                            style="max-width: 400px;">
+                            style="max-width: 300px;">&nbsp;&nbsp;
+                            <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >&nbsp;&nbsp;
+
+                            <button type="button" id="bsa_lead_export" class="btn btn-primary form-control">Export CSV</button>
                     </div>
                     <div class="table-responsive--md  table-responsive">
                         <table class="table table--light style--two">
@@ -142,5 +145,16 @@
                 console.error('Error fetching leads:', error);
             });
         }
+
+        $(document).ready(function () {
+            $('#bsa_lead_export').on('click', function () {
+                const params = {
+                    search: $('#bsa-lead-search-input').val(),
+                    export: 'csv'
+                };
+                const query = $.param(params);
+                window.location.href = "{{ route('admin.leads.bsa') }}?" + query;
+            });
+        });
     </script>
 @endpush

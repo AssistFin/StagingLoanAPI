@@ -783,7 +783,7 @@ class LeadController extends Controller
 
         $query = LoanApplication::with([
                 'user:id,firstname,lastname,mobile,email',
-                'personalDetails',
+                'personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in',
                 'kycDetails',
                 'loanDocument',
                 'addressDetails',
@@ -831,8 +831,54 @@ class LeadController extends Controller
         // If you want to inspect SQL:
         // dd($query->toSql(), $query->getBindings());
 
+        $totalRecordsQuery = clone $query;
+        $totalRecords = $totalRecordsQuery->count();
+
+        if ($request->has('export') && $request->export === 'csv') {
+            $leads = $query->get();
+            
+            $csvData = [];
+
+            foreach ($leads as $lead) {
+                // Default amount value
+                $loanAmount = $lead->loan_amount;
+                $loandate = $lead->created_at;
+
+                $csvData[] = [
+                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                    'Customer Mobile' => "'" . $lead->user->mobile,
+                    'Loan Application No' => $lead->loan_no,
+                    'Loan Amount' => number_format($loanAmount, 0),
+                    'Apply Date' => $loandate,
+                    'Employment Type' => !empty($lead->personalDetails->employment_type) ? $lead->personalDetails->employment_type : '',
+                    'Montly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
+                    'Income Received In' => !empty($lead->personalDetails->income_received_in) ? $lead->personalDetails->income_received_in : '',
+                    'Purpose Of Loan' => $lead->purpose_of_loan,
+                ];
+            }
+            $timestamp = now()->format('Ymd_His');
+
+            $filename = "bsa_leads_export_{$timestamp}.csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
         $leads = $query->orderBy('created_at','asc')->paginate(25);
-        return view('admin.leads.leads-bsa', compact('leads', 'userIdsWithKyc'));
+        return view('admin.leads.leads-bsa', compact('leads', 'userIdsWithKyc','totalRecords'));
     }
 
     public function leadsNotInterested(Request $request)
@@ -864,6 +910,102 @@ class LeadController extends Controller
         $leads = $query->paginate(25);
 
         return view('admin.decision.decision-rejected', compact('leads'));
+    }
+
+    public function leadsRejectFileUpload(Request $request)
+    {
+        $query = LoanApplication::with([
+            'user',
+            'personalDetails', 
+            'employmentDetails', 
+            'kycDetails', 
+            'loanDocument',
+            'addressDetails', 
+            'bankDetails',
+            'loanApproval'
+        ])->where('admin_approval_status', 'rejected')
+            ->whereHas('loanApproval', function ($q) {
+            $q->where('final_remark', 'rejected by system');
+        })->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+            
+            if ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                        $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+                });
+            }
+        $leads = $query->paginate(25);
+
+        return view('admin.leads.leads-rejectfileupload', compact('leads'));
+    }
+
+    public function leadsRejectFileUploadXlsx(Request $request)
+    {
+        $data = [
+            'loan_application_id' => $request->loan_application_id,
+            'user_id' => $request->user_id,
+            'loan_number' => $request->loan_number,
+            'credited_by' => $request->credited_by,
+            'status' => 2, 
+            'final_remark' => $request->final_remark,
+            'additional_remark' => $request->additional_remark,
+            'approval_date' => now(),
+            'loan_type' => "",
+            'branch' => "",
+            'approval_amount' => 0,
+            'repayment_amount' => 0,
+            'disbursal_amount' => 0,
+            'loan_tenure' => "",
+            'tentative_disbursal_date' => "",
+            'loan_tenure_days' => 0,
+            'loan_tenure_date' => "",
+            'roi' => 0,
+            'salary_date' => "",
+            'repay_date' => "",
+            'processing_fee' => 0,
+            'processing_fee_amount' => 0,
+            'gst' => 0,
+            'gst_amount' => 0,
+            'cibil_score' => "",
+            'monthly_income' => 0,
+            'kfs_path' => "",
+            'loan_purpose' => "",
+        ];
+
+        $loanApproval = LoanApproval::updateOrCreate(
+            [
+                'loan_application_id' => $request->loan_application_id,
+                'user_id' => $request->user_id
+            ],
+            $data
+        );
+        
+        $loan = LoanApplication::where([
+            ['user_id', $request->user_id],
+            ['id', $request->loan_application_id]
+        ])->first();
+
+        if ($loan) {
+            $loan->current_step = "loanstatus";
+            $loan->next_step = "noteligible";
+            $loan->admin_approval_status = "rejected";
+            $loan->admin_approval_date = now();
+            $loan->save();
+        }
+
+        $adminData = auth('admin')->user();
+        
+        if ($adminData) {
+            eventLog($adminData->id, $request->user_id, 'Loan Approval - rejected', json_encode($request->all()));
+        }
+
+        return redirect()->back()->with('success', 'Loan has been rejected successfully');
     }
 
     public function leadsVerify($id = null)
