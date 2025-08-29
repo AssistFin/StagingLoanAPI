@@ -647,6 +647,25 @@
                                         <option value="DCB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "DCB" ? "selected" : "" }}>DCB Bank</option>
                                         <option value="CSB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "CSB" ? "selected" : "" }}>CSB Bank</option>
                                         <option value="Bandhan" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Bandhan" ? "selected" : "" }}>Bandhan Bank</option>
+                                        <option value="Airtel" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Airtel" ? "selected" : "" }}>Airtel Payments Bank</option>
+                                        <option value="Paytm" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Paytm" ? "selected" : "" }}>Paytm Payments Bank</option>
+                                        <option value="IndiaPost" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "IndiaPost" ? "selected" : "" }}>India Post Payments Bank</option>
+                                        <option value="Fino" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Fino" ? "selected" : "" }}>Fino Payments Bank</option>
+                                        <option value="APGVB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "APGVB" ? "selected" : "" }}>Andhra Pradesh Grameena Vikas Bank</option>
+                                        <option value="Aryavart" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Aryavart" ? "selected" : "" }}>Aryavart Bank</option>
+                                        <option value="BarodaUP" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "BarodaUP" ? "selected" : "" }}>Baroda UP Bank</option>
+                                        <option value="Kerala" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Kerala" ? "selected" : "" }}>Kerala Gramin Bank</option>
+                                        <option value="KarnatakaG" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "KarnatakaG" ? "selected" : "" }}>Karnataka Gramin Bank</option>
+                                        <option value="MadhyaPradesh" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "MadhyaPradesh" ? "selected" : "" }}>Madhya Pradesh Gramin Bank</option>
+                                        <option value="MaharashtraG" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "MaharashtraG" ? "selected" : "" }}>Maharashtra Gramin Bank</option>
+                                        <option value="Rajasthan" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Rajasthan" ? "selected" : "" }}>Rajasthan Marudhara Gramin Bank</option>
+                                        <option value="Saraswat" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Saraswat" ? "selected" : "" }}>Saraswat Co-operative Bank</option>
+                                        <option value="Abhyudaya" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Abhyudaya" ? "selected" : "" }}>Abhyudaya Co-operative Bank</option>
+                                        <option value="Cosmos" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Cosmos" ? "selected" : "" }}>Cosmos Co-operative Bank</option>
+                                        <option value="SVC" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "SVC" ? "selected" : "" }}>Shamrao Vithal Co-op Bank (SVC)</option>
+                                        <option value="PMC" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "PMC" ? "selected" : "" }}>Punjab & Maharashtra Co-op Bank (PMC)</option>
+                                        <option value="NKGSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "NKGSB" ? "selected" : "" }}>NKGSB Co-op Bank</option>
+                                        <option value="TJSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "TJSB" ? "selected" : "" }}>TJSB Sahakari Bank</option>
                                     </select>
                                 <span class="error-message text-danger"></span>
                             </div>
@@ -680,7 +699,7 @@
                             View KFS Signed Document
                         </a>
 
-                        <a class="btn btn-{{isset($cashfreeData) && $cashfreeData->status == 'ACTIVE' ? 'success' : 'danger'}}" href="#">{{ dd($cashfreeData)}}
+                        <a class="btn btn-{{isset($cashfreeData) && $cashfreeData->status == 'ACTIVE' ? 'success' : 'danger'}}" href="#">
                             e-NACH Status - {{isset($cashfreeData) ? $cashfreeData->status : ''}} 
                             @if(isset($cashfreeData) && $cashfreeData->status == 'FAILED')
                                 @php
@@ -794,6 +813,26 @@
                                         <option value="DCB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "DCB" ? "selected" : "" }}>DCB Bank</option>
                                         <option value="CSB" {{ isset($lead->bankDetails->bank_name) && $lead->bankDetails->bank_name  == "CSB" ? "selected" : "" }}>CSB Bank</option>
                                         <option value="Bandhan" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Bandhan" ? "selected" : "" }}>Bandhan Bank</option>
+                                        
+                                        <option value="Airtel" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Airtel" ? "selected" : "" }}>Airtel Payments Bank</option>
+                                        <option value="Paytm" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Paytm" ? "selected" : "" }}>Paytm Payments Bank</option>
+                                        <option value="IndiaPost" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "IndiaPost" ? "selected" : "" }}>India Post Payments Bank</option>
+                                        <option value="Fino" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Fino" ? "selected" : "" }}>Fino Payments Bank</option>
+                                        <option value="APGVB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "APGVB" ? "selected" : "" }}>Andhra Pradesh Grameena Vikas Bank</option>
+                                        <option value="Aryavart" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Aryavart" ? "selected" : "" }}>Aryavart Bank</option>
+                                        <option value="BarodaUP" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "BarodaUP" ? "selected" : "" }}>Baroda UP Bank</option>
+                                        <option value="Kerala" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Kerala" ? "selected" : "" }}>Kerala Gramin Bank</option>
+                                        <option value="KarnatakaG" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "KarnatakaG" ? "selected" : "" }}>Karnataka Gramin Bank</option>
+                                        <option value="MadhyaPradesh" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "MadhyaPradesh" ? "selected" : "" }}>Madhya Pradesh Gramin Bank</option>
+                                        <option value="MaharashtraG" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "MaharashtraG" ? "selected" : "" }}>Maharashtra Gramin Bank</option>
+                                        <option value="Rajasthan" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Rajasthan" ? "selected" : "" }}>Rajasthan Marudhara Gramin Bank</option>
+                                        <option value="Saraswat" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Saraswat" ? "selected" : "" }}>Saraswat Co-operative Bank</option>
+                                        <option value="Abhyudaya" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Abhyudaya" ? "selected" : "" }}>Abhyudaya Co-operative Bank</option>
+                                        <option value="Cosmos" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "Cosmos" ? "selected" : "" }}>Cosmos Co-operative Bank</option>
+                                        <option value="SVC" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "SVC" ? "selected" : "" }}>Shamrao Vithal Co-op Bank (SVC)</option>
+                                        <option value="PMC" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "PMC" ? "selected" : "" }}>Punjab & Maharashtra Co-op Bank (PMC)</option>
+                                        <option value="NKGSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "NKGSB" ? "selected" : "" }}>NKGSB Co-op Bank</option>
+                                        <option value="TJSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "TJSB" ? "selected" : "" }}>TJSB Sahakari Bank</option>
                                     </select>
                                 <span class="error-message text-danger"></span>
                             </div>                        
@@ -935,6 +974,7 @@
                                     <th>Discount Principal</th>
                                     <th>Discount Interest</th>
                                     <th>Discount Penal</th>
+                                    <th>DPD</th>
                                     <th>Collection Amount</th>
                                     <th>Collection Date</th>
                                     <th>Mode</th>
@@ -955,6 +995,28 @@
                                         <td>{{ number_format($collection->discount_principal, 2) }}</td>
                                         <td>{{ number_format($collection->discount_interest, 2) }}</td>
                                         <td>{{ number_format($collection->discount_penal, 2) }}</td>
+                                        <td>@php
+                                                $dpd = 0;
+                                                if ($collection->status == 'Closed' || $collection->status == 'Settlement') {
+                                                    $repayDate = \Carbon\Carbon::parse($collection->repay_date);
+                                                    $collectionDate = \Carbon\Carbon::parse($collection->collection_date);
+
+                                                    if ($repayDate->greaterThan($collectionDate)) {
+                                                        $dpd = 0;
+                                                    } else {
+                                                        $dpd = $collectionDate->diffInDays($repayDate);
+                                                    }
+                                                }
+                                            @endphp
+
+                                            @if($collection->status == 'Closed' || $collection->status == 'Settlement')
+                                                <span style="color: {{ $dpd > 7 ? 'red' : 'green' }};">
+                                                    {{ $dpd }}
+                                                </span>
+                                            @else
+                                                0
+                                            @endif
+                                        </td>
                                         <td>{{ number_format($collection->collection_amt, 2) }}</td>
                                         <td>{{ \Carbon\Carbon::parse($collection->collection_date)->format('d M Y') }}</td>
                                         <td>{{ $collection->mode }}</td>
@@ -980,11 +1042,12 @@
                                     <th>Remaining Principal Due</th>
                                     <th>Interest Due</th>
                                     <th>Penal Due</th>
+                                    <th>DPD</th>
                                     <th>Total Due</th>
                                     <th>Payment Link</th>
                                 </tr>
                             </thead>
-                            @if($loans && !$settlementStatus)
+                            @if($loans)
                             <tbody>
                                 <tr>
                                     <td>{{ $loans->loan_no }}</td>
@@ -994,6 +1057,7 @@
                                     <td>₹{{ number_format($loans->remaining_principal, 2) }}</td>
                                     <td>₹{{ number_format($loans->interest, 2) }}</td>
                                     <td>₹{{ number_format($loans->penal_interest, 2) }}</td>
+                                    <td>{{ $loans->days_after_due }}</td>
                                     <td>₹{{ number_format($loans->total_dues, 2) }}</td>
                                     
                                     <td><div style="display: -webkit-box;-webkit-line-clamp: 2;
@@ -1027,19 +1091,19 @@
                                     <input type="hidden" id="loanno_{{ $lead->user->id }}" value="{{ $lead->loan_no }}">
                                     <input type="hidden" id="userid_{{ $lead->user->id }}" value="{{ $lead->user->id }}">
                                     <input type="hidden" id="firstname_{{ $lead->user->id }}" value="{{ $lead->user->firstname }}">
-                                    <input type="hidden" id="lastname_{{ $lead->user->id }}" value="{{ $lead->user->lastname }}">
+                                    <input type="hidden" id="lastname_{{ $lead->user->id }}" value="{{ !empty($lead->user->lastname) ? $lead->user->lastname : $lead->user->firstname }}">
                                     <input type="hidden" id="mobile_{{ $lead->user->id }}" value="{{ $lead->user->mobile }}">
                                     <input type="hidden" id="dob_{{ $lead->user->id }}" value="{{ $panData->date_of_birth ?? '' }}">
                                     <input type="hidden" id="pan_{{ $lead->user->id }}" value="{{ $panData->pan ?? '' }}">
                                     <input type="hidden" id="gender_{{ $lead->user->id }}" value="{{ isset($aadharData->gender) && $aadharData->gender == 'M' ? '1' : '2' }}">
-                                    <input type="hidden" id="houseno_{{ $lead->user->id }}" value="{{ $lead->addressDetails->house_no ?? '' }}">
+                                    <input type="hidden" id="houseno_{{ $lead->user->id }}" value="{{ !empty($lead->addressDetails->house_no) ? $lead->addressDetails->house_no : '01' }}">
                                     <input type="hidden" id="city_{{ $lead->user->id }}" value="{{ $lead->addressDetails->city ?? '' }}">
                                     <input type="hidden" id="pincode_{{ $lead->user->id }}" value="{{ $lead->addressDetails->pincode ?? '' }}">
                                     <input type="hidden" id="state_{{ $lead->user->id }}" value="{{ $lead->addressDetails->state ?? '' }}">
                                     <input type="hidden" id="verify_{{ $lead->user->id }}" value="{{ 2 }}">
                                     <td>
                                         @if (empty($experianCreditBureau->response_data))
-                                        <button type="button" onclick="checkCreditScore({{ $lead->user->id }})" class="btn btn-danger">Check Credit Score</button>
+                                        <button type="button" id="checkBtn_{{ $lead->user->id }}" onclick="checkCreditScore({{ $lead->user->id }})" class="btn btn-danger">Check Credit Score</button>
                                         @endif
                                         @if (!empty($experianCreditBureau->response_data))
 
@@ -1085,7 +1149,22 @@
                                     <input type="hidden" id="bank_statement_filename" value="{{ isset($lead->bankDetails) && $lead->bankDetails->bank_statement ? $filename : '' }}">
                                     <input type="hidden" id="bank_statement" value="{{ isset($lead->bankDetails) && $lead->bankDetails->bank_statement ? url('/admin/secure-document/'.$filename) : '' }}">
                                     <input type="hidden" id="bank_statement_pass" value="{{ $lead->bankDetails->bank_statement_password ?? '' }}">
-                                    <button type="button" onclick="checkBSAScore({{ $lead->id }})" class="btn btn-danger">Check BSA Report</button></td>
+                                    
+                                    @if(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'processing')
+                                        {{ $digitapBankRequestData->status }}
+                                    @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'ReportGenerated')
+                                        <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-success">Check Status</button>
+                                    @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'report_generated')
+                                        <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-info">View Report</button>
+                                    @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'report_saved')
+                                        <button class="btn btn-primary view-bsa-report" 
+                                                data-id="{{ $lead->id }}" 
+                                                data-url="{{ route('admin.digitap.bsaDataShow', $lead->id) }}">View Report
+                                        </button>
+                                    @else
+                                        <button type="button" id="checkBSABtn2_{{ $lead->id }}" onclick="checkBSAScore({{ $lead->id }})" class="btn btn-danger">Check BSA Report</button>
+                                    @endif
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1103,7 +1182,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Experian Report</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" onclick="window.location.reload();" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" id="reportContent">
         <!-- HTML content will be injected here -->
@@ -1112,7 +1191,7 @@
 
       <!-- Modal Footer -->
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" onclick="window.location.reload();" data-bs-dismiss="modal">Close</button>
         <button type="button" class="btn btn-primary" onclick="printDiv('reportContent')">Print</button>
       </div>
       
@@ -1152,6 +1231,33 @@
     </div>
   </div>
 </div>
+
+<!-- Modal -->
+@if(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'report_saved')
+<div class="modal fade" id="reportbsaModal" tabindex="-1" aria-labelledby="reportbsaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl" style="max-width: 95%;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Digitap BSA Report</h5>
+        <button type="button" class="btn-close" onclick="window.location.reload();" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="reportbsaContent">
+        <!-- HTML content will be injected here -->
+        <div class="text-center text-muted">Loading...</div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.location.reload();" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="printbsaDiv('reportbsaContent')">Print</button>
+      </div>
+      
+    </div>
+  </div>
+</div>
+@else
+
+@endif
 @endsection 
 
 @push('style')
@@ -1705,11 +1811,20 @@
     });
 
     function checkCreditScore(id) {
+
+            // Disable button immediately on click
+        var btn = document.getElementById('checkBtn_' + id);
+        btn.disabled = true;
+        btn.innerHTML = "Processing...";
+        btn.classList.remove("btn-danger");
+        btn.classList.add("btn-secondary"); // grey look while processing
+
         var user_id = document.getElementById('userid_'+id).value;
         var loan_no = document.getElementById('loanno_'+id).value;
         
         var firstname = document.getElementById('firstname_'+id).value;
         var lastname = document.getElementById('lastname_'+id).value;
+        if(!lastname){ lastname = firstname; }
         var mobile = document.getElementById('mobile_'+id).value;
         var date_of_birth = document.getElementById('dob_'+id).value;
         var dob = date_of_birth.replace(/-/g, "");
@@ -1721,18 +1836,16 @@
         var state = document.getElementById('state_'+id).value;
         var verify = document.getElementById('verify_'+id).value;
 
-        if(!loan_no) return false;
-        if(!user_id) return false;
-        if(!firstname) return false;
-        if(!lastname) return false;
-        if(!mobile) return false;
-        if(!dob) return false;
-        if(!pan) return false;
-        if(!house_no) return false;
-        if(!city) return false;
-        if(!pincode) return false;
-        if(!state) return false;
-        if(!gender) return false;
+        if(!loan_no || !user_id || !firstname || !lastname || !mobile || !dob || !pan || !house_no || !city || !pincode || !state || !gender){
+            alert("Something went wrong....");
+
+            // Re-enable button if validation fails
+            btn.disabled = false;
+            btn.innerHTML = "Check Credit Score";
+            btn.classList.remove("btn-secondary");
+            btn.classList.add("btn-danger");
+            return false;
+        }
         
 
         if(firstname && lastname && mobile && dob && pan && gender && house_no && city && pincode && state && loan_no && user_id){
@@ -1745,20 +1858,50 @@
                 success: function(response) {
                     alert("Success");
                     location.reload();
+                },
+                error: function() {
+                    alert("Request failed!");
+
+                    // Re-enable button if error occurs
+                    btn.disabled = false;
+                    btn.innerHTML = "Check Credit Score";
+                    btn.classList.remove("btn-secondary");
+                    btn.classList.add("btn-danger");
                 }
             });
         }else{
-            alert("Something went wrong....");
+            alert("Error, required data is incomplete so can not process it.");
         }
         
     }
 
     function checkBSAScore(id) {
+        // Disable button immediately on click
+        var btn2 = document.getElementById('checkBSABtn2_' + id);
+        console.log('btn : '+btn2);
+        if(!btn2) {
+            console.error("Button not found for id: " + id);
+            return;
+        }
+        btn2.disabled = true;
+        btn2.innerHTML = "Processing...";
+        btn2.classList.remove("btn-danger");
+        btn2.classList.add("btn-secondary"); // grey look while processing
+
         var bank_statement_filename = document.getElementById('bank_statement_filename').value;
         var bank_statement = document.getElementById('bank_statement').value;
         var bank_statement_pass = document.getElementById('bank_statement_pass').value;
 
-        if(!bank_statement) return false;
+        if(!bank_statement){
+            alert("Something went wrong....");
+
+            // Re-enable button if validation fails
+            btn2.disabled = false;
+            btn2.innerHTML = "Check Credit Score";
+            btn2.classList.remove("btn-secondary");
+            btn2.classList.add("btn-danger");
+            return false;
+        }
 
         if(bank_statement){
             $.ajaxSetup({
@@ -1767,7 +1910,7 @@
                 }
             });
             $.ajax({
-                url: "{{ route('admin.creditbureau.scoremeuploaddoc') }}",
+                url: "{{ route('admin.digitap.digitapbsuploaddoc') }}",
                 type: "POST",
                 data: {
                     bank_statement_filename : bank_statement_filename, bank_statement : bank_statement, bank_statement_pass : bank_statement_pass, loan_id : id
@@ -1775,10 +1918,64 @@
                 success: function(response) {
                     alert("Success");
                     location.reload();
+                },
+                error: function() {
+                    alert("Request failed!");
+
+                    // Re-enable button if error occurs
+                    btn2.disabled = false;
+                    btn2.innerHTML = "Check Credit Score";
+                    btn2.classList.remove("btn-secondary");
+                    btn2.classList.add("btn-danger");
                 }
             });
         }else{
-            alert("Something went wrong....");
+            alert("Error, required data is incomplete so can not process it.");
+        }
+        
+    }
+
+    function checkBSAScoreStatus(id) {
+        // Disable button immediately on click
+        var btn3 = document.getElementById('checkBSABtn3_' + id);
+        console.log('btn : '+btn3);
+        if(!btn3) {
+            console.error("Button not found for id: " + id);
+            return;
+        }
+        btn3.disabled = true;
+        btn3.innerHTML = "Processing...";
+        btn3.classList.remove("btn-danger");
+        btn3.classList.add("btn-secondary"); // grey look while processing
+
+        if(bank_statement){
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
+            $.ajax({
+                url: "{{ route('admin.digitap.digitapbsuploaddocstatus') }}",
+                type: "POST",
+                data: {
+                    loan_id : id
+                },
+                success: function(response) {
+                    alert("Success");
+                    location.reload();
+                },
+                error: function() {
+                    alert("Request failed!");
+
+                    // Re-enable button if error occurs
+                    btn2.disabled = false;
+                    btn2.innerHTML = "Check Status";
+                    btn2.classList.remove("btn-secondary");
+                    btn2.classList.add("btn-danger");
+                }
+            });
+        }else{
+            alert("Error, required data is incomplete so can not process it.");
         }
         
     }
@@ -1864,5 +2061,28 @@
         location.reload(); // Optional: refresh to restore events
     }
 </script>
+<script>
+    $(document).on('click', '.view-bsa-report', function () {
+        const url = $(this).data('url');
 
+        $('#reportbsaContent').html('<div class="text-center text-muted">Loading...</div>');
+        $('#reportbsaModal').modal('show');
+
+        $.get(url, function (response) {
+            $('#reportbsaContent').html(response);
+        }).fail(function () {
+            $('#reportbsaContent').html('<div class="text-danger">Failed to load report.</div>');
+        });
+    });
+
+    function printbsaDiv(divId) {
+        var printbsaContents = document.getElementById(divId).innerHTML;
+        var originalbsaContents = document.body.innerHTML;
+
+        document.body.innerHTML = printbsaContents;
+        window.print();
+        document.body.innerHTML = originalbsaContents;
+        location.reload(); // Optional: refresh to restore events
+    }
+</script>
 @endpush

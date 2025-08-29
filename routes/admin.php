@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\EventLogController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\OSReportController;
+use App\Http\Controllers\Admin\DigitapController;
 
 Route::controller(LoginController::class)->group(function () {
     Route::get('/', 'showLoginForm')->name('login');
@@ -260,6 +261,7 @@ Route::middleware('admin')->group(function () {
 
      // Loan Leads
      Route::get('utm-tracking', [UTMController::class, 'index'])->name('utm.tracking');
+     Route::get('campaign-ids', [UTMController::class, 'getCampaignIds'])->name('campaign.ids');
      Route::controller(LeadController::class)
         ->prefix('leads')
         ->name('leads.')
@@ -430,7 +432,11 @@ Route::middleware('admin')->group(function () {
         Route::post('/scoremeuploaddoc', 'checkBSAReportByScoreMe')->name('scoremeuploaddoc');
     });
     
-    Route::post('/digitap/callback', [ScoreMeWebhookController::class, 'callback'])->name('digitap.callback');
+    Route::name('digitap.')->prefix('digitap')->controller(DigitapController::class)->group(function () {
+        Route::post('/digitapbsuploaddoc', 'checkBSAReportByDigitap')->name('digitapbsuploaddoc');
+        Route::post('/digitapbsuploaddocstatus', 'checkStatusBSAReportByDigitap')->name('digitapbsuploaddocstatus');
+        Route::get('/bsaDataShow/{id}', 'bsaDataShow')->name('bsaDataShow');
+    });
 
     //============Loan================//
     Route::name('loan.')->prefix('loan')->controller(LoanController::class)->group(function () {

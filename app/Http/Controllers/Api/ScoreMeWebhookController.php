@@ -37,7 +37,6 @@ class ScoreMeWebhookController extends Controller
         return response()->json(['message' => 'Invalid or unrecognized webhook payload.'], 400);
     }
 
-
     public function checkBSAReportByScoreMeTest( Request $request )
     {
         $bank_statement_filename = $request->post('bank_statement_filename');
@@ -78,63 +77,5 @@ class ScoreMeWebhookController extends Controller
                 ]
             );
         }
-    }
-
-    public function checkBSAReportByScoreMe(Request $request, DigitapBankStatementService $digitap)
-    {
-        $request->validate([
-            'loan_id' => 'required'
-        ]);
-
-        $bank_statement_filename = $request->post('bank_statement_filename');
-        $bank_statement = $request->post('bank_statement');
-        $bank_statement_pass = $request->post('bank_statement_pass');
-        $loan_id = $request->post('loan_id');
-
-        $customer = LoanApplication::find($loan_id);
-
-        try {
-            // Step 1: Start Upload
-            $bankReq = $digitap->initiateForCustomer(
-                $customer->id,
-                1, // institution_id
-                'REF-' . $customer->id
-            );
-
-            // Step 2: Upload Statement (assuming file path stored in DB)
-            $filePath = $bank_statement;
-            $digitap->uploadStatement($bankReq, $filePath);
-
-            // Step 3: Complete Upload
-            $digitap->completeUpload($bankReq);
-
-            // Step 4: Check Status
-            $statusResponse = $digitap->checkStatus($bankReq);
-
-            // Step 5: If Report Ready → Retrieve
-            $reportData = null;
-            if ($bankReq->status === 'report_generated') {
-                $reportData = $digitap->retrieveReport($bankReq);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'BSA Report Processed',
-                'data' => $reportData ?? $statusResponse
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function callback(Request $request)
-    {
-        Log::info('Digitap Callback Received', $request->all());
-
-        return response()->json(['status' => 'ok'], 200);
     }
 }

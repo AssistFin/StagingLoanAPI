@@ -26,7 +26,7 @@ class DigitapBankStatementService
         $payload = [
             'institution_id'      => $institutionId,
             'client_ref_num'      => $refNum,
-            'txn_completed_cburl' => '',
+            'txn_completed_cburl' => config('services.docs.app_url').'/api/digitap/bsu/webhook',
             'start_month'         => now()->subMonths(3)->format('Y-m'),
             'end_month'           => now()->subMonth()->format('Y-m'),
             'acceptance_policy'   => 'atLeastOneTransactionInRange',
@@ -34,6 +34,7 @@ class DigitapBankStatementService
         ];
 
         $response = $this->httpPost('/startupload', $payload);
+        
         \Log::info('Digitap StartUpload Response', ['response' => $response]);
         if (!is_array($response) || empty($response)) {
             return [
@@ -81,7 +82,7 @@ class DigitapBankStatementService
         }
 
         $response = Http::asMultipart()
-            ->post($this->baseUrl . '/uploadstatement', $multipart)
+            ->post($this->baseUrl . '/uploadstmt', $multipart)
             ->json();
 
         $request->update([
@@ -132,7 +133,7 @@ class DigitapBankStatementService
     /**
      * Retrieve Report
      */
-    public function retrieveReport(DigitapBankRequest $request, $reportType = 'json', $reportSubtype = 'type1')
+    public function retrieveReport(DigitapBankRequest $request, $reportType = 'json', $reportSubtype = 'type3')
     {
         $response = $this->httpPost('/retrievereport', [
             'txn_id'        => $request->txn_id,
@@ -153,9 +154,27 @@ class DigitapBankStatementService
      */
     protected function httpPost($endpoint, $payload)
     {
-        return Http::withHeaders([
+        $res = Http::withHeaders([
             'Authorization' => 'Basic ' . base64_encode($this->clientId . ':' . $this->clientSecret),
             'Content-Type'  => 'application/json',
-        ])->post($this->baseUrl . $endpoint, $payload)->json();
+        ])->post(rtrim($this->baseUrl, '/') . $endpoint, $payload);
+
+        // Try to decode JSON
+        $json = $res->json();
+
+        if ($json === null) {
+            \Log::error("Digitap API ($endpoint) returned non-JSON", [
+                'status'   => $res->status(),
+                'body'     => $res->body(),
+                'payload'  => $payload,
+                'endpoint' => $this->baseUrl . $endpoint
+            ]);
+        }
+
+        return $json ?? [
+            'status_code' => $res->status(),
+            'raw'         => $res->body()
+        ];
     }
+
 }

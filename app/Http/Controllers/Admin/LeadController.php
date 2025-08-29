@@ -13,6 +13,7 @@ use App\Models\LoanApplication;
 use App\Models\CreditBureau;
 use App\Models\CashfreeEnachRequestResponse;
 use App\Models\LoanDocument;
+use App\Models\DigitapBankRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
@@ -947,63 +948,83 @@ class LeadController extends Controller
 
     public function leadsRejectFileUploadXlsx(Request $request)
     {
-        $data = [
-            'loan_application_id' => $request->loan_application_id,
-            'user_id' => $request->user_id,
-            'loan_number' => $request->loan_number,
-            'credited_by' => $request->credited_by,
-            'status' => 2, 
-            'final_remark' => $request->final_remark,
-            'additional_remark' => $request->additional_remark,
-            'approval_date' => now(),
-            'loan_type' => "",
-            'branch' => "",
-            'approval_amount' => 0,
-            'repayment_amount' => 0,
-            'disbursal_amount' => 0,
-            'loan_tenure' => "",
-            'tentative_disbursal_date' => "",
-            'loan_tenure_days' => 0,
-            'loan_tenure_date' => "",
-            'roi' => 0,
-            'salary_date' => "",
-            'repay_date' => "",
-            'processing_fee' => 0,
-            'processing_fee_amount' => 0,
-            'gst' => 0,
-            'gst_amount' => 0,
-            'cibil_score' => "",
-            'monthly_income' => 0,
-            'kfs_path' => "",
-            'loan_purpose' => "",
-        ];
+        $mobiles = ['918297863141','918927699909','919913796179','919905885745','916291297394','918296774556','918800258254','918630795436','917666246787','918447292359','919558703522','919354373547','917575828187','917558009008','919316109503','919612403172','917210087475','917506003159','919907303376','919676630791','919822446053','916379881750','916009769261','917837689150','918506932082'];
 
-        $loanApproval = LoanApproval::updateOrCreate(
-            [
-                'loan_application_id' => $request->loan_application_id,
-                'user_id' => $request->user_id
-            ],
-            $data
-        );
-        
-        $loan = LoanApplication::where([
-            ['user_id', $request->user_id],
-            ['id', $request->loan_application_id]
-        ])->first();
+        $userdata = DB::table('users as u')
+                ->join('loan_applications as la', 'la.user_id', '=', 'u.id')
+                ->whereIn('u.mobile', $mobiles)
+                ->select([
+                    'u.id as user_id',
+                    'u.mobile',
+                    'la.id as loan_app_id',
+                    'la.loan_no',
+                    'la.status',
+                ])
+                ->get(); 
+        $userIds = $userdata->user_id;
 
-        if ($loan) {
-            $loan->current_step = "loanstatus";
-            $loan->next_step = "noteligible";
-            $loan->admin_approval_status = "rejected";
-            $loan->admin_approval_date = now();
-            $loan->save();
-        }
+        collect($userIds)->chunk(500)->each(function ($chunk) {
+            foreach ($chunk as $userId) {
 
-        $adminData = auth('admin')->user();
-        
-        if ($adminData) {
-            eventLog($adminData->id, $request->user_id, 'Loan Approval - rejected', json_encode($request->all()));
-        }
+                $data = [
+                    'loan_application_id' => $request->loan_application_id,
+                    'user_id' => $request->user_id,
+                    'loan_number' => $request->loan_number,
+                    'credited_by' => $request->credited_by,
+                    'status' => 2, 
+                    'final_remark' => $request->final_remark,
+                    'additional_remark' => $request->additional_remark,
+                    'approval_date' => now(),
+                    'loan_type' => "",
+                    'branch' => "",
+                    'approval_amount' => 0,
+                    'repayment_amount' => 0,
+                    'disbursal_amount' => 0,
+                    'loan_tenure' => "",
+                    'tentative_disbursal_date' => "",
+                    'loan_tenure_days' => 0,
+                    'loan_tenure_date' => "",
+                    'roi' => 0,
+                    'salary_date' => "",
+                    'repay_date' => "",
+                    'processing_fee' => 0,
+                    'processing_fee_amount' => 0,
+                    'gst' => 0,
+                    'gst_amount' => 0,
+                    'cibil_score' => "",
+                    'monthly_income' => 0,
+                    'kfs_path' => "",
+                    'loan_purpose' => "",
+                ];
+
+                $loanApproval = LoanApproval::updateOrCreate(
+                    [
+                        'loan_application_id' => $request->loan_application_id,
+                        'user_id' => $request->user_id
+                    ],
+                    $data
+                );
+                
+                $loan = LoanApplication::where([
+                    ['user_id', $request->user_id],
+                    ['id', $request->loan_application_id]
+                ])->first();
+
+                if ($loan) {
+                    $loan->current_step = "loanstatus";
+                    $loan->next_step = "noteligible";
+                    $loan->admin_approval_status = "rejected";
+                    $loan->admin_approval_date = now();
+                    $loan->save();
+                }
+
+                $adminData = auth('admin')->user();
+                
+                if ($adminData) {
+                    eventLog($adminData->id, $request->user_id, 'Loan Approval - rejected', json_encode($request->all()));
+                }
+            }
+        });
 
         return redirect()->back()->with('success', 'Loan has been rejected successfully');
     }
@@ -1032,6 +1053,9 @@ class LeadController extends Controller
 
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
 
+        $digitapBankRequestData = DigitapBankRequest::where('customer_id', $id)->orderBy('id','desc')->first();
+        //dd($digitapBankRequestData);
+        
         $cashfreeExistingActiveData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->where('status', 'ACTIVE')->orderBy('id','desc')->get();
         //dd($cashfreeExistingActiveData);
         if(!empty($cashfreeExistingActiveData)){
@@ -1068,10 +1092,12 @@ class LeadController extends Controller
             'utr_collections.*',
             'loan_applications.loan_no',
             'loan_disbursals.loan_disbursal_number',
+            'loan_approvals.repay_date',
             DB::raw("CONCAT(users.firstname, ' ', users.lastname) as user_name")
         )
         ->join('loan_applications', 'loan_applications.id', '=', 'utr_collections.loan_application_id')
         ->join('loan_disbursals', 'loan_disbursals.loan_application_id', '=', 'utr_collections.loan_application_id')
+        ->join('loan_approvals', 'loan_approvals.loan_application_id', '=', 'utr_collections.loan_application_id')
         ->join('users', 'users.id', '=', 'utr_collections.user_id')
         ->where('users.id', $lead->user->id)
         ->where('utr_collections.loan_application_id', $id)
@@ -1155,7 +1181,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData'));
     }
 
     public function deleteLead($id)

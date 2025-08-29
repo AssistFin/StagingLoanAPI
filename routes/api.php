@@ -12,8 +12,10 @@ use App\Http\Controllers\Api\LoanPaymentController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\ScoreMeWebhookController;
+use App\Http\Controllers\Admin\DigitapController;
 
 Route::post('/scoreme/webhook', [ScoreMeWebhookController::class, 'handle']);
+Route::post('/digitap/bsu/webhook', [DigitapController::class, 'callback']);
 Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
 Route::get('/pay/{id}', [LoanPaymentController::class, 'generatePaymentLink']);
 /*
@@ -40,6 +42,16 @@ Route::namespace('Api')->name('api.')->group(function () {
 
     Route::get('/updated/kfs-document/{filename}/{loanon}', function ($filename, $loanon) {
         $filePath = config('services.docs.upload_kfs_doc') . '/documents/loan_'. $loanon . '/kfs/updated_' . $filename;
+    
+        if (!file_exists($filePath)) {
+            abort(404, 'File not found');
+        }
+    
+        return response()->file($filePath);
+    })->where('filename', '.*');
+
+    Route::get('/secure-document/{filename}', function ($filename) {
+        $filePath = config('services.docs.upload_kfs_doc') . '/' . $filename;
     
         if (!file_exists($filePath)) {
             abort(404, 'File not found');
