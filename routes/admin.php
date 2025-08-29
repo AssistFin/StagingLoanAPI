@@ -419,7 +419,7 @@ Route::middleware('admin')->group(function () {
     Route::name('creditbureau.')->prefix('creditbureau')->controller(CreditBureauController::class)->group(function () {
         Route::get('/index', 'index')->name('index');
         Route::get('/checkReport', 'checkReportByExperian')->name('checkReport');
-        Route::get('/checkBankAccNo', 'checkBankAccNo')->name('checkBankAccNo');
+        Route::get('/checkBankAccNo', 'checkBankAccNoByApproval')->name('checkBankAccNo');
         Route::get('/show/{id}', 'show')->name('show');
 
     });

@@ -75,7 +75,7 @@
                                     <option value="last_15_days" {{ request('date_range') == 'last_15_days' ? 'selected' : '' }}>Last 15 Days</option>
                                     <option value="current_month" {{ request('date_range') == 'current_month' ? 'selected' : '' }}>Current Month</option>
                                     <option value="previous_month" {{ request('date_range') == 'previous_month' ? 'selected' : '' }}>Previous Month</option>
-                                    <option value="custom">Custom Range</option>
+                                    <option value="custom" {{ request('date_range') == 'custom' ? 'selected' : '' }}>Custom Range</option>
                                 </select>
 
                                 <select id="source" name="source" class="form-control">
@@ -99,8 +99,7 @@
                                 
                                 <select id="utm_records" name="utm_records" class="form-control">
                                     <option value="">Select UTM Records</option>
-                                    <option value="tur" {{ request('utm_records') == 'tur' ? 'selected' : '' }}>Total UTM Records</option>
-                                    <option value="tusr" {{ request('utm_records') == 'tusr' ? 'selected' : '' }}>Total Userwise Records</option>
+                                    <option value="tusr" {{ request('utm_records') == 'tusr' ? 'selected' : '' }}>Total UTM Records</option>
                                     <option value="tca" {{ request('utm_records') == 'tca' ? 'selected' : '' }}>Total Complete Application</option>
                                     <option value="taa" {{ request('utm_records') == 'taa' ? 'selected' : '' }}>Total Approved Application</option>
                                     <option value="tra" {{ request('utm_records') == 'tra' ? 'selected' : '' }}>Total Rejected Application</option>
@@ -111,7 +110,7 @@
                                 placeholder="Search by Mobile No" 
                                 style="max-width: 400px;">
 
-                                <input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="{{ $totalRecords }}" readonly >
+                                <!--input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="" readonly -->
 
                                 <button type="button" id="utm_export" class="btn btn-primary form-control">Export CSV</button>
                             </div>
@@ -120,8 +119,8 @@
                             <div id="customDateSection" class="custom-date-container" style="margin-top: 10px;">
                                 <div class="section-heading">Select Custom Date Range:</div>
                                 <div class="flex gap-3">
-                                    <input type="text" id="from_date" name="from_date" class="datepicker" placeholder="From Date" autocomplete="off" />
-                                    <input type="text" id="to_date" name="to_date" class="datepicker" placeholder="To Date" autocomplete="off" />
+                                    <input type="text" id="from_date" name="from_date" class="datepicker" placeholder="From Date" autocomplete="off" {{ request('date_range') == 'custom' &&  !empty(request('from_date')) ? 'selected' : '' }} />
+                                    <input type="text" id="to_date" name="to_date" class="datepicker" placeholder="To Date" autocomplete="off" {{ request('date_range') == 'custom' &&  !empty(request('to_date')) ? 'selected' : '' }} />
                                 </div>
                             </div>
 
@@ -152,8 +151,8 @@
                             @forelse($utmRecords as $record)
                                 <tr>
                                     <td data-label="@lang('Date')">
-                                        {{ showDateTime(\Carbon\Carbon::parse($record->created_at)) }}<br>
-                                        {{ \Carbon\Carbon::parse($record->created_at)->diffForHumans() }}
+                                        {{ showDateTime(\Carbon\Carbon::parse($record->utm_created_at)) }}<br>
+                                        {{ \Carbon\Carbon::parse($record->utm_created_at)->diffForHumans() }}
                                     </td>
                                     <td data-label="@lang('User')">
                                         @if($record->user_id)
@@ -254,14 +253,10 @@
             success: function(response) {
                 $('#utmTable').html($(response).find('#utmTable').html());
                 $('#utmpaginationLinks').html($(response).find('#utmpaginationLinks').html());
-                $('#total_records').val($(response).find('#total_records').val());
+                //$('#total_records').val($(response).find('#total_records').val());
             }
         });
     }
-
-    $(document).ready(function () {
-
-    });
 
         //$('#date_range, #utm_records, #source, #campaign_id').on('change', () => fetchUTMLeads());
         //$('#utm-search-input').on('keyup', () => fetchUTMLeads());
@@ -328,7 +323,17 @@
             }
         });
 
+    $(document).ready(function () {
         $('#utm_export').on('click', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('from_date')) {
+                $('#from_date').val(urlParams.get('from_date'));
+            }
+            if (urlParams.has('to_date')) {
+                $('#to_date').val(urlParams.get('to_date'));
+            }
+            //alert($('#from_date').val());
+            //alert($('#to_date').val());
             const params = {
                 date_range: $('#date_range').val(),
                 from_date: $('#from_date').val(),
@@ -342,6 +347,7 @@
             const query = $.param(params);
             window.location.href = "{{ route('admin.utm.tracking') }}?" + query;
         });
+    });
 
     $(document).ready(function () {
     $('#source').on('change', function () {
