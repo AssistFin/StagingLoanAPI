@@ -14,6 +14,7 @@ class UTMController extends Controller
 {
     public function index(Request $request)
     {
+        ini_set('memory_limit', '2048M');
         $pageTitle = 'UTM Tracking Data';
         
         $query = DB::table('utm_tracking')
@@ -23,20 +24,35 @@ class UTMController extends Controller
             ->leftJoin('loan_disbursals', 'loan_disbursals.loan_application_id', '=', 'loan_applications.id')
             ->leftJoin('loan_approvals', 'loan_approvals.loan_application_id', '=', 'loan_applications.id')
             ->leftJoin('loan_bank_details', 'loan_bank_details.loan_application_id', '=', 'loan_applications.id')
-            ->select(
-                'utm_tracking.*',
-                'users.firstname',
-                'users.lastname',
-                'users.mobile',
-                'users.email',
-                'loan_applications.id',
-                'loan_applications.loan_no',
-                'loan_personal_details.employment_type',
-                'loan_personal_details.monthly_income',
-                'loan_personal_details.income_received_in',
-                'loan_approvals.cibil_score',
-                'loan_approvals.final_remark'
-            )->orderByRaw('utm_tracking.created_at DESC');
+            ->select([
+                DB::raw('ANY_VALUE(utm_tracking.id) as utm_id'),
+                'utm_tracking.user_id as utm_user_id',
+                DB::raw('ANY_VALUE(utm_tracking.utm_source) as utm_source'),
+                DB::raw('ANY_VALUE(utm_tracking.utm_medium) as utm_medium'),
+                DB::raw('ANY_VALUE(utm_tracking.utm_campaign) as utm_campaign'),
+                DB::raw('ANY_VALUE(utm_tracking.landing_page) as landing_page'),
+                DB::raw('ANY_VALUE(utm_tracking.ip_address) as ip_address'),
+                DB::raw('ANY_VALUE(utm_tracking.user_agent) as user_agent'),
+                DB::raw('ANY_VALUE(utm_tracking.created_at) as utm_created_at'),
+
+                DB::raw('ANY_VALUE(users.id) as user_id'),
+                DB::raw('ANY_VALUE(users.firstname) as firstname'),
+                DB::raw('ANY_VALUE(users.lastname) as lastname'),
+                DB::raw('ANY_VALUE(users.mobile) as mobile'),
+                DB::raw('ANY_VALUE(users.email) as email'),
+
+                DB::raw('ANY_VALUE(loan_applications.id) as loan_app_id'),
+                DB::raw('ANY_VALUE(loan_applications.loan_no) as loan_no'),
+
+                DB::raw('ANY_VALUE(loan_personal_details.employment_type) as employment_type'),
+                DB::raw('ANY_VALUE(loan_personal_details.monthly_income) as monthly_income'),
+                DB::raw('ANY_VALUE(loan_personal_details.income_received_in) as income_received_in'),
+
+                DB::raw('ANY_VALUE(loan_approvals.cibil_score) as cibil_score'),
+                DB::raw('ANY_VALUE(loan_approvals.final_remark) as final_remark'),
+            ])
+            ->groupBy('utm_tracking.user_id')
+            ->orderBy(DB::raw('MAX(utm_tracking.created_at)'), 'desc');
         
         $searchTerm = $request->get('search');
         $dateRange = $request->get('date_range');
@@ -143,7 +159,7 @@ class UTMController extends Controller
         
         //echo 'test 1 - '.$totalRecords;
         if ($utm_records) {
-            $loanAppIds = (clone $query)->pluck('loan_applications.id');
+            $loanAppIds = (clone $query)->pluck('loan_app_id');
             $loanAppIds = array_filter($loanAppIds->toArray(), function ($id) {
                 return !is_null($id);
             });
@@ -171,17 +187,10 @@ class UTMController extends Controller
             }
         }
 
-        // Clone the query to get the total count before pagination
-        $totalRecordsQuery = clone $query;
-        $totalRecords = $totalRecordsQuery->count();
-
         if ($request->has('export') && $request->export === 'csv') {
             $utmRecords = $query->get();
 
             $csvData = [];
-            //echo '<pre>';
-            //print_r($utmRecords);
-            //dd();
             foreach ($utmRecords as $utmRecord) {
                 if($utm_records && $utm_records === 'taa'){
                     $csvData[] = [
@@ -226,7 +235,7 @@ class UTMController extends Controller
                         'Employment Type' => $utmRecord->employment_type ?? '',
                         'Monthly Income' => $utmRecord->monthly_income ?? '',
                         'Income Received In' => $utmRecord->income_received_in ?? '',
-                        'Date' => \Carbon\Carbon::parse($utmRecord->created_at)->timezone('Asia/Kolkata'),
+                        'Date' => \Carbon\Carbon::parse($utmRecord->utm_created_at),
                         'Source' => $utmRecord->utm_source ?? '',
                         'Medium' => $utmRecord->utm_medium ?? '',
                         'Campaign' => $utmRecord->utm_campaign ?? '',
@@ -277,7 +286,7 @@ class UTMController extends Controller
             ->toArray();
         $utmRecords = $query->paginate(25);
 
-        return view('admin.leads.utm-details', compact('pageTitle', 'utmRecords', 'totalRecords','campaignIds'));
+        return view('admin.leads.utm-details', compact('pageTitle', 'utmRecords','campaignIds'));
     }
 
     // Store UTM data for anonymous users
