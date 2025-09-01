@@ -110,7 +110,7 @@
                                 placeholder="Search by Mobile No" 
                                 style="max-width: 400px;">
 
-                                <!--input type="text" id="total_records" placeholder="Total Records"  class="form-control" value="" readonly -->
+                                <input type="text" id="total_records" placeholder="Total Records"  value="{{ $totalRecords }}" class="form-control" value="" readonly>
 
                                 <button type="button" id="utm_export" class="btn btn-primary form-control">Export CSV</button>
                             </div>
@@ -253,7 +253,7 @@
             success: function(response) {
                 $('#utmTable').html($(response).find('#utmTable').html());
                 $('#utmpaginationLinks').html($(response).find('#utmpaginationLinks').html());
-                //$('#total_records').val($(response).find('#total_records').val());
+                $('#total_records').val($(response).find('#total_records').val());
             }
         });
     }

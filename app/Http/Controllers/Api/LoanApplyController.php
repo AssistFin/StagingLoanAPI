@@ -745,10 +745,10 @@ class LoanApplyController extends Controller
 
         $data = [
             "customer_details" => [
-                "customer_name" => $user->firstname." ".$user->lastname,
+                "customer_name" => $user->firstname." ".substr($user->lastname, 0, 20),
                 "customer_email" => $user->email,
                 "customer_phone" => $user->mobile,
-                "customer_bank_account_holder_name" => $user->firstname." ".$user->lastname,
+                "customer_bank_account_holder_name" => $user->firstname." ".substr($user->lastname, 0, 20),
                 "customer_bank_account_number" => $bankDetails->account_number,
                 "customer_bank_ifsc" => $bankDetails->ifsc_code,
                 "customer_bank_account_type" => "SAVINGS"

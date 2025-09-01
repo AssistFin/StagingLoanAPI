@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use App\Models\DigitapBankRequest;
+use Illuminate\Support\Facades\Storage;
 
 class DigitapBankStatementService
 {
@@ -27,7 +28,7 @@ class DigitapBankStatementService
             'institution_id'      => $institutionId,
             'client_ref_num'      => $refNum,
             'txn_completed_cburl' => config('services.docs.app_url').'/api/digitap/bsu/webhook',
-            'start_month'         => now()->subMonths(3)->format('Y-m'),
+            'start_month'         => now()->subMonths(4)->format('Y-m'),
             'end_month'           => now()->subMonth()->format('Y-m'),
             'acceptance_policy'   => 'atLeastOneTransactionInRange',
             'relaxation_days'     => '2'
@@ -135,19 +136,52 @@ class DigitapBankStatementService
      */
     public function retrieveReport(DigitapBankRequest $request, $reportType = 'json', $reportSubtype = 'type3')
     {
+        // 1. JSON report
         $response = $this->httpPost('/retrievereport', [
             'txn_id'        => $request->txn_id,
             'report_type'   => $reportType,
             'report_subtype'=> $reportSubtype
         ]);
 
-        $request->update([
-            'report_data' => $response,
-            'status'      => 'report_saved'
+        DigitapBankRequest::where('txn_id', $request->txn_id)
+            ->update([
+                'report_json_data' => json_encode($response, JSON_UNESCAPED_UNICODE),
+                'status'           => 'json_report_saved'
+            ]);
+
+        // 2. XLSX report
+        $response2 = $this->httpPost('/retrievereport', [
+            'txn_id'        => $request->txn_id,
+            'report_type'   => 'xlsx',
+            'report_subtype'=> $reportSubtype
         ]);
 
+        $xlsx_filePath = null;
+
+        if (!empty($response2['raw'])) {
+            $xlsxData = $response2['raw']; // binary data
+
+            // relative path in storage/app/public/
+            $xlsx_filePath = 'digitap_reports/'.$request->txn_id.'_report.xlsx';
+
+            // make sure directory exists in storage/app/public/
+            Storage::disk('public')->makeDirectory('digitap_reports');
+
+            // save file using Laravel Storage
+            Storage::disk('public')->put($xlsx_filePath, $xlsxData);
+
+            // update db with only the path
+            DigitapBankRequest::where('txn_id', $request->txn_id)
+                ->update([
+                    'report_xlsx_data' => $xlsx_filePath, // store relative path
+                    'status'           => 'xlsx_report_saved'
+                ]);
+        }
+
+        // return clean response (without binary)
         return $response;
     }
+
 
     /**
      * Helper: POST request with Header Auth
@@ -162,7 +196,7 @@ class DigitapBankStatementService
         // Try to decode JSON
         $json = $res->json();
 
-        if ($json === null) {
+        if ($json === null && $payload['report_type'] != 'xlsx') {
             \Log::error("Digitap API ($endpoint) returned non-JSON", [
                 'status'   => $res->status(),
                 'body'     => $res->body(),

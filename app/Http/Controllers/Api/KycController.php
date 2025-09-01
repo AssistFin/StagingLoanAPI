@@ -367,7 +367,7 @@ class KycController extends Controller
             );
 
 
-            if(isset($data['data'])) {
+            if(isset($data['data']) && ($data['data']['status'] == 'valid') && ($data['data']['name_as_per_pan_match'] == true) && ($data['data']['date_of_birth_match'] == true)){
                 $loanDocument = LoanKYCDetails::updateOrCreate(
                     ['loan_application_id' => $request->loan_application_id],
                     ['pan_number' => $request->pan_number]
@@ -399,6 +399,9 @@ class KycController extends Controller
                         'updated_at' => now()
                     ]);
                 }
+            }else{
+                Log::error('PAN verification response error : ' . $data['data']);
+                return response()->json(['status' => 'error', 'message' => ['error' => [$data['data']]]], );
             }
 
             $loan = LoanApplication::where('user_id', auth()->id())->first();
