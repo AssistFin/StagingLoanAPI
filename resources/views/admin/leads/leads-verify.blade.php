@@ -1158,10 +1158,7 @@
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'ReportGenerated')
                                         <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-info">View Report</button>
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'xlsx_report_saved' && !empty($digitapBankRequestData->report_xlsx_data))
-                                        <button class="btn btn-primary view-bsa-report" 
-                                                data-id="{{ $lead->id }}" 
-                                                data-url="{{ route('admin.digitap.bsaDataShow', $lead->id) }}">View Excel Report
-                                        </button>
+                                        <a href="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}" target="_blank" class="btn btn-primary"> View Excel Report</a>
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'json_report_saved' && !empty($digitapBankRequestData->report_json_data))
                                         <button class="btn btn-primary view-bsa-report" 
                                                 data-id="{{ $lead->id }}" 
