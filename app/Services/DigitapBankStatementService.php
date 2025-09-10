@@ -162,7 +162,7 @@ class DigitapBankStatementService
             $xlsxData = $response2['raw']; // binary data
 
             // relative path in storage/app/public/
-            $xlsx_filePath = 'digitap_reports/'.$request->txn_id.'_report.xlsx';
+            $xlsx_filePath = $request->txn_id.'_report.xlsx';
 
             // make sure directory exists in storage/app/public/
             Storage::disk('public')->makeDirectory('digitap_reports');

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Response;
 
 class UTMController extends Controller
 {
+
     public function index(Request $request)
     {
         ini_set('memory_limit', '2048M');
@@ -70,6 +71,7 @@ class UTMController extends Controller
                 'loan_approvals.status as approval_status',
                 'loan_approvals.approval_amount'
             ])
+            ->whereRaw('loan_applications.id = (SELECT MIN(id) FROM loan_applications WHERE loan_applications.user_id = users.id)')
             ->orderBy('utm_tracking.created_at', 'desc');
 
         // ================= Date Filter =================
@@ -221,6 +223,7 @@ class UTMController extends Controller
 
         return view('admin.leads.utm-details', compact('pageTitle', 'utmRecords', 'campaignIds', 'totalRecords'));
     }
+
 
     // Store UTM data for anonymous users
     public function store(Request $request)
