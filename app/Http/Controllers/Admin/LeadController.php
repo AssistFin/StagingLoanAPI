@@ -37,7 +37,7 @@ class LeadController extends Controller
             ->toArray();
 
         // Step 3: Start building the loan applications query
-        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','loanApproval'])
+        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','user.utmTracking:id,user_id,utm_source','loanApproval','personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in'])
             ->withExists([
                 'personalDetails',
                 'employmentDetails',
@@ -457,6 +457,8 @@ class LeadController extends Controller
                     'Loan Amount' => number_format($loanAmount, 2),
                      $dateHead => $disbursedDate,
                     $purpose_head => $purpose,
+                    'source' => $lead->user->utmTracking->utm_source ?? '',
+                    'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
                 ];
             }
 
@@ -634,7 +636,8 @@ class LeadController extends Controller
         return view('admin.leads.leads-all', compact('leads', 'usersWithKyc', 'userIdsWithKyc','totalAmount', 'totalRecords'));
     }
 
-    public function leadsWBS(Request $request) {
+    public function leadsWBS(Request $request){
+        ini_set('memory_limit', '2048M');
 
        $query = LoanApplication::with([
             'user',
@@ -773,6 +776,7 @@ class LeadController extends Controller
 
     public function leadsBSA(Request $request)
     {
+        ini_set('memory_limit', '2048M');
         $usersWithKyc = DB::table('loan_kyc_details')
                 ->pluck('loan_application_id');
 
@@ -785,6 +789,7 @@ class LeadController extends Controller
 
         $query = LoanApplication::with([
                 'user:id,firstname,lastname,mobile,email',
+                'user.utmTracking:id,user_id,utm_source',
                 'personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in',
                 'kycDetails',
                 'loanDocument',
@@ -856,6 +861,7 @@ class LeadController extends Controller
                     'Montly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
                     'Income Received In' => !empty($lead->personalDetails->income_received_in) ? $lead->personalDetails->income_received_in : '',
                     'Purpose Of Loan' => $lead->purpose_of_loan,
+                    'Source' => $lead->user->utmTracking->utm_source ?? '',
                 ];
             }
             $timestamp = now()->format('Ymd_His');
@@ -949,6 +955,7 @@ class LeadController extends Controller
 
     public function leadsVerify($id = null)
     {
+        ini_set('memory_limit', '2048M');
         $lead = LoanApplication::with([
             'user',
             'personalDetails', 

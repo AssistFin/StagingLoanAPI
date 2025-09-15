@@ -83,6 +83,7 @@
                                     <option value="fb" {{ request('source') == 'fb' ? 'selected' : '' }}>Facebook</option>
                                     <option value="google" {{ request('source') == 'google' ? 'selected' : '' }}>Google</option>
                                     <option value="vortexia" {{ request('source') == 'vortexia' ? 'selected' : '' }}>Vortexia</option>
+                                    <option value="hexawebony" {{ request('source') == 'hexawebony' ? 'selected' : '' }}>Hexawebony</option>
                                     <option value="digisoftnexus" {{ request('source') == 'digisoftnexus' ? 'selected' : '' }}>Digisoftnexus</option>
                                 </select>
 

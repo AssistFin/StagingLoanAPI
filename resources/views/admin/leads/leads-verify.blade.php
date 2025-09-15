@@ -666,6 +666,7 @@
                                         <option value="PMC" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "PMC" ? "selected" : "" }}>Punjab & Maharashtra Co-op Bank (PMC)</option>
                                         <option value="NKGSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "NKGSB" ? "selected" : "" }}>NKGSB Co-op Bank</option>
                                         <option value="TJSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "TJSB" ? "selected" : "" }}>TJSB Sahakari Bank</option>
+                                        <option value="CRGB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "CRGB" ? "selected" : "" }}>CHHATTISGARH Rajya Gramin Bank</option>
                                     </select>
                                 <span class="error-message text-danger"></span>
                             </div>
@@ -833,6 +834,7 @@
                                         <option value="PMC" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "PMC" ? "selected" : "" }}>Punjab & Maharashtra Co-op Bank (PMC)</option>
                                         <option value="NKGSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "NKGSB" ? "selected" : "" }}>NKGSB Co-op Bank</option>
                                         <option value="TJSB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "TJSB" ? "selected" : "" }}>TJSB Sahakari Bank</option>
+                                        <option value="CRGB" {{isset($lead->bankDetails->bank_name) &&  $lead->bankDetails->bank_name  == "CRGB" ? "selected" : "" }}>CHHATTISGARH Rajya Gramin Bank</option>
                                     </select>
                                 <span class="error-message text-danger"></span>
                             </div>                        

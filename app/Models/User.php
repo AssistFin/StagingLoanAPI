@@ -155,4 +155,9 @@ class User extends Authenticatable {
             });
         }])->get();
     }
+
+    public function utmTracking()
+    {
+        return $this->hasOne(UtmTracking::class, 'user_id', 'id');
+    }
 }
