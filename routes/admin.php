@@ -41,6 +41,7 @@ use App\Http\Controllers\Admin\EventLogController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\OSReportController;
 use App\Http\Controllers\Admin\DigitapController;
+use App\Http\Controllers\Admin\VendorController;
 
 Route::controller(LoginController::class)->group(function () {
     Route::get('/', 'showLoginForm')->name('login');
@@ -558,6 +559,13 @@ Route::middleware('admin')->group(function () {
             Route::get('/roles/edit-permissions/{id}','editPermissions')->name('edit.permissions');
             Route::post('/roles/update-permissions/{id}','updatePermissions')->name('update.permissions');
 
+    });
+
+    Route::controller(VendorController::class)
+        ->name('vendors.')
+        ->group(function () {
+            Route::get('vendors/index', 'index')->name('index');
+            Route::post('/{vendor}/{field}', 'toggle')->name('toggle');
     });
 
     Route::controller(EventLogController::class)
