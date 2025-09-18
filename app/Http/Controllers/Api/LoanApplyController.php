@@ -861,4 +861,21 @@ class LoanApplyController extends Controller
         }
     }
 
+    public function getcity($id)
+    {
+        if(!empty($id)){
+         $allindiapincode = DB::table('allindiapincode')->where('pincode', $id)->first();
+
+            return response()->json([
+                'Status' => 'Success',
+                'data' => $allindiapincode,
+            ]);
+        }else{
+            return response()->json([
+                'Status' => false,
+                'data' => 'District not found'
+            ], 404);
+        }
+    }
+
 }

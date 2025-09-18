@@ -18,6 +18,7 @@ Route::post('/scoreme/webhook', [ScoreMeWebhookController::class, 'handle']);
 Route::post('/digitap/bsu/webhook', [DigitapController::class, 'callback']);
 Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
 Route::get('/pay/{id}', [LoanPaymentController::class, 'generatePaymentLink']);
+Route::get('/get-city/{pincode}', [LoanApplyController::class, 'getcity']);
 /*
 |--------------------------------------------------------------------------
 | API Routes
