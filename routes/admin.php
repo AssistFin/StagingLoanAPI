@@ -306,6 +306,7 @@ Route::middleware('admin')->group(function () {
         ->group(function () {
         Route::get('collection-predue', 'collectionPredue')->name('predue');
         Route::get('collection-overdue', 'collectionOverdue')->name('overdue');
+        Route::get('collection-all', 'collectionAll')->name('all');
     });
 
 
@@ -579,7 +580,7 @@ Route::middleware('admin')->group(function () {
         ->name('osreport.')
         ->group(function () {
             Route::get('osreport/index', 'index')->name('index');
-
+            Route::get('osreport/cindex', 'cindex')->name('cindex');
     });
 
     Route::controller(AdminController::class)
