@@ -450,9 +450,10 @@ class CollectionController extends Controller
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
-                    SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
+                    SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid, SUM(penal) as total_penal_paid,
+                    MAX(collection_date) as last_collection_date, MAX(created_at) as last_payment_date FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount',
+                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount', 'uc.total_principal_paid', 'uc.total_interest_paid', 'uc.total_penal_paid', 'uc.last_collection_date', 'uc.last_payment_date', 'uc.total_paid',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
@@ -460,33 +461,34 @@ class CollectionController extends Controller
                         + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0, (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date), 0 ) as total_dues')
                     ])
                     ->where('la.id', $lead->id)
-                    ->where('la.loan_closed_status', 'pending')
                     ->first();
 
-                $totalDues = !empty($loans->total_dues) ? (int)$loans->total_dues : 0;
-                $daysAfterDue = !empty($loans->days_after_due) ? (int)$loans->days_after_due : 0;
+                $totalDues = max((int)($loans->total_dues ?? 0), 0);
+                $daysAfterDue = max((int)($loans->days_after_due ?? 0), 0);
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
                 $loanStatus = $totalDues == 0 ? 'Paid' : 'Unpaid';
 
                 $csvData[] = [
-                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
-                    'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
-                    'Loan Application No' => $lead->loan_no,
-                    'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
-                    'Total Due' => number_format($totalDues, 0),
-                    'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
-                    'Repayment date' => $repayDate,
-                    'DPD' => $daysAfterDue,
-                    'Email' => $lead->user->email,
-                    'Loan Tenure' => $loans->loan_tenure_days ?? 0,
-                    'Status' => $loanStatus,
+                        'Customer Name'      => $lead->user->firstname . ' ' . $lead->user->lastname,
+                        'Customer Mobile'    => '="'. substr($lead->user->mobile, 2, 12).'"',
+                        'Loan Application No'=> $lead->loan_no,
+                        'Loan Amount'        => number_format($loans->approval_amount ?? 0, 0),
+                        'Total Due'          => number_format($totalDues, 0),
+                        'Repayment Amount'   => number_format($loans->repayment_amount ?? 0, 0),
+                        'Repayment date'     => $repayDate,
+                        'Collection Date'    => $loans->last_collection_date ?? '',
+                        'Collection Amount'    => number_format($loans->total_paid ?? 0, 0),
+                        'DPD'                => $daysAfterDue,
+                        'Email'              => $lead->user->email,
+                        'Loan Tenure'        => $loans->loan_tenure_days ?? 0,
+                        'Status'             => $loanStatus,
                 ];
             }
 
             $dateRangeText = $dateRange ?? 'alltime';
             $timestamp = now()->format('Ymd_His');
 
-            $filename = "{$dateRangeText}_COD_export_{$timestamp}.csv";
+            $filename = "{$dateRangeText}_collection_export_{$timestamp}.csv";
 
             $headers = [
                 'Content-Type' => 'text/csv',
