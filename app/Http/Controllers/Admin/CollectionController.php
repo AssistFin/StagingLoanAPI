@@ -13,6 +13,7 @@ class CollectionController extends Controller
 {
     public function collectionPredue(Request $request)
     {
+        ini_set('memory_limit', '2048M');
         $today = now()->toDateString();
 
         // 1️⃣ Base query
@@ -199,6 +200,7 @@ class CollectionController extends Controller
 
     public function collectionOverdue(Request $request)
     {
+        ini_set('memory_limit', '2048M');
         $today = now()->toDateString();
 
         // 1️⃣ Base query
@@ -258,7 +260,7 @@ class CollectionController extends Controller
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
                     SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount',
+                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','ld.loan_disbursal_number','ld.disbursal_date',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
@@ -280,10 +282,14 @@ class CollectionController extends Controller
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
                     'Loan Application No' => $lead->loan_no,
+                    'Loan Account No' => $loans->loan_disbursal_number ?? '',
                     'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
                     'Total Due' => number_format($totalDues, 0),
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
+                    'Loan Disbursal Date' => $loans->disbursal_date ?? '',
+                    'Intrest Rate (%)' => $loans->roi ?? 0,
+                    'Intrest Calculated upto' => $today,
                     'Payment Link' => $paymentLink,
                     'DPD' => $daysAfterDue,
                     'Email' => $lead->user->email,
@@ -392,6 +398,7 @@ class CollectionController extends Controller
 
     public function collectionAll(Request $request)
     {
+        ini_set('memory_limit', '2048M');
         $today = now()->toDateString();
 
         // 1️⃣ Base query

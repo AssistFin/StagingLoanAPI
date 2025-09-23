@@ -111,7 +111,7 @@ class KycController extends Controller
                         'doc_types' => [
                             "aadhaar"
                         ],
-                        'redirect_url' => "http://localhost:3000/verifyotp"
+                        'redirect_url' => config('services.cashfree.app_url')."verifyotp"
                     ]
                 ]);
 
@@ -262,7 +262,7 @@ class KycController extends Controller
                 $timestamp = gmdate('Y-m-d\TH:i:s\Z');
                 //echo $this->accessToken;
                 // 4. Call API
-                $response = $this->client->post("https://{$host}{$path}", [
+                $response = $this->client->get("https://{$host}{$path}", [
                     'headers' => [
                         'authorization' => $this->accessToken,
                         'accept'        => 'application/json',
@@ -271,7 +271,7 @@ class KycController extends Controller
                 ]);
 
                 $data = json_decode($response->getBody(), true);
-                print_r($data);
+                Log::info("API 1 Data:", $data);
                 $loanApplicationId = $request->loan_application_id;
                 DB::table('user_kyc_verifications')->updateOrInsert(
                     ['loan_application_id' => $loanApplicationId],  
@@ -284,7 +284,7 @@ class KycController extends Controller
 
                 if (isset($data["data"]['status']) && $data["data"]['status'] == "succeeded") {
 
-                    $response2 = $this->client->post("https://{$host}{$path2}", [
+                    $response2 = $this->client->get("https://{$host}{$path2}", [
                         'headers' => [
                             'authorization' => $this->accessToken,
                             'accept'        => 'application/json',
@@ -293,9 +293,7 @@ class KycController extends Controller
                     ]);
 
                     $data2 = json_decode($response2->getBody(), true);
-                    
-                    print_r($data2);
-
+                    Log::info("API 2 Data:", $data2);
                     LoanKYCDetails::where('loan_application_id', $applicationId)->update(['aadhar_otp_verified' => 1]);
 
                     $loan = LoanApplication::where('user_id', auth()->id())->first();
@@ -311,7 +309,7 @@ class KycController extends Controller
 
                     $loanDocument1 = LoanKYCDetails::where('loan_application_id', $applicationId)->first();
 
-                    $aadhaarData = $data['data'];
+                    $aadhaarData = $data2['data'];
                     $addressData = $aadhaarData['address'];
 
                     $exists = DB::table('aadhaar_data')->where('user_id', auth()->id())->exists();
@@ -356,7 +354,7 @@ class KycController extends Controller
                         'status' => 'success',
                         'message' => ['success' => ['Aadhaar OTP Verified']],
                         'data' => [
-                            'kyc_data' => $data['data'] ?? null
+                            'kyc_data' => $data2['data'] ?? null
                         ]
                     ]);
                 } else {
