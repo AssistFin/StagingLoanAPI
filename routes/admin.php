@@ -113,7 +113,7 @@ Route::middleware('admin')->group(function () {
     })->where('filename', '.*');
 
     Route::get('/digitap_reports/{filename}', function ($filename) {
-        $filePath = config('services.digitap.dbsa_url') .'/digitap_reports/'. $filename;
+        $filePath = config('services.digitap.dbsa_url') .'/'. $filename;
     
         if (!file_exists($filePath)) {
             //abort(404, 'File not found');

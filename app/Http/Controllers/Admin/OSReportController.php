@@ -565,10 +565,29 @@ class OSReportController extends Controller
                     ->first();
 
                 $loanType = isset($loanType) ? $loanType : 'Active';
-                $totalos = (!empty($loans->total_dues) || !empty($loans->total_paid)) ? $loans->total_dues-$loans->total_paid : 0;
+                $totalos = (!empty($loans->total_dues) || !empty($loans->total_paid)) ? $loans->total_dues - $loans->total_paid : 0;
                 $totalprncos = (!empty($loans->remaining_principal) || !empty($loans->total_principal_paid)) ? $loans->remaining_principal - $loans->total_principal_paid : 0;
-                $totalintos = (!empty($loans->interest) || !empty($loans->total_interest_paid)) ? $loans->total_dues - $loans->total_interest_paid : 0;
+                $totalintos = (!empty($loans->interest) || !empty($loans->total_interest_paid)) ? $loans->interest - $loans->total_interest_paid : 0;
                 $totalpenalos = (!empty($loans->penal_interest) || !empty($loans->total_penal_paid)) ? $loans->penal_interest - $loans->total_penal_paid : 0;
+
+                // Adjust negative O/s by adding back into dues
+                if ($totalos < 0) {
+                    $loans->total_dues += abs($totalos);
+                    $totalos = 0;
+                }
+                if ($totalprncos < 0) {
+                    $loans->remaining_principal += abs($totalprncos);
+                    $totalprncos = 0;
+                }
+                if ($totalintos < 0) {
+                    $loans->interest += abs($totalintos);
+                    $totalintos = 0;
+                }
+                if ($totalpenalos < 0) {
+                    $loans->penal_interest += abs($totalpenalos);
+                    $totalpenalos = 0;
+                }
+                $daysAfterDue = max((int)($loans->days_after_due ?? 0), 0);
                 
                 if (!empty($lead->loanApproval->repay_date) && !empty($loans->last_payment_date)) {
                     $repayDate = \Carbon\Carbon::parse($lead->loanApproval->repay_date);
@@ -600,10 +619,10 @@ class OSReportController extends Controller
                     'Rate of Interest' => !empty($lead->loanApproval->roi) ? $lead->loanApproval->roi : '',
                     'Tenure' => !empty($lead->loanApproval->loan_tenure_days) ? $lead->loanApproval->loan_tenure_days : '',
                     'Repayment Due Date' => !empty($lead->loanApproval->repay_date) ? $lead->loanApproval->repay_date : '',
-                    'Total Due Amount' => (!empty($loans->total_dues)) ? number_format($loans->total_dues, 2) : 0,
-                    'Principal Due' => (!empty($loans->remaining_principal)) ? number_format($loans->remaining_principal, 2) : 0,
-                    'Interest Due' => (!empty($loans->interest)) ? number_format($loans->interest, 2) : 0,
-                    'Penal Due' => (!empty($loans->penal_interest)) ? number_format($loans->penal_interest, 2) : 0,
+                    'Total Due Amount' => number_format(max($loans->total_dues, 0), 2),
+                    'Principal Due'   => number_format(max($loans->remaining_principal, 0), 2),
+                    'Interest Due'    => number_format(max($loans->interest, 0), 2),
+                    'Penal Due'       => number_format(max($loans->penal_interest, 0), 2),
                     'Paid Date' => (!empty($loans->last_payment_date)) ? date('d-m-Y',strtotime($loans->last_payment_date)) : '',
                     'Total Amt Collected' => !empty($loans->total_paid) ? number_format($loans->total_paid, 2) : 0,
                     'Principal Collect.' => (!empty($loans->total_principal_paid)) ? number_format($loans->total_principal_paid, 2) : 0 ,
@@ -614,7 +633,7 @@ class OSReportController extends Controller
                     'Principal O/s' => $totalprncos,
                     'Interest O/s' => $totalintos,
                     'Penal O/s' => $totalpenalos,
-                    'DPD' => !empty($loans->days_after_due) ? $loans->days_after_due : 0,
+                    'DPD' => $daysAfterDue,
                     'Purpose Of Loan' => $lead->purpose_of_loan,
                     'Status' => $loanType === 'disbursed_loan' ? 'Active' : $loanType,
                     'CIBIL Score' => !empty($lead->loanApproval->cibil_score) ? $lead->loanApproval->cibil_score : '',

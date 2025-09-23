@@ -455,10 +455,12 @@ class LeadController extends Controller
                     'Customer Mobile' => "'" . $lead->user->mobile,
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loanAmount, 2),
-                     $dateHead => $disbursedDate,
+                    'Disbursed Amount' =>  optional($lead->loanDisbursal)->disbursal_amount ?? 0,
+                    $dateHead => $disbursedDate,
                     $purpose_head => $purpose,
                     'source' => $lead->user->utmTracking->utm_source ?? '',
                     'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
+                    'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
                 ];
             }
 
