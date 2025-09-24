@@ -79,4 +79,12 @@ class LoanApplication extends Model
     {
         return $this->hasOne(LoanDisbursal::class, 'loan_application_id');
     }
+
+    public function cashfreeEnachRequests()
+    {
+        return $this->hasMany(CashfreeEnachRequestResponse::class, // model name
+            'subscription_id', // foreign key in cashfree table
+            'loan_no'          // local key in loan_applications
+        );
+    }
 }

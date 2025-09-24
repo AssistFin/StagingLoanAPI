@@ -42,6 +42,7 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\OSReportController;
 use App\Http\Controllers\Admin\DigitapController;
 use App\Http\Controllers\Admin\VendorController;
+use App\Http\Controllers\Admin\BankingController;
 
 Route::controller(LoginController::class)->group(function () {
     Route::get('/', 'showLoginForm')->name('login');
@@ -567,6 +568,12 @@ Route::middleware('admin')->group(function () {
         ->group(function () {
             Route::get('vendors/index', 'index')->name('index');
             Route::post('/{vendor}/{field}', 'toggle')->name('toggle');
+    });
+
+    Route::controller(BankingController::class)
+        ->name('banking.')
+        ->group(function () {
+            Route::get('banking/index', 'index')->name('index');
     });
 
     Route::controller(EventLogController::class)
