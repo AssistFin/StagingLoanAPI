@@ -246,7 +246,7 @@ class DecisionController extends Controller
                     'Loan Amount' => optional($lead->loanApproval)->approval_amount ?? 0,
                     'Repayment Amount' =>  optional($lead->loanApproval)->repayment_amount ?? 0,
                     'Paid Amount' => number_format($loanAmount, 2),
-                    'Payment ID' => optional($lead->collections)->payment_id ?? 0,
+                    'Payment ID' => $lead->collections->pluck('payment_id')->implode(', '),
                     'Closed Date' => $lead->loan_closed_date ? $lead->loan_closed_date : 0,
                 ];
             }
