@@ -23,6 +23,8 @@
                         <input type="text" id="d-closed-search-input" class="form-control" 
                             placeholder="Search by Name / Mobile No / Loan App No / Email..." 
                             style="max-width: 400px;">
+                            &nbsp;&nbsp;&nbsp;&nbsp;
+                            <button type="button" id="all_closed_export" class="btn btn-primary form-control" style="width: fit-content;">Export CSV</button>
                     </div>
                     <div class="table-responsive--md  table-responsive">
                         <table class="table table--light style--two">
@@ -127,5 +129,17 @@
                 console.error('Error fetching closed decision:', error);
             });
         }
+
+        $(document).ready(function () {
+
+            $('#all_closed_export').on('click', function () {
+                const params = {
+                    search: $('#d-closed-search-input').val(),
+                    export: 'csv'
+                };
+                const query = $.param(params);
+                window.location.href = "{{ route('admin.decision.closed') }}?" + query;
+            });
+        });
     </script>
 @endpush

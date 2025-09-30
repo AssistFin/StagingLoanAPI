@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use Illuminate\Http\Request;
 use App\Models\LoanApplication;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Response;
 
 class DecisionController extends Controller
 {
@@ -227,6 +228,52 @@ class DecisionController extends Controller
                     ->orWhere('loan_no', 'like', "%{$searchTerm}%");
                 });
             }
+
+        if ($request->has('export') && $request->export === 'csv') {
+            $query->with(['user', 'loanApproval', 'loanDisbursal', 'collections']);
+            $leads = $query->get();
+
+            $csvData = [];
+
+            foreach ($leads as $lead) {
+
+                $loanAmount = $lead->collections->sum('collection_amt');
+                
+                $csvData[] = [
+                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                    'Customer Mobile' => "'" . $lead->user->mobile,
+                    'Loan Application No' => $lead->loan_no,
+                    'Loan Amount' => optional($lead->loanApproval)->approval_amount ?? 0,
+                    'Repayment Amount' =>  optional($lead->loanApproval)->repayment_amount ?? 0,
+                    'Paid Amount' => number_format($loanAmount, 2),
+                    'Payment ID' => optional($lead->collections)->payment_id ?? 0,
+                    'Closed Date' => $lead->loan_closed_date ? $lead->loan_closed_date : 0,
+                ];
+            }
+
+            $loanTypeText = $loanType ?? 'all';
+            $dateRangeText = $dateRange ?? 'alltime';
+            $timestamp = now()->format('Ymd_His');
+
+            $filename = "{$dateRangeText}_{$loanTypeText}_closed_loans_export_{$timestamp}.csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
         $leads = $query->paginate(25);
 
         return view('admin.decision.decision-closed', compact('leads'));
