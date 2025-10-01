@@ -31,6 +31,7 @@ class CollectionController extends Controller
                 'bankDetails',
                 'loanDisbursal',
                 'loanApproval',
+                'experianCreditReport',
             ])->where('loan_applications.loan_closed_status', '!=', 'closed')
             ->orderByRaw('created_at DESC');
 
@@ -87,6 +88,43 @@ class CollectionController extends Controller
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
                 $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
+                $experian = null;
+
+                if (!empty($lead->experianCreditReport) && !empty($lead->experianCreditReport->response_data)) {
+                    $experian = json_decode($lead->experianCreditReport->response_data, true);
+                }
+                $telephone = $mobile = $emailid = [];
+                if(!empty($experian['CAIS_Account']['CAIS_Account_DETAILS']))
+                {
+                    $accountDetails = $experian['CAIS_Account']['CAIS_Account_DETAILS'] ?? [];
+                    foreach($accountDetails as $account)
+                    {
+                        $phones = $account['CAIS_Holder_Phone_Details'] ?? [];
+                        if(!empty($phones))
+                        {
+                            foreach($phones as $index => $ph)
+                            {
+                                $tel   = $ph['Telephone_Number'] ?? null;
+                                $mob   = $ph['Mobile_Telephone_Number'] ?? null;
+                                $email = $ph['EMailId'] ?? null;
+
+                                // Convert arrays to comma-separated strings
+                                $tel   = is_array($tel)   ? implode(', ', $tel)   : $tel;
+                                $mob   = is_array($mob)   ? implode(', ', $mob)   : $mob;
+                                $email = is_array($email) ? implode(', ', $email) : $email;
+
+                                if ($tel)   $telephone[] = $tel;
+                                if ($mob)   $mobile[]    = $mob;
+                                if ($email) $emailid[]   = $email;
+                            }
+                        }
+                    }
+                }
+
+                $telephone = array_unique($telephone);
+                $mobile    = array_unique($mobile);
+                $emailid   = array_unique($emailid);
+
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
@@ -96,6 +134,9 @@ class CollectionController extends Controller
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
                     'Payment Link' => $paymentLink,
+                    'Telephone' => implode(', ', $telephone),
+                    'Mobile No' => implode(', ', $mobile),
+                    'Email Id'  => implode(', ', $emailid),
                 ];
             }
 
@@ -279,7 +320,11 @@ class CollectionController extends Controller
                 $userAddress = DB::table('aadhaar_data')->where('user_id', $lead->user->id)->first();
                 $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
-                $experian = !empty($lead->experianCreditReport->response_data) ?? '';
+                $experian = null;
+
+                if (!empty($lead->experianCreditReport) && !empty($lead->experianCreditReport->response_data)) {
+                    $experian = json_decode($lead->experianCreditReport->response_data, true);
+                }
                 $telephone = $mobile = $emailid = [];
                 if(!empty($experian['CAIS_Account']['CAIS_Account_DETAILS']))
                 {
@@ -300,16 +345,17 @@ class CollectionController extends Controller
                                 $mob   = is_array($mob)   ? implode(', ', $mob)   : $mob;
                                 $email = is_array($email) ? implode(', ', $email) : $email;
 
-                                if(!empty($tel) || !empty($mob) || !empty($email))
-                                {
-                                    $telephone[] = $tel ?? '';
-                                    $mobile[] = $mob ?? '';
-                                    $emailid[] = $email ?? '';
-                                }
+                                if ($tel)   $telephone[] = $tel;
+                                if ($mob)   $mobile[]    = $mob;
+                                if ($email) $emailid[]   = $email;
                             }
                         }
                     }
                 }
+
+                $telephone = array_unique($telephone);
+                $mobile    = array_unique($mobile);
+                $emailid   = array_unique($emailid);
 
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
@@ -328,9 +374,9 @@ class CollectionController extends Controller
                     'Email' => $lead->user->email,
                     'Loan Tenure' => $loans->loan_tenure_days ?? 0,
                     'Full Address' => isset($userAddress) ? $userAddress->full_address : '',
-                    'Telephone' => $telephone,
-                    'Mobile No' => $mobile,
-                    'Email Id' => $emailid,
+                    'Telephone' => implode(', ', $telephone),
+                    'Mobile No' => implode(', ', $mobile),
+                    'Email Id'  => implode(', ', $emailid),
                 ];
             }
 
