@@ -56,6 +56,8 @@ class BankingController extends Controller
                 $today = Carbon::today()->toDateString();
 
                 $csvData[] = [
+                    'Loan Application No' => $lead->loan_no,
+                    'E-mandate Reference No' => optional($lead->cashfreeEnachRequests->first())->reference_id,
                     'Beneficiary Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Beneficiary Account Number' => "'".$lead->bankDetails->account_number ?? '',
                     'IFSC' => $lead->bankDetails->ifsc_code ?? '',

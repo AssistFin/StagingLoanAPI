@@ -450,18 +450,37 @@ class LeadController extends Controller
                         $purpose = $lead->purpose_of_loan;
                 }
 
-                $csvData[] = [
-                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
-                    'Customer Mobile' => "'" . $lead->user->mobile,
-                    'Loan Application No' => $lead->loan_no,
-                    'Loan Amount' => number_format($loanAmount, 2),
-                    'Disbursed Amount' =>  optional($lead->loanDisbursal)->disbursal_amount ?? 0,
-                    $dateHead => $disbursedDate,
-                    $purpose_head => $purpose,
-                    'source' => $lead->user->utmTracking->utm_source ?? '',
-                    'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
-                    'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
-                ];
+                if($loanType == 'disbursed_loan'){
+                    $csvData[] = [
+                        'Loan Application No' => $lead->loan_no,
+                        'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                        'Customer Mobile' => "'" . $lead->user->mobile,
+                        'Email Id' => $lead->user->email,
+                        $purpose_head => $purpose,
+                        'Loan Amount' => number_format($loanAmount, 2),
+                        'Disbursed Amount' =>  optional($lead->loanDisbursal)->disbursal_amount ?? 0,
+                        $dateHead => $disbursedDate,
+                        'Repayment Date' => optional($lead->loanApproval)->repay_date ?? 0,
+                        'Repayment Amount' => optional($lead->loanApproval)->repayment_amount ?? 0,
+                        'source' => $lead->user->utmTracking->utm_source ?? '',
+                        'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
+                        'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
+                    ];
+                }else{
+                    $csvData[] = [
+                        'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                        'Customer Mobile' => "'" . $lead->user->mobile,
+                        'Loan Application No' => $lead->loan_no,
+                        'Loan Amount' => number_format($loanAmount, 2),
+                        'Disbursed Amount' =>  optional($lead->loanDisbursal)->disbursal_amount ?? 0,
+                        $dateHead => $disbursedDate,
+                        $purpose_head => $purpose,
+                        'source' => $lead->user->utmTracking->utm_source ?? '',
+                        'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
+                        'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
+                    ];
+                }
+                
             }
 
             $loanTypeText = $loanType ?? 'all';
