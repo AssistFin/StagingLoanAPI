@@ -112,6 +112,60 @@
         </div>
     </div>
 
+    {{-- After Report Summary --}}
+    <div class="section">
+        <h2>BUREAU IDENTITY PROFILE / CONTACT INFO</h2>
+
+        <table width="100%" cellspacing="0" cellpadding="3" 
+            style="font-size: 12px; border-collapse: collapse; border:1px solid #ddd;">
+            <thead>
+                <tr style="background:#f2f2f2; text-align:center; font-weight:bold;">
+                    <th style="border:1px solid #ddd;">Telephone</th>
+                    <th style="border:1px solid #ddd;">Mobile</th>
+                    <th style="border:1px solid #ddd;">Email</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if(!empty($data['CAIS_Account']['CAIS_Account_DETAILS']))
+                @php $accountDetails = $data['CAIS_Account']['CAIS_Account_DETAILS'] ?? []; @endphp
+
+                @foreach($accountDetails as $account)
+                    @php $phones = $account['CAIS_Holder_Phone_Details'] ?? []; @endphp
+
+                    @if(!empty($phones))
+                        @foreach($phones as $index => $ph)
+                            @php
+                                $tel   = $ph['Telephone_Number'] ?? null;
+                                $mob   = $ph['Mobile_Telephone_Number'] ?? null;
+                                $email = $ph['EMailId'] ?? null;
+
+                                // Convert arrays to comma-separated strings
+                                $tel   = is_array($tel)   ? implode(', ', $tel)   : $tel;
+                                $mob   = is_array($mob)   ? implode(', ', $mob)   : $mob;
+                                $email = is_array($email) ? implode(', ', $email) : $email;
+                            @endphp
+
+                            @if(!empty($tel) || !empty($mob) || !empty($email))
+                                <tr style="background: {{ $index % 2 == 0 ? '#ffffff' : '#f9f9f9' }};">
+                                    <td style="border:1px solid #ddd; text-align:center;">{{ $tel ?? '-' }}</td>
+                                    <td style="border:1px solid #ddd; text-align:center;">{{ $mob ?? '-' }}</td>
+                                    <td style="border:1px solid #ddd; text-align:center; color:#0073e6;">{{ $email ?? '-' }}</td>
+                                </tr>
+                            @endif
+                        @endforeach
+                    @endif
+                @endforeach
+            @else
+                <tr>
+                    <td colspan="3" style="text-align:center; color:#999; padding:10px;">
+                        No enquiries found.
+                    </td>
+                </tr>
+            @endif
+            </tbody>
+        </table>
+    </div>
+
     <!-- CREDIT ACCOUNT SUMMARY -->
     <div class="section">
         <h2>CREDIT ACCOUNT SUMMARY</h2>
@@ -363,9 +417,14 @@
                             if((string)($summary['Account_Status']) == '137'){ $accountStatus = 'Entity ceased while account was open';}
                             if((string)($summary['Account_Status']) == '138'){ $accountStatus = 'Entity ceased while account was closed';}
                             
-                            $opendateString = (string)($summary['Open_Date']);
-                            $carbonDates1 = \Carbon\Carbon::createFromFormat('Ymd', $opendateString);
-                            $openedDate = $carbonDates1->format('d/m/Y');
+
+                            if(!is_array($summary['Open_Date'])){
+                                $opendateString = (string)($summary['Open_Date']);
+                                $carbonDates1 = \Carbon\Carbon::createFromFormat('Ymd', $opendateString);
+                                $openedDate = $carbonDates1->format('d/m/Y');
+                            }else{
+                                $openedDate = '-';
+                            }
 
                             if(!is_array($summary['Date_of_Last_Payment'])){
                                 $lastpaydateString = (string)($summary['Date_of_Last_Payment']);

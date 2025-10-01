@@ -87,4 +87,9 @@ class LoanApplication extends Model
             'loan_no'          // local key in loan_applications
         );
     }
+
+    public function experianCreditReport()
+    {
+        return $this->hasOne(ExperianCreditReport::class, 'lead_id');
+    }
 }

@@ -200,7 +200,7 @@ class CollectionController extends Controller
 
     public function collectionOverdue(Request $request)
     {
-        ini_set('memory_limit', '2048M');
+        ini_set('memory_limit', '4096M');
         $today = now()->toDateString();
 
         // 1️⃣ Base query
@@ -221,6 +221,7 @@ class CollectionController extends Controller
                 'bankDetails',
                 'loanDisbursal',
                 'loanApproval',
+                'experianCreditReport',
             ])->where('loan_applications.loan_closed_status', '!=', 'closed')
             ->orderByRaw('created_at DESC');
 
@@ -278,6 +279,38 @@ class CollectionController extends Controller
                 $userAddress = DB::table('aadhaar_data')->where('user_id', $lead->user->id)->first();
                 $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
+                $experian = !empty($lead->experianCreditReport->response_data) ?? '';
+                $telephone = $mobile = $emailid = [];
+                if(!empty($experian['CAIS_Account']['CAIS_Account_DETAILS']))
+                {
+                    $accountDetails = $experian['CAIS_Account']['CAIS_Account_DETAILS'] ?? [];
+                    foreach($accountDetails as $account)
+                    {
+                        $phones = $account['CAIS_Holder_Phone_Details'] ?? [];
+                        if(!empty($phones))
+                        {
+                            foreach($phones as $index => $ph)
+                            {
+                                $tel   = $ph['Telephone_Number'] ?? null;
+                                $mob   = $ph['Mobile_Telephone_Number'] ?? null;
+                                $email = $ph['EMailId'] ?? null;
+
+                                // Convert arrays to comma-separated strings
+                                $tel   = is_array($tel)   ? implode(', ', $tel)   : $tel;
+                                $mob   = is_array($mob)   ? implode(', ', $mob)   : $mob;
+                                $email = is_array($email) ? implode(', ', $email) : $email;
+
+                                if(!empty($tel) || !empty($mob) || !empty($email))
+                                {
+                                    $telephone[] = $tel ?? '';
+                                    $mobile[] = $mob ?? '';
+                                    $emailid[] = $email ?? '';
+                                }
+                            }
+                        }
+                    }
+                }
+
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
@@ -295,6 +328,9 @@ class CollectionController extends Controller
                     'Email' => $lead->user->email,
                     'Loan Tenure' => $loans->loan_tenure_days ?? 0,
                     'Full Address' => isset($userAddress) ? $userAddress->full_address : '',
+                    'Telephone' => $telephone,
+                    'Mobile No' => $mobile,
+                    'Email Id' => $emailid,
                 ];
             }
 
