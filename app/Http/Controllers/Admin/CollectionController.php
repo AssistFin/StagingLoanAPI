@@ -302,7 +302,7 @@ class CollectionController extends Controller
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
                     SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','ld.loan_disbursal_number','ld.disbursal_date',
+                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','lap.cibil_score','ld.loan_disbursal_number','ld.disbursal_date',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
@@ -357,6 +357,9 @@ class CollectionController extends Controller
                 $mobile    = array_unique($mobile);
                 $emailid   = array_unique($emailid);
 
+                $loanCount = $lead->user->loanApplications()->count();
+                $customerType = $loanCount > 1 ? 'Existing' : 'New';
+
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
@@ -368,6 +371,8 @@ class CollectionController extends Controller
                     'Repayment date' => $repayDate,
                     'Loan Disbursal Date' => $loans->disbursal_date ?? '',
                     'Intrest Rate (%)' => $loans->roi ?? 0,
+                    'Cibil Score' => $loans->cibil_score ?? 0,
+                    'Customer Type' => $customerType,
                     'Intrest Calculated upto' => $today,
                     'Payment Link' => $paymentLink,
                     'DPD' => $daysAfterDue,
