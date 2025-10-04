@@ -21,16 +21,24 @@ class BankingController extends Controller
             'addressDetails', 
             'bankDetails',
             'loanDisbursal',
-            'loanApproval'
+            'loanApproval',
+            'latestActiveCashfreeEnachRequest',
         ])->where('loan_disbursal_status', 'pending')
           ->where('admin_approval_status', 'approved')
           ->where('user_acceptance_status', 'accepted')
           ->whereHas('cashfreeEnachRequests', function ($q) {
-                $q->where('reference_id', '!=', '')
+                // this ensures only loans that have at least one ACTIVE non-null reference are returned
+                $q->whereNotNull('reference_id')
                 ->where('status', 'ACTIVE');
             })
           ->orderByRaw('created_at DESC');
-
+        
+        // dd(vsprintf(
+        //     str_replace('?', '%s', $query->toSql()), 
+        //     collect($query->getBindings())->map(function ($binding) {
+        //         return is_numeric($binding) ? $binding : "'{$binding}'";
+        //     })->toArray()
+        // ));
         $searchTerm = $request->get('search');
             
         if ($searchTerm) {
@@ -46,7 +54,6 @@ class BankingController extends Controller
 
         if ($request->has('export') && $request->export === 'csv') {
             $leads = $query->get();
-            
             $csvData = [];
 
             foreach ($leads as $lead) {
@@ -57,7 +64,7 @@ class BankingController extends Controller
 
                 $csvData[] = [
                     'Loan Application No' => $lead->loan_no,
-                    'E-mandate Reference No' => optional($lead->cashfreeEnachRequests->first())->reference_id,
+                    'E-mandate Reference No' => optional($lead->latestActiveCashfreeEnachRequest)->reference_id,
                     'Beneficiary Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Beneficiary Account Number' => "'".$lead->bankDetails->account_number ?? '',
                     'IFSC' => $lead->bankDetails->ifsc_code ?? '',
