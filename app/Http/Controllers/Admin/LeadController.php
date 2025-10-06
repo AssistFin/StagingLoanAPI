@@ -37,7 +37,7 @@ class LeadController extends Controller
             ->toArray();
 
         // Step 3: Start building the loan applications query
-        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','user.utmTracking:id,user_id,utm_source','loanApproval','personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in'])
+        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','user.utmTracking:id,user_id,utm_source','loanApproval','loanApproval.creditedBy:id,name','personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in'])
             ->withExists([
                 'personalDetails',
                 'employmentDetails',
@@ -478,6 +478,7 @@ class LeadController extends Controller
                         'source' => $lead->user->utmTracking->utm_source ?? '',
                         'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
                         'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
+                        'Approved By' => optional($lead->loanApproval->creditedBy)->name ?? 'N/A',
                     ];
                 }
                 

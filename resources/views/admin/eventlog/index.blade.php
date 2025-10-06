@@ -95,13 +95,15 @@
                                 <option value="">Select Event</option>
                                 <option value="Login">Login</option>
                                 <option value="Logout">Logout</option>
-                                <option value="Loan Approval">Loan Approval</option>
+                                <option value="Loan Approval - approved">Loan Approved</option>
+                                <option value="Loan Approval - rejected">Loan Rejected</option>
                                 <option value="Loan Disbursed">Loan Disbursed</option>
                                 <option value="Loan Closed">Loan Closed</option>
                                 <option value="Loan Part Payment">Loan Part Payment</option>
                                 <option value="Loan Settlement">Loan Settlement</option>
                             </select>
 
+                            <button type="button" id="event_log_export" class="btn btn-primary form-control">Export CSV</button>
                         </div>
 
                         {{-- Custom Date Row --}}
@@ -343,6 +345,19 @@
             } catch (error) {
                 console.error("Invalid pagination URL", error);
             }
+        });
+
+        $('#event_log_export').on('click', function () {
+            const params = {
+                date_range: $('#date_range').val(),
+                from_date: $('#from_date').val(),
+                to_date: $('#to_date').val(),
+                employee: $('#employee').val(),
+                search: $('#search-input').val(),
+                export: 'csv'
+            };
+            const query = $.param(params);
+            window.location.href = "{{ route('admin.eventlog.index') }}?" + query;
         });
     });
 </script>

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Submenu;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Response;
 
 class EventLogController extends Controller
 {
@@ -75,6 +76,44 @@ class EventLogController extends Controller
             $query->where(function ($q) use ($event) {
                 $q->where('event', 'like', "%{$event}%");
             });
+        }
+
+        if ($request->has('export') && $request->export === 'csv') {
+            $leads = $query->get();
+
+            $csvData = [];
+
+            foreach ($leads as $lead) {
+                $createdAtIST = $lead->created_at ? Carbon::parse($lead->created_at)->setTimezone(config('app.timezone'))->format('d-m-Y') : '';
+                $csvData[] = [
+                    'Customer Name' => $lead->user ? ($lead->user->firstname . ' ' . $lead->user->lastname) : '',
+                    'Customer Mobile' => isset($lead->user->mobile) ? "'" . $lead->user->mobile : '',
+                    'Employee Name' => $lead->admin ? $lead->admin->name : '',
+                    'Date' => $createdAtIST,
+                    'Action' => $lead->event ?? '',
+                ];
+            }
+
+            $dateRangeText = $dateRange ?? 'alltime';
+            $timestamp = now()->format('Ymd_His');
+
+            $filename = "{$dateRangeText}_event_log_export_{$timestamp}.csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
         }
         
         $eventRecords = $query->paginate(25);

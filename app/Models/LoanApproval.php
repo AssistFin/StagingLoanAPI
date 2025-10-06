@@ -55,4 +55,10 @@ class LoanApproval extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function creditedBy()
+    {
+        return $this->belongsTo(Admin::class, 'credited_by', 'id');
+    }
+
 }

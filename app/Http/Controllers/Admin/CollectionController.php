@@ -299,10 +299,11 @@ class CollectionController extends Controller
                 $loans = DB::table('loan_applications as la')
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
+                    ->leftJoin('admins as a', 'a.id', '=', 'lap.credited_by')
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
                     SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','lap.cibil_score','ld.loan_disbursal_number','ld.disbursal_date',
+                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','lap.cibil_score','ld.loan_disbursal_number','ld.disbursal_date','a.name as credited_by_name',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
@@ -381,6 +382,7 @@ class CollectionController extends Controller
                     'Relation' => $lead->addressDetails->relation,
                     'Relative Contact No' => $lead->addressDetails->contact_number,
                     'Loan Tenure' => $loans->loan_tenure_days ?? 0,
+                    'CPA' => $loans->credited_by_name ?? '',
                     'Full Address' => isset($userAddress) ? $userAddress->full_address : '',
                     'Telephone' => implode(', ', $telephone),
                     'Mobile No' => implode(', ', $mobile),
