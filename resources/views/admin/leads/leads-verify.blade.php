@@ -4,6 +4,46 @@
     td.text-break {
         word-break: break-word;
     }
+
+    #confirmModal2 .raise-payment-modal {
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.1);
+    }
+
+    #confirmModal2 .modal-title {
+    font-weight: 600;
+    color: #1a1a1a;
+    }
+
+    #confirmModal2 .form-label {
+    font-weight: 500;
+    color: #333;
+    }
+
+    #confirmModal2 .input-group-text {
+    background-color: #f8f9fa;
+    font-weight: 500;
+    }
+
+    #confirmModal2 .btn-primary {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    border-radius: 8px;
+    padding: 6px 18px;
+    }
+
+    #confirmModal2 .btn-primary:hover {
+    background-color: #5a34a5;
+    }
+
+    #confirmModal2 .btn-outline-secondary {
+    border-radius: 8px;
+    padding: 6px 18px;
+    }
+
+    #confirmModal2 textarea.form-control {
+    resize: none;
+    }
 </style>
 @section('panel')
 <div class="row gy-4">
@@ -870,6 +910,34 @@
                 
                 <div class="tab-pane fade" id="UTR" role="tabpanel" aria-labelledby="UTR-tab">
                     <h1>Collection Form</h1>
+                    @if(isset($cashfreeData) && $cashfreeData->status == 'ACTIVE')
+                        <div class="row mb-3">
+                            @if(isset($cfreeSubsData) && $cfreeSubsData->subscription_id == $cashfreeData->alt_subscription_id)
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-success">
+                                Payment Request Raised</button>
+                            </div>
+                            @else
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal2">
+                                Raise Payment Request</button>
+                            </div>
+                            @endif
+                            
+                            @if(isset($cfreeSubsData) && $cfreeSubsData->status == 'Cancelled')
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-success">
+                                    Raised Payment Request Cancelled</button>
+                                </div>
+                            @else
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal3">
+                                    Cancel Raised Payment Request</button>
+                                </div>
+                            @endif
+                            
+                        </div>
+                    @endif
                     <form action="{{ route('admin.loan.utr.store') }}" method="POST" id="loanUtrForm">
                         @csrf
                         <input type="hidden" name="loan_application_id" value="{{ $lead->id }}">
@@ -1231,6 +1299,105 @@
     </div>
 </div>
 
+<!-- Confirmation Modal 2-->
+<div class="modal fade" id="confirmModal2" tabindex="-1" aria-labelledby="confirmModal2Label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content raise-payment-modal">
+
+      <!-- Header -->
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold" id="confirmModal2Label">Raise Payment Request</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+
+        <!-- Subscription ID -->
+        @php $subs_id = ''; @endphp
+        @if(isset($cashfreeData) && $cashfreeData->status == 'ACTIVE')
+            @php
+                $subs_id = $cashfreeData->alt_subscription_id ?? '';
+            @endphp
+        @endif
+        <div class="mb-3">
+          <label class="form-label fw-medium">Subscription ID</label>
+          <input type="text" class="form-control" id="alt_sub_id" value="{{ $subs_id }}" readonly>
+        </div>
+
+        <!-- Payment and Max Amount -->
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-medium">Payment Amount</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" class="form-control" placeholder="Enter amount">
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-medium">Maximum Amount</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="text" class="form-control" value="100000" readonly>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="mb-3">
+          <label class="form-label fw-medium">Schedule On</label>
+            <div class="input-group">
+                <input type="date" class="form-control" id="schedule_date" name="schedule_date" >
+                <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+            </div>
+        </div>
+
+        <!-- Remarks -->
+        <div class="mb-2">
+          <label class="form-label fw-medium">Remarks <span class="text-muted small">(Optional)</span></label>
+          <textarea class="form-control" rows="3" maxlength="200" placeholder="A maximum of 200 characters are allowed."></textarea>
+        </div>
+
+        <div class="text-muted small">
+          A maximum of 200 characters are allowed.
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer border-0 d-flex justify-content-end">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="raisePaymentBtn">Raise Payment</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal 2-->
+<div class="modal fade" id="confirmModal3" tabindex="-1" aria-labelledby="confirmModal3Label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModal3Label">Confirm Cancellation Raised Payment Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                Are you sure, you want to cancel this raised payment request ?
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="cancelPaymentBtn" class="btn btn-primary">Yes, Cancel It</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <!-- Form submission -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal 3-->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
   <div id="copyToast" class="toast align-items-center text-white bg-success border-0" role="alert">
     <div class="d-flex">
@@ -2094,5 +2261,86 @@
         document.body.innerHTML = originalbsaContents;
         location.reload(); // Optional: refresh to restore events
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('schedule_date');
+        if (!dateInput) return;
+
+        const today = new Date();
+        const maxDate = new Date();
+        maxDate.setDate(today.getDate() + 14); // 14 days from today
+
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = ('0' + (date.getMonth() + 1)).slice(-2);
+            const day = ('0' + date.getDate()).slice(-2);
+            return `${year}-${month}-${day}`;
+        };
+
+        dateInput.min = formatDate(today);
+        dateInput.max = formatDate(maxDate);
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Raise Payment Request
+        document.getElementById('raisePaymentBtn').addEventListener('click', function() {
+            const subscription_id = document.getElementById('alt_sub_id').value;
+            const payment_amount = document.querySelector('input[placeholder="Enter amount"]').value;
+            const schedule_on = document.getElementById('schedule_date').value;
+            const remarks = document.querySelector('textarea').value;
+
+            if (!payment_amount || !schedule_on) {
+                alert("Please fill required fields.");
+                return;
+            }
+
+            fetch("{{ route('admin.leads.createenach') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    subscription_id,
+                    payment_amount,
+                    schedule_on,
+                    remarks,
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if (data.status) {
+                    location.reload();
+                }
+            })
+            .catch(() => alert("Something went wrong."));
+        });
+
+
+        // Cancel Raised Payment Request
+        document.getElementById('cancelPaymentBtn').addEventListener('click', function() {
+            const subscription_id = document.getElementById('alt_sub_id').value;
+
+            fetch("{{ route('admin.leads.cancelenach') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ subscription_id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if (data.status) {
+                    location.reload();
+                }
+            })
+            .catch(() => alert("Something went wrong."));
+        });
+
+    });
 </script>
 @endpush

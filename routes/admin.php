@@ -284,6 +284,8 @@ Route::middleware('admin')->group(function () {
         Route::get('leads-notinterested', 'leadsNotInterested')->name('notinterested');
         Route::get('verify/{id}', 'leadsVerify')->name('verify');
         Route::delete('delete/{id}', 'deleteLead')->name('delete');
+        Route::post('leads-createenach', 'leadsRaisePayReq')->name('createenach');
+        Route::post('leads-cancelenach', 'leadsCancelRaisePayReq')->name('cancelenach');
      });
 
     // Loan Leads

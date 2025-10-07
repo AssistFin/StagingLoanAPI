@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 
 class LeadController extends Controller
 {
@@ -999,6 +1000,10 @@ class LeadController extends Controller
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
+        $cfreeSubsData = [];
+        if(!empty($cashfreeData)){
+            $cfreeSubsData = DB::table('subscription_payment_requests')->where('subscription_id', $cashfreeData->alt_subscription_id)->first();
+        }
 
         $digitapBankRequestData = DigitapBankRequest::where('customer_id', $id)->orderBy('id','desc')->first();
         //dd($digitapBankRequestData);
@@ -1128,7 +1133,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData','cfreeSubsData'));
     }
 
     public function deleteLead($id)
@@ -1338,5 +1343,98 @@ class LeadController extends Controller
             'data' => $jsonData,
             'pdfUrl' => Storage::url($pdfPath)
         ] );
+    }
+
+    public function leadsRaisePayReq(Request $request)
+    {
+        $request->validate([
+            'subscription_id' => 'required|string',
+            'payment_amount' => 'required|numeric|min:1',
+            'schedule_on' => 'required|date',
+            'remarks' => 'nullable|string|max:200',
+        ]);
+
+        try {
+            // Example Cashfree API endpoint
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'x-api-version' => config('services.cashfree.api_version'),
+                'x-client-id' => config('services.cashfree.app_id'),
+                'x-client-secret' => config('services.cashfree.secret_key'),
+            ])->post(config('services.cashfree.base_url') . '/pg/subscriptions/pay', [
+                'subscription_id' => $request->subscription_id,
+                "payment_id" => "CF-".$request->subscription_id,
+                'payment_amount' => floatval(preg_replace('/[^\d.]/', '', $request->payment_amount)),
+                'payment_schedule_date' => Carbon::parse($request->schedule_on)->toIso8601String(),
+                'payment_remarks' => $request->remarks,
+                "payment_type" => "CHARGE"
+            ]);
+            
+            $data = [
+                'subscription_id' => $request->subscription_id,
+                'payment_id' => "CF-".$request->subscription_id,
+                'payment_amount' => floatval(preg_replace('/[^\d.]/', '', $request->payment_amount)),
+                'payment_schedule_date' => $request->schedule_on,
+                'payment_remarks' => $request->remarks,
+                'payment_type' => 'CHARGE',
+                'response_status' => $response->successful() ? 'Success' : 'Failed',
+                'response_data' => $response,
+                'error_message' => $response->successful() ? null : json_encode($response),
+                'status' => $response->successful() ? 'Raised' : 'Pending',
+            ];
+
+            DB::table('subscription_payment_requests')->insert($data);
+
+            if ($response->successful()) {
+                return response()->json(['status' => true, 'message' => 'Payment request raised successfully.']);
+            } else {
+                Log::error('Raise Payment Error: ' . json_encode($response->json()));
+                return response()->json(['status' => false, 'message' => 'Failed to raise payment.', 'error' => $response->json()]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Raise Payment Exception: ' . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Server error.']);
+        }
+    }
+
+    public function leadsCancelRaisePayReq(Request $request)
+    {
+        $request->validate([
+            'subscription_id' => 'required|string',
+        ]);
+
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'x-api-version' => config('services.cashfree.api_version'),
+                'x-client-id' => config('services.cashfree.app_id'),
+                'x-client-secret' => config('services.cashfree.secret_key'),
+            ])->post(config('services.cashfree.base_url') . '/pg/subscriptions/'.$request->subscription_id.'/payments/CF-'.$request->subscription_id.'/manage', [
+                'subscription_id' => $request->subscription_id,
+                'action' => 'CANCEL',
+            ]);
+
+            if ($response->successful()) {
+                // Prepare update data
+                $updateData = [
+                    'status' => 'Cancelled',
+                ];
+
+                // Update the existing record (based on subscription_id & payment_id)
+                DB::table('subscription_payment_requests')
+                    ->where('subscription_id', $request->subscription_id)
+                    ->where('payment_id', 'CF-'.$request->subscription_id)
+                    ->update($updateData);
+
+                return response()->json(['status' => true, 'message' => 'Payment request cancelled successfully.']);
+            } else {
+                return response()->json(['status' => false, 'message' => 'Failed to cancel payment.', 'error' => $response->json()]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Cancel Payment Error: ' . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Server error.']);
+        }
     }
 }
