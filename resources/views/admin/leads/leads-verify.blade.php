@@ -580,6 +580,39 @@
                                 </select>
                                 <span class="error-message text-danger"></span>
                             </div>
+
+                            <!-- Hidden by default -->
+                            <div class="col-md-12" id="rejectReasonDiv" style="display: none;">
+                                <label for="rejection_reason" class="form-label">Rejection Reason</label>
+                                <select class="form-control" id="rejection_reason" name="rejection_reason">
+                                    <option value="">Select Reason</option>
+                                    <option value="Cibil default (latest dpds, written off, suite filed, settled etc.)" {{isset($loanApproval) && $loanApproval->reject_reason == "Cibil default (latest dpds, written off, suite filed, settled etc.)" ? "selected" : ""}}>Cibil default (latest dpds, written off, suite filed, settled etc.)</option>
+                                    <option value="Salary not verified, Cash salary" {{isset($loanApproval) && $loanApproval->reject_reason == "Salary not verified, Cash salary" ? "selected" : ""}}>Salary not verified, Cash salary</option>
+                                    <option value="No business proof" {{isset($loanApproval) && $loanApproval->reject_reason == "No business proof" ? "selected" : ""}}>No business proof</option>
+                                    <option value="Bounces in banking (more than 2 in last 3 months not cleared)" {{isset($loanApproval) && $loanApproval->reject_reason == "Bounces in banking (more than 2 in last 3 months not cleared)" ? "selected" : ""}}>Bounces in banking (more than 2 in last 3 months not cleared)</option>
+                                    <option value="Poor banking txns and low ABB balances." {{isset($loanApproval) && $loanApproval->reject_reason == "Poor banking txns and low ABB balances." ? "selected" : ""}}>Poor banking txns and low ABB balances.</option>
+                                    <option value="Customer is not Interested" {{isset($loanApproval) && $loanApproval->reject_reason == "Customer is not Interested" ? "selected" : ""}}>Customer is not Interested</option>
+                                    <option value="Number Switched off, Temporarily out of service, not reachable etc." {{isset($loanApproval) && $loanApproval->reject_reason == "Number Switched off, Temporarily out of service, not reachable etc." ? "selected" : ""}}>Number Switched off, Temporarily out of service, not reachable etc.</option>
+                                    <option value="Details provided in application and on call are different" {{isset($loanApproval) && $loanApproval->reject_reason == "Details provided in application and on call are different" ? "selected" : ""}}>Details provided in application and on call are different</option>
+                                    <option value="Heavy usage of overdrafting (negative balances in banking)" {{isset($loanApproval) && $loanApproval->reject_reason == "Heavy usage of overdrafting (negative balances in banking)" ? "selected" : ""}}>Heavy usage of overdrafting (negative balances in banking)</option>
+                                    <option value="Manipulating details over call, Prompting found in verification, Someone else was giving details over the call" {{isset($loanApproval) && $loanApproval->reject_reason == "Manipulating details over call, Prompting found in verification, Someone else was giving details over the call" ? "selected" : ""}}>Manipulating details over call, Prompting found in verification, Someone else was giving details over the call</option>
+                                    <option value="Fraud documents/Customer" {{isset($loanApproval) && $loanApproval->reject_reason == "Fraud documents/Customer" ? "selected" : ""}}>Fraud documents/Customer</option>
+                                    <option value="Not co operating over call for details" {{isset($loanApproval) && $loanApproval->reject_reason == "Not co operating over call for details" ? "selected" : ""}}>Not co operating over call for details</option>
+                                    <option value="Seasonal Business, No business setup" {{isset($loanApproval) && $loanApproval->reject_reason == "Seasonal Business, No business setup" ? "selected" : ""}}>Seasonal Business, No business setup</option>
+                                    <option value="Doubtful profile (Details mismatch completely)" {{isset($loanApproval) && $loanApproval->reject_reason == "Doubtful profile (Details mismatch completely)" ? "selected" : ""}}>Doubtful profile (Details mismatch completely)</option>
+                                    <option value="Negative profile (Defence person, Policeman, lawyer, astrologer, priest, media reporter, commission agent, collection agent, lottery etc)" {{isset($loanApproval) && $loanApproval->reject_reason == "Negative profile (Defence personell, Policeman, lawyer, astrologer, priest, media reporter, commission agent, collection agent, lottery etc)" ? "selected" : ""}}>Negative profile (Defence personell, Policeman, lawyer, astrologer, priest, media reporter, commission agent, collection agent, lottery etc)</option>
+                                    <option value="Heavy txns of shares and online gaming" {{isset($loanApproval) && $loanApproval->reject_reason == "Heavy txns of shares and online gaming" ? "selected" : ""}}>Heavy txns of shares and online gaming</option>
+                                    <option value="Income less than 25k" {{isset($loanApproval) && $loanApproval->reject_reason == "Income less than 25k" ? "selected" : ""}}>Income less than 25k</option>
+                                    <option value="Overdebt customer (insufficient repayment capacity, negative NDI)" {{isset($loanApproval) && $loanApproval->reject_reason == "Overdebt customer (insufficient repayment capacity, negative NDI)" ? "selected" : ""}}>Overdebt customer (insufficient repayment capacity, negative NDI)</option>
+                                    <option value="Negative reference feedback, reference denied to provide loan to applicant" {{isset($loanApproval) && $loanApproval->reject_reason == "Negative reference feedback, reference denied to provide loan to applicant" ? "selected" : ""}}>Negative reference feedback, reference denied to provide loan to applicant</option>
+                                    <option value="Rented RCO profile" {{isset($loanApproval) && $loanApproval->reject_reason == "Rented RCO profile" ? "selected" : ""}}>Rented RCO profile</option>
+                                    <option value="Rented bachelor/shared accommodation age less than 23 years and income less than 20k" {{isset($loanApproval) && $loanApproval->reject_reason == "Rented bachelor/shared accommodation age less than 23 years and income less than 20k" ? "selected" : ""}}>Rented bachelor/shared accommodation age less than 23 years and income less than 20k</option>
+                                    <option value="As per our policy/Internal rule" {{isset($loanApproval) && $loanApproval->reject_reason == "As per our policy/Internal rule" ? "selected" : ""}}>As per our policy/Internal rule</option>
+                                    <option value="DPD in internal loan" {{isset($loanApproval) && $loanApproval->reject_reason == "DPD in internal loan" ? "selected" : ""}}>DPD in internal loan</option>
+
+                                </select>
+                                <span class="error-message text-danger"></span>
+                            </div>
                 
                             <!-- Approval Date -->
                             <div class="col-md-6">
@@ -929,9 +962,14 @@
                                     <button type="button" class="btn btn-success">
                                     Raised Payment Request Cancelled</button>
                                 </div>
-                            @else
+                            @elseif(isset($cfreeSubsData) && $cfreeSubsData->subscription_id == $cashfreeData->alt_subscription_id)
                                 <div class="col-md-6">
                                     <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal3">
+                                    Cancel Raised Payment Request</button>
+                                </div>
+                            @else
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-secondary">
                                     Cancel Raised Payment Request</button>
                                 </div>
                             @endif
@@ -2342,5 +2380,29 @@
         });
 
     });
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const statusSelect = document.getElementById("loanApprovalForm_status");
+    const rejectDiv = document.getElementById("rejectReasonDiv");
+    const rejectReason = document.getElementById("rejection_reason");
+
+    function toggleRejectReason() {
+        if (statusSelect.value === "2") { // Rejected
+            rejectDiv.style.display = "block";
+            rejectReason.setAttribute("required", "required");
+        } else {
+            rejectDiv.style.display = "none";
+            rejectReason.removeAttribute("required");
+            rejectReason.value = ""; // clear old selection
+        }
+    }
+
+    // Initial check on load
+    toggleRejectReason();
+
+    // Change listener
+    statusSelect.addEventListener("change", toggleRejectReason);
+});
 </script>
 @endpush

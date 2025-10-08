@@ -34,6 +34,7 @@ class LoanApproval extends Model
         'cibil_score',
         'monthly_income',
         'status',
+        'reject_reason',
         'credited_by',
         'approval_date',
         'final_remark',

@@ -29,12 +29,18 @@ class LoanApprovalController extends Controller
 
     protected function handleRejectedLoan(Request $request)
     {
+        //dd($request);
+        $request->validate([
+            'rejection_reason' => 'required|string',
+        ]);
+
         $data = [
             'loan_application_id' => $request->loan_application_id,
             'user_id' => $request->user_id,
             'loan_number' => $request->loan_number,
             'credited_by' => $request->credited_by,
             'status' => 2, 
+            'reject_reason' => $request->rejection_reason,
             'final_remark' => $request->final_remark,
             'additional_remark' => $request->additional_remark,
             'approval_date' => now(),
