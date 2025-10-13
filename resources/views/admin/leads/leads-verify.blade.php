@@ -44,6 +44,39 @@
     #confirmModal2 textarea.form-control {
     resize: none;
     }
+
+    /* Make table compact & fit nicely in tab */
+    .table-fit {
+        padding: 0.75rem 1rem;
+    }
+
+    .table-responsive-sm {
+        overflow-x: auto; /* removes scroll */
+    }
+
+    /* Reduce font and padding slightly for compactness */
+    .small-table th, .small-table td {
+        padding: 8px 12px;
+        font-size: 1rem; /* Adjust font size */
+    }
+
+    /* Make headers more balanced */
+    .small-table th {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+
+    .small-table td {
+        word-wrap: break-word;
+        white-space: normal;
+    }
+
+    /* Rounded card corners & soft shadow */
+    .card {
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+    }
+
 </style>
 @section('panel')
 <div class="row gy-4">
@@ -945,37 +978,73 @@
                     <h1>Collection Form</h1>
                     @if(isset($cashfreeData) && $cashfreeData->status == 'ACTIVE')
                         <div class="row mb-3">
-                            @if(isset($cfreeSubsData) && $cfreeSubsData->subscription_id == $cashfreeData->alt_subscription_id)
-                            <div class="col-md-6">
-                                <button type="button" class="btn btn-success">
-                                Payment Request Raised</button>
-                            </div>
-                            @else
                             <div class="col-md-6">
                                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal2">
                                 Raise Payment Request</button>
                             </div>
-                            @endif
                             
                             @if(isset($cfreeSubsData) && $cfreeSubsData->status == 'Cancelled')
                                 <div class="col-md-6">
                                     <button type="button" class="btn btn-success">
                                     Raised Payment Request Cancelled</button>
                                 </div>
-                            @elseif(isset($cfreeSubsData) && $cfreeSubsData->subscription_id == $cashfreeData->alt_subscription_id)
-                                <div class="col-md-6">
-                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal3">
-                                    Cancel Raised Payment Request</button>
-                                </div>
                             @else
                                 <div class="col-md-6">
-                                    <button type="button" class="btn btn-secondary">
+                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal3">
                                     Cancel Raised Payment Request</button>
                                 </div>
                             @endif
                             
                         </div>
                     @endif
+
+                    <!-- Insert Table Section Between Buttons and Inputs -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="card shadow-sm">
+                                <div class="card-body p-3 table-fit">
+                                    <div class="table-responsive-sm">
+                                        <table class="table table-bordered table-striped mb-0 align-middle text-center small-table">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Created On</th>
+                                                    <th>Subscription ID</th>
+                                                    <th>Scheduled On</th>
+                                                    <th>Amount</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($allcfreeSubPayReqData as $req)
+                                                    <tr>
+                                                        <td>{{ \Carbon\Carbon::parse($req->created_at)->format('d M Y') }}</td>
+                                                        <td>{{ $req->subscription_id ?? '--' }}</td>
+                                                        <td>{{ !empty($req->payment_schedule_date) ? \Carbon\Carbon::parse($req->payment_schedule_date)->format('d M Y') : '--' }}</td>
+                                                        <td>INR {{ number_format($req->payment_amount ?? 0, 2) }}</td>
+                                                        <td>
+                                                            @if(strtolower($req->status) === 'cancelled')
+                                                                <span class="text-danger fw-semibold">Cancelled</span>
+                                                            @elseif(strtolower($req->status) === 'active')
+                                                                <span class="text-success fw-semibold">Active</span>
+                                                            @else
+                                                                <span class="text-secondary">{{ ucfirst($req->status ?? '--') }}</span>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+
+                                                @if($allcfreeSubPayReqData->isEmpty())
+                                                    <tr>
+                                                        <td colspan="9" class="text-center text-muted">No payment requests found</td>
+                                                    </tr>
+                                                @endif
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <form action="{{ route('admin.loan.utr.store') }}" method="POST" id="loanUtrForm">
                         @csrf
                         <input type="hidden" name="loan_application_id" value="{{ $lead->id }}">
@@ -1354,13 +1423,37 @@
         <!-- Subscription ID -->
         @php $subs_id = ''; @endphp
         @if(isset($cashfreeData) && $cashfreeData->status == 'ACTIVE')
-            @php
-                $subs_id = $cashfreeData->alt_subscription_id ?? '';
-            @endphp
         @endif
         <div class="mb-3">
           <label class="form-label fw-medium">Subscription ID</label>
-          <input type="text" class="form-control" id="alt_sub_id" value="{{ $subs_id }}" readonly>
+          <select name="subscription_id" id="alt_sub_id" class="form-select">
+            <option value="">-- Select Subscription ID --</option>
+
+                @foreach($allcfreeSubData as $v1)
+                    @php
+                        $relatedPayments = $allcfreeSubPayReqData->where('subscription_id', $v1->alt_subscription_id);
+                        $isCancelled = $relatedPayments->contains(fn($p) => strtolower($p->status ?? '') === 'cancelled');
+
+                        if ($relatedPayments->isEmpty()) {
+                            $label = 'Raise Payment Request';
+                            $status = 'no_request';
+                        } elseif ($isCancelled) {
+                            $label = 'Payment Cancelled';
+                            $status = 'cancelled';
+                        } else {
+                            $label = 'Payment Request Raised';
+                            $status = 'active';
+                        }
+                    @endphp
+
+                    <option value="{{ $v1->alt_subscription_id }}" data-status="{{ $status }}"
+                        {{ $subs_id == $v1->alt_subscription_id ? 'selected' : '' }}
+                        {{ $status === 'active' ? 'disabled' : '' }}>
+                        {{ $v1->alt_subscription_id }}
+                    </option>
+                @endforeach
+            </select>
+          
         </div>
 
         <!-- Payment and Max Amount -->
@@ -1423,7 +1516,49 @@
             </div>
 
             <div class="modal-body">
-                Are you sure, you want to cancel this raised payment request ?
+                <p>Select the subscription you want to cancel:</p>
+
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Subscription ID</label>
+                    <select class="form-select" id="cancel_subscription_id" name="cancel_subscription_id">
+                        <option value="">-- Select Subscription ID --</option>
+
+                        @foreach($allcfreeSubData as $v1)
+                            @php
+                                // Find related payments
+                                $relatedPayments = $allcfreeSubPayReqData->where('subscription_id', $v1->alt_subscription_id);
+
+                                // Check if any payment is cancelled
+                                $isCancelled = $relatedPayments->contains(function ($payment) {
+                                    return isset($payment->status) && strtolower($payment->status) === 'cancelled';
+                                });
+
+                                // Determine status
+                                if ($relatedPayments->isEmpty()) {
+                                    $label = 'No Request Raised';
+                                    $status = 'no_request';
+                                } elseif ($isCancelled) {
+                                    $label = 'Payment Cancelled';
+                                    $status = 'cancelled';
+                                } else {
+                                    $label = 'Active Request';
+                                    $status = 'active';
+                                }
+                            @endphp
+
+                            <option 
+                                value="{{ $v1->alt_subscription_id }}"
+                                data-status="{{ $status }}"
+                                {{ $status !== 'active' ? 'disabled' : '' }}>
+                                {{ $v1->alt_subscription_id }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <p class="text-danger mt-2 small">
+                    Only subscriptions with an active payment request can be cancelled.
+                </p>
             </div>
 
             <div class="modal-footer">
@@ -2359,7 +2494,7 @@
 
         // Cancel Raised Payment Request
         document.getElementById('cancelPaymentBtn').addEventListener('click', function() {
-            const subscription_id = document.getElementById('alt_sub_id').value;
+            const subscription_id = document.getElementById('cancel_subscription_id').value;
 
             fetch("{{ route('admin.leads.cancelenach') }}", {
                 method: "POST",

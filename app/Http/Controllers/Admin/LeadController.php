@@ -1000,8 +1000,12 @@ class LeadController extends Controller
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
-        $cfreeSubsData = [];
+        $cfreeSubsData = $allcfreeSubData = [];
         if(!empty($cashfreeData)){
+            $allcfreeSubData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->get();
+
+            $allcfreeSubPayReqData = DB::table('subscription_payment_requests')->where('subscription_id', 'like', "%{$lead->loan_no}%")->get();
+
             $cfreeSubsData = DB::table('subscription_payment_requests')->where('subscription_id', $cashfreeData->alt_subscription_id)->first();
         }
 
@@ -1133,7 +1137,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData','cfreeSubsData'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData','cfreeSubsData', 'allcfreeSubData', 'allcfreeSubPayReqData'));
     }
 
     public function deleteLead($id)
