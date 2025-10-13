@@ -1000,7 +1000,7 @@ class LeadController extends Controller
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
-        $cfreeSubsData = $allcfreeSubData = [];
+        $cfreeSubsData = $allcfreeSubData = $allcfreeSubPayReqData = [];
         if(!empty($cashfreeData)){
             $allcfreeSubData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->get();
 

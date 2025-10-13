@@ -1033,7 +1033,7 @@
                                                     </tr>
                                                 @endforeach
 
-                                                @if($allcfreeSubPayReqData->isEmpty())
+                                                @if(empty($allcfreeSubPayReqData))
                                                     <tr>
                                                         <td colspan="9" class="text-center text-muted">No payment requests found</td>
                                                     </tr>
