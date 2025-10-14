@@ -13,6 +13,16 @@
     border-top: 1px solid #ccc;
 }
 </style>
+<style>
+.modal-xl {
+  max-width: 95%;
+}
+.modal-body {
+  max-height: 75vh;
+  overflow-y: auto;
+}
+</style>
+
 @endpush
 
 @section('panel')
@@ -45,12 +55,7 @@
                                 <th>@lang('Mobile No')</th>
                                 <th>@lang('Loan Amount')</th>
                                 <th>@lang('Purpose Of Loan')</th>
-                                <th>@lang('Personal Details')</th>
-                                <th>@lang('KYC Details')</th>
-                                <th>@lang('Selfie Document')</th>
-                                <th>@lang('Address Details')</th>
-                                <th>@lang('Employement Details')</th>
-                                <th>@lang('Bank Details')</th>
+                                <th>@lang('Action')</th>
                             </tr>
                             </thead>
                             <tbody id="bsaLeadsTable">
@@ -64,12 +69,7 @@
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
                                     <td>{{ $lead->loan_amount }}</td>
                                     <td>{{ $lead->purpose_of_loan }}</td>
-                                    <td>{!! $lead->personalDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->kycDetails || in_array($lead->user_id, $userIdsWithKyc) ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->loanDocument || in_array($lead->user_id, $userIdsWithKyc) ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->addressDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->employmentDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                    <td>{!! $lead->bankDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
+                                    <td><button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#underwritingModal" >Check UW</button></td>
                                 </tr>
                             @empty
                                 <tr>
@@ -93,6 +93,120 @@
             </div>
         </div>
     </div>
+
+<!-- Modal -->
+<div class="modal fade" id="underwritingModal" tabindex="-1" aria-labelledby="underwritingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <form id="underwritingForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="underwritingModalLabel">Underwriting Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="container-fluid">
+            
+            <!-- Applicant Info -->
+            <div class="row mb-3">
+              <div class="col-md-3">
+                <label>CPA Name</label>
+                <input type="text" class="form-control" placeholder="13419">
+              </div>
+              <div class="col-md-3">
+                <label>Loan App. No.</label>
+                <input type="text" class="form-control" placeholder="Sample">
+              </div>
+              <div class="col-md-3">
+                <label>Client Name</label>
+                <input type="text" class="form-control" placeholder="Enter client name">
+              </div>
+              <div class="col-md-3">
+                <label>Apply Date</label>
+                <input type="date" class="form-control">
+              </div>
+            </div>
+
+            <!-- BANKING SECTION -->
+            <h5 class="mt-4 mb-2 text-primary border-bottom pb-1">Banking</h5>
+
+            <div class="row mb-3">
+              <div class="col-md-12"><strong>Salary in Last 3 Months</strong></div>
+              <div class="col-md-2"><input type="number" class="form-control" placeholder="Month 1"></div>
+              <div class="col-md-2"><input type="number" class="form-control" placeholder="Month 2"></div>
+              <div class="col-md-2"><input type="number" class="form-control" placeholder="Month 3"></div>
+              <div class="col-md-3"><input type="number" class="form-control" placeholder="Average"></div>
+              <div class="col-md-3"><input type="text" class="form-control" placeholder="Bank Score"></div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-3"><label>Min Balance</label><input type="text" class="form-control"></div>
+              <div class="col-md-3"><label>Avg Balance</label><input type="text" class="form-control"></div>
+              <div class="col-md-3"><label>Bounce/Return (Last 1 Month)</label><input type="text" class="form-control"></div>
+              <div class="col-md-3"><label>Bounce/Return (Last 3 Months)</label><input type="text" class="form-control"></div>
+            </div>
+
+            <!-- BUREAU SECTION -->
+            <h5 class="mt-4 mb-2 text-primary border-bottom pb-1">Bureau</h5>
+            <div class="row mb-3">
+              <div class="col-md-3"><label>Bureau Score</label><input type="text" class="form-control"></div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12"><strong>DPD in Last 30 Days</strong></div>
+              <div class="col-md-3"><input type="number" class="form-control" placeholder="Account Type"></div>
+              <div class="col-md-3"><input type="number" class="form-control" placeholder="DPD"></div>
+              <div class="col-md-3"><input type="number" class="form-control" placeholder="Amount"></div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12"><strong>DPD in Last 90 Days</strong></div>
+              <div class="col-md-3"><input type="number" class="form-control" placeholder="Account Type"></div>
+              <div class="col-md-3"><input type="number" class="form-control" placeholder="DPD"></div>
+              <div class="col-md-3"><input type="number" class="form-control" placeholder="Amount"></div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-3"><label>Experience in Unsecured Loan (Last 6 months)</label>
+                <select class="form-select">
+                  <option>No</option>
+                  <option>Yes</option>
+                </select>
+              </div>
+              <div class="col-md-3"><label>No. of Loan Accounts Open (Last 6 months)</label><input type="number" class="form-control"></div>
+              <div class="col-md-3"><label>No. of Loan Accounts Closed (Last 6 months)</label><input type="number" class="form-control"></div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12"><strong>Amount of Last 2 Loan Open</strong></div>
+              <div class="col-md-4"><input type="number" class="form-control" placeholder="1"></div>
+              <div class="col-md-4"><input type="number" class="form-control" placeholder="2"></div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12"><strong>Last Unsecured Loan Closed</strong></div>
+              <div class="col-md-4"><input type="number" class="form-control" placeholder="1"></div>
+              <div class="col-md-4"><input type="number" class="form-control" placeholder="2"></div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12"><strong>Leverage</strong></div>
+              <div class="col-md-4"><input type="number" class="form-control" placeholder="Average Salary"></div>
+              <div class="col-md-4"><input type="number" class="form-control" placeholder="Unsecured Loan"></div>
+            </div>
+
+          </div> <!-- /.container-fluid -->
+        </div> <!-- /.modal-body -->
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-success">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 @endsection
 
 @push('breadcrumb-plugins')
@@ -164,4 +278,18 @@
             });
         });
     </script>
+<script>
+    document.getElementById('underwritingForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Prevent default form submission
+    // You can collect data here if needed, e.g. FormData(this)
+    
+    // Optional: show success message or close modal first
+    const modal = bootstrap.Modal.getInstance(document.getElementById('underwritingModal'));
+    modal.hide();
+
+    // Redirect to Google
+    window.location.href = "https://www.google.com";
+    });
+</script>
+
 @endpush

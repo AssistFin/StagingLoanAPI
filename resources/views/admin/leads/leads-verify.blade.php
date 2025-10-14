@@ -1447,8 +1447,7 @@
                     @endphp
 
                     <option value="{{ $v1->alt_subscription_id }}" data-status="{{ $status }}"
-                        {{ $subs_id == $v1->alt_subscription_id ? 'selected' : '' }}
-                        {{ $status === 'active' ? 'disabled' : '' }}>
+                        {{ $subs_id == $v1->alt_subscription_id ? 'selected' : '' }}>
                         {{ $v1->alt_subscription_id }}
                     </option>
                 @endforeach
@@ -1548,8 +1547,7 @@
 
                             <option 
                                 value="{{ $v1->alt_subscription_id }}"
-                                data-status="{{ $status }}"
-                                {{ $status !== 'active' ? 'disabled' : '' }}>
+                                data-status="{{ $status }}">
                                 {{ $v1->alt_subscription_id }}
                             </option>
                         @endforeach
