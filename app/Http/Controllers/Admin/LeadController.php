@@ -1441,4 +1441,45 @@ class LeadController extends Controller
             return response()->json(['status' => false, 'message' => 'Server error.']);
         }
     }
+
+    public function leadsunderwritingstore(Request $request)
+    {
+        $data = $request->validate([
+            'admin_id' => 'required',
+            'loan_application_id' => 'required',
+            'client_id' => 'required',
+            'salary_month1' => 'required',
+            'salary_month2' => 'required',
+            'salary_month3' => 'required',
+            'average_salary' => 'required',
+            'bank_score' => 'required',
+            'min_balance' => 'required',
+            'avg_balance' => 'required',
+            'bounce_1_month' => 'required',
+            'bounce_3_month' => 'required',
+            'bureau_score' => 'required',
+            'dpd_30_1' => 'required',
+            'dpd_30_amt1' => 'required',
+            'dpd_30_2' => 'required',
+            'dpd_30_amt2' => 'required',
+            'dpd_90_1' => 'required',
+            'dpd_90_amt1' => 'required',
+            'dpd_90_2' => 'required',
+            'dpd_90_amt2' => 'required',
+            'unsecured_loan_experience' => 'required',
+            'loan_open_6m' => 'required',
+            'loan_closed_6m' => 'required',
+            'last2_open_1' => 'required',
+            'last2_open_2' => 'required',
+            'last2_closed_1' => 'required',
+            'last2_closed_2' => 'required',
+            'leverage_avg_salary' => 'required',
+            'leverage_unsecured_loan' => 'required',
+            'status' => 'active',
+        ]);
+
+        Underwriting::create($data);
+
+        return response()->json(['status' => 'success', 'message' => 'Underwriting saved successfully!']);
+    }
 }

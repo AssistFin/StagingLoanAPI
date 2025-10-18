@@ -1,4 +1,5 @@
 @extends('admin.layouts.app')
+<meta name="csrf-token" content="{{ csrf_token() }}">
 @push('style')
 <style>
 .sticky-pagination {
@@ -54,7 +55,6 @@
                                 <th>@lang('Customer Name')</th>
                                 <th>@lang('Mobile No')</th>
                                 <th>@lang('Loan Amount')</th>
-                                <th>@lang('Purpose Of Loan')</th>
                                 <th>@lang('Action')</th>
                             </tr>
                             </thead>
@@ -68,8 +68,15 @@
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
                                     <td>{{ $lead->loan_amount }}</td>
-                                    <td>{{ $lead->purpose_of_loan }}</td>
-                                    <td><button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#underwritingModal" >Check UW</button></td>
+                                    <td><button class="btn btn-primary btn-sm checkUWBtn"
+                                      data-loan-id="{{ $lead->id }}"
+                                      data-client-id="{{ $lead->user->id }}"
+                                      data-client-name="{{ $lead->user ? $lead->user->firstname.' '.$lead->user->lastname : '' }}"
+                                      data-loan-app-no="{{ $lead->loan_no }}"
+                                      data-apply-date="{{ $lead->created_at->format('Y-m-d') }}"
+                                      data-cpa-name="{{ auth()->guard('admin')->user()->name }}"
+                                      data-bs-toggle="modal"
+                                      data-bs-target="#underwritingModal" >Check UW</button></td>
                                 </tr>
                             @empty
                                 <tr>
@@ -98,7 +105,8 @@
 <div class="modal fade" id="underwritingModal" tabindex="-1" aria-labelledby="underwritingModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
-      <form id="underwritingForm">
+      <form id="underwritingForm" method="POST" action="{{ route('admin.leads.underwriting-store') }}">
+        @csrf
         <div class="modal-header">
           <h5 class="modal-title" id="underwritingModalLabel">Underwriting Details</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -111,19 +119,22 @@
             <div class="row mb-3">
               <div class="col-md-3">
                 <label>CPA Name</label>
-                <input type="text" class="form-control" placeholder="13419">
+                <input type="text" class="form-control" id="cpa_name" name="cpa_name" readonly >
               </div>
               <div class="col-md-3">
                 <label>Loan App. No.</label>
-                <input type="text" class="form-control" placeholder="Sample">
+                <input type="text" name="loan_app_no" id="loan_app_no" class="form-control" readonly>
               </div>
               <div class="col-md-3">
                 <label>Client Name</label>
-                <input type="text" class="form-control" placeholder="Enter client name">
+                <input type="text" name="client_name" id="client_name" class="form-control" readonly>
               </div>
               <div class="col-md-3">
                 <label>Apply Date</label>
-                <input type="date" class="form-control">
+                <input type="text" name="apply_date" id="apply_date" class="form-control" readonly>
+                <input type="hidden" name="admin_id" id="admin_id" value="{{ auth()->guard('admin')->user()->id }}" >
+                <input type="hidden" name="loan_application_id" id="loan_application_id">
+                <input type="hidden" name="client_id" id="client_id">
               </div>
             </div>
 
@@ -132,67 +143,75 @@
 
             <div class="row mb-3">
               <div class="col-md-12"><strong>Salary in Last 3 Months</strong></div>
-              <div class="col-md-2"><input type="number" class="form-control" placeholder="Month 1"></div>
-              <div class="col-md-2"><input type="number" class="form-control" placeholder="Month 2"></div>
-              <div class="col-md-2"><input type="number" class="form-control" placeholder="Month 3"></div>
-              <div class="col-md-3"><input type="number" class="form-control" placeholder="Average"></div>
-              <div class="col-md-3"><input type="text" class="form-control" placeholder="Bank Score"></div>
+              <div class="col-md-2"><input type="number" class="form-control" name="salary_month1" id="salary1" value="" required placeholder="3000"></div>
+              <div class="col-md-2"><input type="number" class="form-control" name="salary_month2" id="salary2" value="" required placeholder="4000"></div>
+              <div class="col-md-2"><input type="number" class="form-control" name="salary_month3" id="salary3" value="" required placeholder="4000"></div>
+              <div class="col-md-3"><input type="number" class="form-control" name="average_salary" id="avg_salary" value="" readonly placeholder="3000"></div>
+              <div class="col-md-3"><input type="text" class="form-control" name="bank_score" id="bank_score" value="" required placeholder="Bank Score"></div>
             </div>
 
             <div class="row mb-3">
-              <div class="col-md-3"><label>Min Balance</label><input type="text" class="form-control"></div>
-              <div class="col-md-3"><label>Avg Balance</label><input type="text" class="form-control"></div>
-              <div class="col-md-3"><label>Bounce/Return (Last 1 Month)</label><input type="text" class="form-control"></div>
-              <div class="col-md-3"><label>Bounce/Return (Last 3 Months)</label><input type="text" class="form-control"></div>
+              <div class="col-md-3"><label>Min Balance</label><input type="text" class="form-control" name="min_balance" id="min_balance" required></div>
+              <div class="col-md-3"><label>Avg Balance</label><input type="text" class="form-control" name="avg_balance" id="avg_balance" required></div>
+              <div class="col-md-3"><label>Bounce/Return (Last 1 Month)</label><input type="text" class="form-control" name="bounce_1_month" id="bounce_1_month" required></div>
+              <div class="col-md-3"><label>Bounce/Return (Last 3 Months)</label><input type="text" class="form-control" name="bounce_3_month" id="bounce_3_month" required></div>
             </div>
 
             <!-- BUREAU SECTION -->
             <h5 class="mt-4 mb-2 text-primary border-bottom pb-1">Bureau</h5>
             <div class="row mb-3">
-              <div class="col-md-3"><label>Bureau Score</label><input type="text" class="form-control"></div>
+              <div class="col-md-3"><label>Bureau Score</label><input type="text" class="form-control" name="bureau_score" id="bureau_score" required></div>
             </div>
 
             <div class="row mb-3">
               <div class="col-md-12"><strong>DPD in Last 30 Days</strong></div>
-              <div class="col-md-3"><input type="number" class="form-control" placeholder="Account Type"></div>
-              <div class="col-md-3"><input type="number" class="form-control" placeholder="DPD"></div>
-              <div class="col-md-3"><input type="number" class="form-control" placeholder="Amount"></div>
+              <div class="col-md-1">1.</div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_30_1" id="dpd_30_1" required placeholder="12"></div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_30_amt1" id="dpd_30_amt1" required placeholder="240000"></div>
+              <div class="col-md-2"></div>
+              <div class="col-md-1">2.</div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_30_2" id="dpd_30_2" required placeholder="32"></div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_30_amt2" id="dpd_30_amt2" required placeholder="420000"></div>
             </div>
 
             <div class="row mb-3">
               <div class="col-md-12"><strong>DPD in Last 90 Days</strong></div>
-              <div class="col-md-3"><input type="number" class="form-control" placeholder="Account Type"></div>
-              <div class="col-md-3"><input type="number" class="form-control" placeholder="DPD"></div>
-              <div class="col-md-3"><input type="number" class="form-control" placeholder="Amount"></div>
+              <div class="col-md-1">1.</div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_90_1" id="dpd_90_1" required placeholder="23"></div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_90_amt1" id="dpd_90_amt1" required placeholder="340000"></div>
+              <div class="col-md-2"></div>
+              <div class="col-md-1">2.</div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_90_2" id="dpd_90_2" required placeholder="35"></div>
+              <div class="col-md-2"><input type="number" class="form-control" name="dpd_90_amt2" id="dpd_90_amt2" required placeholder="300000"></div>
             </div>
 
             <div class="row mb-3">
               <div class="col-md-3"><label>Experience in Unsecured Loan (Last 6 months)</label>
-                <select class="form-select">
-                  <option>No</option>
-                  <option>Yes</option>
+                <select class="form-select" name="unsecured_loan_experience" id="unsecured_loan_experience" required>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
                 </select>
               </div>
-              <div class="col-md-3"><label>No. of Loan Accounts Open (Last 6 months)</label><input type="number" class="form-control"></div>
-              <div class="col-md-3"><label>No. of Loan Accounts Closed (Last 6 months)</label><input type="number" class="form-control"></div>
+              <div class="col-md-3"><label>No. of Loan Accounts Open (Last 6 months)</label><input type="number" class="form-control" name="loan_open_6m" id="loan_open_6m" required ></div>
+              <div class="col-md-3"><label>No. of Loan Accounts Closed (Last 6 months)</label><input type="number" class="form-control" name="loan_closed_6m" id="loan_closed_6m" required ></div>
             </div>
 
             <div class="row mb-3">
               <div class="col-md-12"><strong>Amount of Last 2 Loan Open</strong></div>
-              <div class="col-md-4"><input type="number" class="form-control" placeholder="1"></div>
-              <div class="col-md-4"><input type="number" class="form-control" placeholder="2"></div>
+              <div class="col-md-4"><input type="number" class="form-control" name="last2_open_1" id="last2_open_1" required placeholder="1"></div>
+              <div class="col-md-4"><input type="number" class="form-control" name="last2_open_2" id="last2_open_2" required placeholder="2"></div>
             </div>
 
             <div class="row mb-3">
               <div class="col-md-12"><strong>Last Unsecured Loan Closed</strong></div>
-              <div class="col-md-4"><input type="number" class="form-control" placeholder="1"></div>
-              <div class="col-md-4"><input type="number" class="form-control" placeholder="2"></div>
+              <div class="col-md-4"><input type="number" class="form-control" name="last2_closed_1" id="last2_closed_1" required placeholder="1"></div>
+              <div class="col-md-4"><input type="number" class="form-control" name="last2_closed_2" id="last2_closed_2" required placeholder="2"></div>
             </div>
 
             <div class="row mb-3">
               <div class="col-md-12"><strong>Leverage</strong></div>
-              <div class="col-md-4"><input type="number" class="form-control" placeholder="Average Salary"></div>
-              <div class="col-md-4"><input type="number" class="form-control" placeholder="Unsecured Loan"></div>
+              <div class="col-md-4"><input type="number" class="form-control" name="leverage_avg_salary" id="leverage_avg_salary" required placeholder="4560060"></div>
+              <div class="col-md-4"><input type="number" class="form-control" name="leverage_unsecured_loan" id="leverage_unsecured_loan" required placeholder="45670000"></div>
             </div>
 
           </div> <!-- /.container-fluid -->
@@ -200,7 +219,7 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-success">Submit</button>
+          <button type="submit" id="submitBtn" class="btn btn-success">Submit</button>
         </div>
       </form>
     </div>
@@ -217,79 +236,123 @@
 @push('script')
 
 <script>
-        const searchInput = document.getElementById('bsa-lead-search-input');
-        const bsaLeadsTable = document.getElementById('bsaLeadsTable');
-        const bsapaginationLinks = document.getElementById('bsapaginationLinks');
-        let searchTimeout;
-        let initialPaginationHTML = bsapaginationLinks.innerHTML;
+    const searchInput = document.getElementById('bsa-lead-search-input');
+    const bsaLeadsTable = document.getElementById('bsaLeadsTable');
+    const bsapaginationLinks = document.getElementById('bsapaginationLinks');
+    let searchTimeout;
+    let initialPaginationHTML = bsapaginationLinks.innerHTML;
 
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout); // Clear previous timeout if user is still typing
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout); // Clear previous timeout if user is still typing
 
-            searchTimeout = setTimeout(() => {
-                const searchTerm = this.value.trim();
-                fetchBsaLeads(searchTerm);
-            }, 300); // Adjust the delay (in milliseconds) as needed
-        });
-
-        function fetchBsaLeads(searchTerm) {
-            const url = `/admin/leads/leads-bsa?search=${searchTerm}`;
-
-            fetch(url, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.text())
-            .then(html => {
-                // Create a temporary element to hold the HTML
-                const tempElement = document.createElement('div');
-                tempElement.innerHTML = html;
-
-                // Find the tbody within the temporary element
-                const newTbody = tempElement.querySelector('#bsaLeadsTable');
-
-                if (newTbody) {
-                    bsaLeadsTable.innerHTML = newTbody.innerHTML;
-                } else {
-                    bsaLeadsTable.innerHTML = '<tr><td colspan="11">No data found.</td></tr>';
-                }
-                
-                // Update pagination links
-                if (searchTerm) {
-                    bsapaginationLinks.innerHTML = newPagination ? newPagination.innerHTML : '';
-                } else {
-                    bsapaginationLinks.innerHTML = initialPaginationHTML;
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching leads:', error);
-            });
-        }
-
-        $(document).ready(function () {
-            $('#bsa_lead_export').on('click', function () {
-                const params = {
-                    search: $('#bsa-lead-search-input').val(),
-                    export: 'csv'
-                };
-                const query = $.param(params);
-                window.location.href = "{{ route('admin.leads.bsa') }}?" + query;
-            });
-        });
-    </script>
-<script>
-    document.getElementById('underwritingForm').addEventListener('submit', function(e) {
-    e.preventDefault(); // Prevent default form submission
-    // You can collect data here if needed, e.g. FormData(this)
-    
-    // Optional: show success message or close modal first
-    const modal = bootstrap.Modal.getInstance(document.getElementById('underwritingModal'));
-    modal.hide();
-
-    // Redirect to Google
-    window.location.href = "https://www.google.com";
+        searchTimeout = setTimeout(() => {
+            const searchTerm = this.value.trim();
+            fetchBsaLeads(searchTerm);
+        }, 300); // Adjust the delay (in milliseconds) as needed
     });
+
+    function fetchBsaLeads(searchTerm) {
+        const url = `/admin/leads/leads-bsa?search=${searchTerm}`;
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Create a temporary element to hold the HTML
+            const tempElement = document.createElement('div');
+            tempElement.innerHTML = html;
+
+            // Find the tbody within the temporary element
+            const newTbody = tempElement.querySelector('#bsaLeadsTable');
+
+            if (newTbody) {
+                bsaLeadsTable.innerHTML = newTbody.innerHTML;
+            } else {
+                bsaLeadsTable.innerHTML = '<tr><td colspan="11">No data found.</td></tr>';
+            }
+            
+            // Update pagination links
+            if (searchTerm) {
+                bsapaginationLinks.innerHTML = newPagination ? newPagination.innerHTML : '';
+            } else {
+                bsapaginationLinks.innerHTML = initialPaginationHTML;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching leads:', error);
+        });
+    }
+
+    $(document).ready(function () {
+        $('#bsa_lead_export').on('click', function () {
+            const params = {
+                search: $('#bsa-lead-search-input').val(),
+                export: 'csv'
+            };
+            const query = $.param(params);
+            window.location.href = "{{ route('admin.leads.bsa') }}?" + query;
+        });
+    });
+</script>
+<script>
+  function calculateAverageSalary() {
+    const s1 = parseFloat(document.getElementById('salary1').value) || 0;
+    const s2 = parseFloat(document.getElementById('salary2').value) || 0;
+    const s3 = parseFloat(document.getElementById('salary3').value) || 0;
+
+    if (s1 > 0 && s2 > 0 && s3 > 0) {
+      // Find the minimum of 3 months
+      const minSalary = Math.min(s1, s2, s3);
+      document.getElementById('avg_salary').value = minSalary;
+    } else {
+      document.getElementById('avg_salary').value = '';
+    }
+  }
+
+  // Attach event listeners for real-time update
+  document.getElementById('salary1').addEventListener('input', calculateAverageSalary);
+  document.getElementById('salary2').addEventListener('input', calculateAverageSalary);
+  document.getElementById('salary3').addEventListener('input', calculateAverageSalary);
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const buttons = document.querySelectorAll('.checkUWBtn');
+
+  buttons.forEach(button => {
+    button.addEventListener('click', function() {
+      // Get data attributes
+      const loanId = this.dataset.loanId;
+      const clientId = this.dataset.clientId;
+      const clientName = this.dataset.clientName;
+      const loanAppNo = this.dataset.loanAppNo;
+      const applyDate = this.dataset.applyDate;
+      const cpaName = this.dataset.cpaName;
+
+      // Fill modal fields
+      document.getElementById('loan_application_id').value = loanId;
+      document.getElementById('client_id').value = clientId;
+      document.getElementById('client_name').value = clientName;
+      document.getElementById('loan_app_no').value = loanAppNo;
+      document.getElementById('apply_date').value = applyDate;
+      document.getElementById('cpa_name').value = cpaName;
+    });
+  });
+
+  // Calculate average salary automatically
+  const salaryInputs = ['month1', 'month2', 'month3'].map(id => document.getElementById(id));
+  const avgInput = document.getElementById('average');
+
+  salaryInputs.forEach(input => {
+    input.addEventListener('input', function() {
+      const values = salaryInputs.map(i => parseFloat(i.value) || 0);
+      const minVal = Math.min(...values.filter(v => v > 0));
+      avgInput.value = minVal || '';
+    });
+  });
+});
 </script>
 
 @endpush

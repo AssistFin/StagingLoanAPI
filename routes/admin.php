@@ -43,6 +43,8 @@ use App\Http\Controllers\Admin\OSReportController;
 use App\Http\Controllers\Admin\DigitapController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\BankingController;
+use App\Http\Controllers\Admin\TemplateController;
+use App\Http\Controllers\Admin\UnderwritingController;
 
 Route::controller(LoginController::class)->group(function () {
     Route::get('/', 'showLoginForm')->name('login');
@@ -286,6 +288,8 @@ Route::middleware('admin')->group(function () {
         Route::delete('delete/{id}', 'deleteLead')->name('delete');
         Route::post('leads-createenach', 'leadsRaisePayReq')->name('createenach');
         Route::post('leads-cancelenach', 'leadsCancelRaisePayReq')->name('cancelenach');
+        Route::post('leads-underwriting-store', 'leadsunderwritingstore')->name('underwriting-store');
+
      });
 
     // Loan Leads
@@ -576,6 +580,25 @@ Route::middleware('admin')->group(function () {
         ->name('banking.')
         ->group(function () {
             Route::get('banking/index', 'index')->name('index');
+    });
+
+    Route::controller(TemplateController::class)
+        ->name('template.')
+        ->group(function () {
+            Route::get('template/emailindex', 'emailindex')->name('emailindex');
+            Route::get('template/createemail', 'createemail')->name('createemail');
+            Route::post('/template', 'store')->name('store');
+            Route::get('/template/edit-emailtemplates/{id}','editemailTemplates')->name('edit.emailtemplates');
+            Route::post('/template/update-emailtemplates/{id}','updateemailTemplates')->name('update.emailtemplates');
+            Route::get('template/smsindex', 'smsindex')->name('smsindex');
+    });
+
+    Route::controller(UnderwritingController::class)
+        ->name('underwriting.')
+        ->group(function () {
+            Route::get('underwriting/index', 'index')->name('index');
+            Route::get('underwriting/create', 'create')->name('create');
+            Route::post('/underwriting', 'store')->name('store');
     });
 
     Route::controller(EventLogController::class)
