@@ -26,7 +26,11 @@
                                         <td>{{ $uwclog->admin->name ?? 'Unknown' }}</td>
                                         <td>{{ $uwclog->created_at->format('d-m-Y H:i') }}</td>
                                         <td>
-                                            <a class="btn btn-primary btn-sm">View Remark</a>
+                                            <a href="#" 
+                                            class="btn btn-primary btn-sm view-remark-btn" data-bs-toggle="modal" data-bs-target="#remarkModal"
+                                            data-remark="{{ $uwclog->remark ?? 'No Remark' }}">
+                                            View Remark
+                                            </a>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -37,5 +41,37 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="remarkModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="remarkModalLabel">Remark</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center">
+            <p id="remarkText"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+        </div>
+    </div>
+    </div>
     <x-confirmation-modal />
 @endsection
+@push('script')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const remarkModal = document.getElementById('remarkModal');
+        const remarkText = document.getElementById('remarkText');
+
+        // Listen to Bootstrap modal show event
+        remarkModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget; // Button that triggered modal
+            const remark = button.getAttribute('data-remark'); // Get remark from data attribute
+            remarkText.textContent = remark; // Set modal text
+        });
+    });
+</script>
+@endpush

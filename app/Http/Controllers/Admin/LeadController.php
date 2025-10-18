@@ -14,6 +14,8 @@ use App\Models\CreditBureau;
 use App\Models\CashfreeEnachRequestResponse;
 use App\Models\LoanDocument;
 use App\Models\DigitapBankRequest;
+use App\Models\Underwriting;
+use App\Models\UnderwritingConfig;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
@@ -1446,8 +1448,8 @@ class LeadController extends Controller
     {
         $data = $request->validate([
             'admin_id' => 'required',
-            'loan_application_id' => 'required',
-            'client_id' => 'required',
+            'loan_id' => 'required',
+            'user_id' => 'required',
             'salary_month1' => 'required',
             'salary_month2' => 'required',
             'salary_month3' => 'required',
@@ -1478,8 +1480,80 @@ class LeadController extends Controller
             'status' => 'active',
         ]);
 
-        Underwriting::create($data);
+        $saveData = Underwriting::create($data);
 
+        if($saveData){
+            $confData = UnderwritingConfig::first();
+
+            $p1 = $p2 = $p3 = $p4 = $p5 = $p6 = $p7 = $p8 = $p9 = false;
+
+            if($request->average_salary >= $confData->avgSalary)
+            {
+                $p1 = true;
+            }
+
+            if($request->min_balance >= $confData->minBalance)
+            {
+                $p2 = true;
+            }
+
+            if($request->bounce_1_month <= $confData->bounceLast1Month)
+            {
+                $p3 = true;
+            }
+
+            if($request->bounce_3_month <= $confData->bounceLast3Month)
+            {
+                $p4 = true;
+            }
+
+            if($request->bureau_score >= $confData->bureauScore)
+            {
+                $p5 = true;
+            }
+
+            if($request->dpd_30_1 <= $confData->dpdLast30Days || $request->dpd_30_amt1 <= $confData->dpdamtLast30Days)
+            {
+                $p6 = true;
+            }
+
+            if($request->dpd_90_1 <= $confData->dpdLast90Days || $request->dpd_90_amt1 <= $confData->dpdamtLast90Days)
+            {
+                $p7 = true;
+            }
+
+            if($request->unsecured_loan_experience == $confData->expUnsecureLoan)
+            {
+                $p8 = true;
+            }
+
+            if($request->leverage_avg_salary *  $confData->leverage <= $request->leverage_unsecured_loan)
+            {
+                $p9 = true;
+            }
+
+            if($p1 && $p2 && $p3 && $p4 && $p5 && $p6 && $p7 && $p8 && $p9)
+            {
+                $maxClosed = max($request->last2_closed_1, $request->last2_closed_2);
+                $twentyFivePercent = $request->average_salary * 0.25;
+                $maxamt = $confData->maxLoanAmt;
+
+                $finalMinValue = min($maxClosed, $twentyFivePercent, $maxamt);
+                $decision = 'Approved';
+            }else{
+                $finalMinValue = null;
+                $decision = 'Rejected';
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'decision' => $decision,
+                'eligible_amount' => $finalMinValue,
+                'message' => 'Underwriting saved successfully!',
+            ]);
+
+        }
+        
         return response()->json(['status' => 'success', 'message' => 'Underwriting saved successfully!']);
     }
 }

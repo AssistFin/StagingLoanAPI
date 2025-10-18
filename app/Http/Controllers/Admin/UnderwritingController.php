@@ -20,7 +20,8 @@ class UnderwritingController extends Controller
 
     public function create()
     {
-        return view('admin.underwriting.create');
+        $existingData = UnderwritingConfig::first();
+        return view('admin.underwriting.create', compact('existingData') );
     }
 
     public function store(Request $request)
@@ -41,6 +42,7 @@ class UnderwritingController extends Controller
             'experience_unsecured' => 'required',
             'leverage' => 'required',
             'exposure_on_salary' => 'required',
+            'maxLoanAmt' => 'required',
             'remark' => 'required',
         ]);
 
@@ -59,22 +61,40 @@ class UnderwritingController extends Controller
             'expUnsecureLoan' => $request->experience_unsecured,
             'leverage' => $request->leverage,
             'exposureOnSalary' => $request->exposure_on_salary,
-
+            'maxLoanAmt' => $request->maxLoanAmt,
         ]);
-
-        UnderwritingConfig::create($data);
 
         $existing = UnderwritingConfig::first();
-        $oldData = $existing->toArray();
-        $data2 = ([
-            'admin_id' => $request->client_id,
-            'old_value' => json_encode($oldData),
-            'new_value' => json_encode($request->all()),
-            'remark' => $request->remark,
-        ]);
 
-        UnderwritingConfigChangeLog::create($data2);
+        if ($existing) {
+            // Store old data for log
+            $oldData = $existing->toArray();
 
-        return redirect()->route('admin.underwriting.index')->with('success', 'Role created successfully!');
+            // Update the existing record
+            $existing->update($data);
+
+            // Save change log
+            UnderwritingConfigChangeLog::create([
+                'admin_id' => $request->client_id,
+                'old_value' => json_encode($oldData),
+                'new_value' => json_encode($data),
+                'remark' => $request->remark,
+            ]);
+        } else {
+            // If no record exists, create one
+            $created = UnderwritingConfig::create($data);
+
+            // Log initial creation (optional)
+            UnderwritingConfigChangeLog::create([
+                'admin_id' => $request->client_id,
+                'old_value' => json_encode([]),
+                'new_value' => json_encode($data),
+                'remark' => 'Initial configuration created',
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.underwriting.index')
+            ->with('success', 'Underwriting configuration saved successfully!');
     }
 }

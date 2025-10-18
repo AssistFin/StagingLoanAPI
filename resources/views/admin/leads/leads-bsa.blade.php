@@ -1,5 +1,4 @@
 @extends('admin.layouts.app')
-<meta name="csrf-token" content="{{ csrf_token() }}">
 @push('style')
 <style>
 .sticky-pagination {
@@ -133,8 +132,8 @@
                 <label>Apply Date</label>
                 <input type="text" name="apply_date" id="apply_date" class="form-control" readonly>
                 <input type="hidden" name="admin_id" id="admin_id" value="{{ auth()->guard('admin')->user()->id }}" >
-                <input type="hidden" name="loan_application_id" id="loan_application_id">
-                <input type="hidden" name="client_id" id="client_id">
+                <input type="hidden" name="loan_id" id="loan_id">
+                <input type="hidden" name="user_id" id="user_id">
               </div>
             </div>
 
@@ -226,6 +225,23 @@
   </div>
 </div>
 
+<div class="modal fade" id="decisionModal" tabindex="-1" aria-labelledby="decisionModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="decisionModalLabel">Underwriting Decision</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <h4 id="decisionText"></h4>
+        <p id="eligibleAmountText"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('breadcrumb-plugins')
@@ -332,27 +348,70 @@ document.addEventListener('DOMContentLoaded', function() {
       const cpaName = this.dataset.cpaName;
 
       // Fill modal fields
-      document.getElementById('loan_application_id').value = loanId;
-      document.getElementById('client_id').value = clientId;
+      document.getElementById('loan_id').value = loanId;
+      document.getElementById('user_id').value = clientId;
       document.getElementById('client_name').value = clientName;
       document.getElementById('loan_app_no').value = loanAppNo;
       document.getElementById('apply_date').value = applyDate;
       document.getElementById('cpa_name').value = cpaName;
     });
   });
-
-  // Calculate average salary automatically
-  const salaryInputs = ['month1', 'month2', 'month3'].map(id => document.getElementById(id));
-  const avgInput = document.getElementById('average');
-
-  salaryInputs.forEach(input => {
-    input.addEventListener('input', function() {
-      const values = salaryInputs.map(i => parseFloat(i.value) || 0);
-      const minVal = Math.min(...values.filter(v => v > 0));
-      avgInput.value = minVal || '';
-    });
-  });
 });
 </script>
+<script>
+    document.getElementById('underwritingForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
 
+      const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+      const csrfToken = tokenMeta ? tokenMeta.getAttribute('content') : '';
+
+      fetch("{{ route('admin.leads.underwriting-store') }}", {
+        method: "POST",
+        headers: {
+          "X-CSRF-TOKEN": csrfToken
+        },
+        body: formData
+      })
+      .then(response => response.text())
+      .then(text => {
+        console.log("Raw Response:", text); // log it
+        try {
+          const data = JSON.parse(text); // try parsing JSON
+          if (data.status === 'success') {
+            const underwritingModal = bootstrap.Modal.getInstance(document.getElementById('underwritingModal'));
+            underwritingModal.hide();
+
+            // Wait until it's fully hidden before showing the decision modal
+            $('#underwritingModal').on('hidden.bs.modal', function () {
+              showDecisionModal(data.decision, data.eligible_amount);
+              // Unbind the event so it doesn't trigger multiple times
+              $(this).off('hidden.bs.modal');
+            });
+          }
+        } catch (e) {
+          console.error("Invalid JSON:", e);
+          alert("Server returned unexpected data. Check console for details.");
+        }
+      })
+      .catch(error => console.error('Error:', error));
+    });
+
+    function showDecisionModal(decision, eligibleAmount) {
+      const decisionText = document.getElementById('decisionText');
+      const eligibleAmountText = document.getElementById('eligibleAmountText');
+
+      decisionText.innerHTML = decision === 'Approved'
+        ? `<span class="text-success">✅ Loan Approved</span>`
+        : `<span class="text-danger">❌ Loan Rejected</span>`;
+
+      eligibleAmountText.innerHTML = decision === 'Approved'
+        ? `Eligible Loan Amount : <strong> ₹ ${eligibleAmount}</strong>`
+        : 'Applicant did not meet all underwriting criteria.';
+
+      const decisionModal = new bootstrap.Modal(document.getElementById('decisionModal'));
+      decisionModal.show();
+    }
+
+</script>
 @endpush
