@@ -590,7 +590,15 @@ Route::middleware('admin')->group(function () {
             Route::post('/template', 'store')->name('store');
             Route::get('/template/edit-emailtemplates/{id}','editemailTemplates')->name('edit.emailtemplates');
             Route::post('/template/update-emailtemplates/{id}','updateemailTemplates')->name('update.emailtemplates');
+            Route::post('email-template/activate/{id}', 'activate')->name('email-template.activate');
+            
             Route::get('template/smsindex', 'smsindex')->name('smsindex');
+            Route::get('template/createsms', 'createsms')->name('createsms');
+            Route::post('/template', 'storeSMS')->name('storeSMS');
+            Route::get('/template/edit-smstemplates/{id}','editsmsTemplates')->name('edit.smstemplates');
+            Route::post('/template/update-smstemplates/{id}','updatesmsTemplates')->name('update.smstemplates');
+            Route::post('sms-template/activate/{id}', 'activate')->name('sms-template.activate');
+
     });
 
     Route::controller(UnderwritingController::class)

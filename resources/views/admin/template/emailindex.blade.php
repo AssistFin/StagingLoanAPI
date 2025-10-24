@@ -27,7 +27,13 @@
                                         <td>{{ $temp->title }}</td>
                                         <td>{{ $temp->created_at }}</td>
                                         <td>
-                                            <a href="{{ route('admin.template.edit.emailtemplates', $temp->id) }}" class="btn btn-primary btn-sm">Edit</a>
+                                            <a href="{{ route('admin.template.edit.emailtemplates', $temp->id) }}" class="btn btn-primary btn-sm">Edit</a>&nbsp;&nbsp; 
+                                            @if ($temp->status == 'active')
+                                                <span class="badge btn-success">Active</span>
+                                            @else
+                                                <button class="btn btn-sm btn-danger activate-btn" data-id="{{ $temp->id }}">Inactive
+                                                </button>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach
@@ -40,3 +46,42 @@
     </div>
     <x-confirmation-modal />
 @endsection
+@push('script')
+<script>
+$(document).ready(function() {
+    $('.activate-btn').click(function() {
+        const id = $(this).data('id');
+        const button = $(this);
+
+        $.ajax({
+            url: "{{ url('admin/email-template/activate') }}/" + id,
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}"
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Reset all rows visually
+                    $('td').removeClass('btn-success');
+                    $('td .badge').remove();
+                    $('td .activate-btn').show();
+
+                    // Highlight the activated one
+                    const row = $('tr[data-id="' + response.active_id + '"]');
+                    row.addClass('btn-success');
+                    button.hide().before('<span class="badge btn-success">Active</span>');
+
+                    alert('Activated Successfully.')
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                }
+            },
+            error: function() {
+                toastr.error('Something went wrong. Try again.');
+            }
+        });
+    });
+});
+</script>
+@endpush
