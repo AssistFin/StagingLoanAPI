@@ -217,17 +217,42 @@ class DecisionController extends Controller
           ->orderByRaw('created_at DESC');
 
         $searchTerm = $request->get('search');
-            
-            if ($searchTerm) {
-                $query->where(function ($q) use ($searchTerm) {
-                    $q->whereHas('user', function ($userQuery) use ($searchTerm) {
-                        $userQuery->where('firstname', 'like', "%{$searchTerm}%")
-                            ->orWhere('email', 'like', "%{$searchTerm}%")
-                            ->orWhere('mobile', 'like', "%{$searchTerm}%");
-                    })
-                    ->orWhere('loan_no', 'like', "%{$searchTerm}%");
-                });
-            }
+        $dateRange = $request->get('date_range');
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+
+        if ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                    $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                })
+                ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        if ($dateRange) {
+            $query->whereHas('collections', function ($collectionQuery) use ($dateRange, $fromDate, $toDate) {
+                if ($dateRange === 'today') {
+                    $collectionQuery->whereDate('collection_date', now()->today());
+                } elseif ($dateRange === 'yesterday') {
+                    $collectionQuery->whereDate('collection_date', now()->yesterday());
+                } elseif ($dateRange === 'last_3_days') {
+                    $collectionQuery->whereBetween('collection_date', [now()->subDays(3), now()]);
+                } elseif ($dateRange === 'last_7_days') {
+                    $collectionQuery->whereBetween('collection_date', [now()->subDays(7), now()]);
+                } elseif ($dateRange === 'last_15_days') {
+                    $collectionQuery->whereBetween('collection_date', [now()->subDays(15), now()]);
+                } elseif ($dateRange === 'current_month') {
+                    $collectionQuery->whereBetween('collection_date', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+                } elseif ($dateRange === 'previous_month') {
+                    $collectionQuery->whereBetween('collection_date', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
+                } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                    $collectionQuery->whereBetween('collection_date', [$fromDate, $toDate]);
+                }
+            });
+        }
 
         if ($request->has('export') && $request->export === 'csv') {
             $query->with(['user', 'loanApproval', 'loanDisbursal', 'collections']);
