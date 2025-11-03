@@ -26,12 +26,16 @@ class BankingController extends Controller
         ])->where('loan_disbursal_status', 'pending')
           ->where('admin_approval_status', 'approved')
           ->where('user_acceptance_status', 'accepted')
+          ->whereHas('cashfreeEnachRequests', function ($q) {
+                $q->where('status', 'ACTIVE')->whereNotNull('reference_id');
+            })
           ->addSelect([
-            'latest_reference_id' => CashfreeEnachRequestResponse::select('reference_id')
-                ->whereColumn('subscription_id', 'loan_applications.loan_no')
-                ->whereNotNull('reference_id')
-                ->orderByDesc('created_at')
-                ->limit(1)
+                'latest_reference_id' => CashfreeEnachRequestResponse::select('reference_id')
+                    ->whereColumn('subscription_id', 'loan_applications.loan_no')
+                    ->where('status', 'ACTIVE')
+                    ->whereNotNull('reference_id')
+                    ->orderByDesc('created_at')
+                    ->limit(1),
             ])
           ->orderByRaw('created_at DESC');
         
