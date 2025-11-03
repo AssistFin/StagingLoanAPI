@@ -12,6 +12,7 @@ use App\Models\LoanBankDetails;
 use App\Models\LoanAddressDetails;
 use App\Models\LoanPersonalDetails;
 use App\Models\LoanEmploymentDetails;
+use App\Models\DigitapBankRequest;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -91,5 +92,10 @@ class LoanApplication extends Model
     public function experianCreditReport()
     {
         return $this->hasOne(ExperianCreditReport::class, 'lead_id');
+    }
+
+    public function digitapRequest()
+    {
+        return $this->hasOne(DigitapBankRequest::class, 'customer_id', 'id');
     }
 }
