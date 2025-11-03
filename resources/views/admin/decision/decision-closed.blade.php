@@ -158,25 +158,16 @@
         dateRangeSelect.addEventListener('change', function() {
             selectedRange = this.value;
 
-            if (selectedRange === 'custom') {
+            if (selectedRange == 'custom') {
                 customDateSection.style.display = 'block';
             } else {
                 customDateSection.style.display = 'none';
+                fromDateInput.value = '';
+                toDateInput.value = '';
                 fromDate = '';
                 toDate = '';
                 fetchLeads(searchInput.value.trim()); // Trigger fetch when changing date range
             }
-        });
-
-        // Trigger fetch when user selects custom dates
-        [fromDateInput, toDateInput].forEach(input => {
-            input.addEventListener('change', function() {
-                fromDate = fromDateInput.value;
-                toDate = toDateInput.value;
-                if (fromDate && toDate) {
-                    fetchLeads(searchInput.value.trim());
-                }
-            });
         });
 
         searchInput.addEventListener('input', function() {
@@ -195,7 +186,7 @@
                 from_date: fromDate,
                 to_date: toDate
             });
-
+            //console.log({ searchTerm, selectedRange, fromDate, toDate });
             const url = `/admin/decision/decision-closed?${params.toString()}`;
 
             fetch(url, {
@@ -221,6 +212,21 @@
 
         // CSV Export
         $(document).ready(function () {
+
+            // Initialize datepicker + custom date logic
+            $('#from_date, #to_date').datepicker({
+                format: 'yyyy-mm-dd',
+                autoclose: true,
+                todayHighlight: true
+            }).on('changeDate', function () {
+                fromDate = $('#from_date').val();
+                toDate = $('#to_date').val();
+
+                if (fromDate && toDate) {
+                    fetchLeads($('#d-closed-search-input').val().trim());
+                }
+            });
+
             $('#all_closed_export').on('click', function () {
                 const params = {
                     search: $('#d-closed-search-input').val(),
@@ -238,6 +244,9 @@
                 format: 'yyyy-mm-dd',
                 autoclose: true,
                 todayHighlight: true
+            }).on('changeDate', function (e) {
+                // Trigger input event manually when date selected
+                $(this).trigger('change');
             });
         });
     </script>
