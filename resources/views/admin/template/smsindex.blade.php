@@ -15,6 +15,7 @@
                                 <tr>
                                     <th>Sr No</th>
                                     <th>Title</th>
+                                    <th>Category</th>
                                     <th>Added On</th>
                                     <th>Actions</th>
                                 </tr>
@@ -25,6 +26,7 @@
                                     <tr>
                                         <td>{{ $x++ }}</td>
                                         <td>{{ $temp->title }}</td>
+                                        <td>{{ $temp->subject }}</td>
                                         <td>{{ $temp->created_at }}</td>
                                         <td>
                                             <a href="{{ route('admin.template.edit.smstemplates', $temp->id) }}" class="btn btn-primary btn-sm">Edit</a>&nbsp;&nbsp; 

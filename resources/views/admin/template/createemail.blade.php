@@ -21,8 +21,12 @@
 
         @csrf
         <div class="form-group">
-            <label for="subject">Subject</label>
-            <input type="text" class="form-control" name="subject" required placeholder="e.g. Overdue collection related" value="{{ old('subject') }}">
+            <label for="subject">Category</label>
+            <select class="form-control" name="subject" id="subject" required>
+                <option value="">-- Select Category --</option>
+                <option value="predue" {{ old('subject') == 'predue' ? 'selected' : '' }}>Predue</option>
+                <option value="overdue" {{ old('subject') == 'overdue' ? 'selected' : '' }}>Overdue</option>
+            </select>
             @error('subject')
                 <span class="text-danger d-block mt-1">{{ $message }}</span>
             @enderror

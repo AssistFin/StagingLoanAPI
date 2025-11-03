@@ -68,7 +68,7 @@ class TemplateController extends Controller
         $template = MessageTemplate::findOrFail($id);
 
         // Deactivate only templates of the same type (email or sms)
-        MessageTemplate::where('type', $template->type)
+        MessageTemplate::where(['type' => $template->type, 'subject' => $template->subject])
             ->update(['status' => 'inactive']);
 
         // Activate the selected one

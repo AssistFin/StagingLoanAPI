@@ -590,7 +590,7 @@ Route::middleware('admin')->group(function () {
         ->group(function () {
             Route::get('template/emailindex', 'emailindex')->name('emailindex');
             Route::get('template/createemail', 'createemail')->name('createemail');
-            Route::post('/template', 'store')->name('store');
+            Route::post('/', 'store')->name('store');
             Route::get('/template/edit-emailtemplates/{id}','editemailTemplates')->name('edit.emailtemplates');
             Route::post('/template/update-emailtemplates/{id}','updateemailTemplates')->name('update.emailtemplates');
             Route::post('email-template/activate/{id}', 'activate')->name('email-template.activate');
