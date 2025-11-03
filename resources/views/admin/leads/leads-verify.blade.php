@@ -373,8 +373,8 @@
                             </div>
                         </div>
     
-                         <!-- Address Details -->
-                         <div class="accordion-item">
+                        <!-- Address Details -->
+                        <div class="accordion-item">
                             <h2 class="accordion-header" id="addressDetails">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAddressDetails" aria-expanded="false" aria-controls="collapseAddressDetails">
                                     Address Details
@@ -382,46 +382,56 @@
                             </h2>
                             <div id="collapseAddressDetails" class="accordion-collapse collapse" aria-labelledby="addressDetails" data-bs-parent="#loanAccordion">
                                 <div class="accordion-body">
-                                    <table class="table table-bordered">
-                                        <tbody>
-                                            <tr>
-                                                <th>Address Type</th>
-                                                <td class="text-break">{{ $lead->addressDetails->address_type ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>House No</th>
-                                                <td class="text-break">{{ $lead->addressDetails->house_no ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Locality</th>
-                                                <td class="text-break">{{ $lead->addressDetails->locality ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Pincode</th>
-                                                <td class="text-break">{{ $lead->addressDetails->pincode ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>City</th>
-                                                <td class="text-break">{{ $lead->addressDetails->city ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>State</th>
-                                                <td class="text-break">{{ $lead->addressDetails->state ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Relation</th>
-                                                <td class="text-break">{{ $lead->addressDetails->relation ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Relative Name</th>
-                                                <td class="text-break">{{ $lead->addressDetails->relative_name ?? '' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Contact Number</th>
-                                                <td class="text-break">{{ $lead->addressDetails->contact_number ?? '' }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>                                    
+                                    
+                                    {{-- View Mode --}}
+                                    <div id="addressView">
+                                        <table class="table table-bordered">
+                                            <tbody>
+                                                <tr><th>Address Type</th><td id="v_address_type">{{ $lead->addressDetails->address_type ?? '' }}</td></tr>
+                                                <tr><th>House No</th><td id="v_house_no">{{ $lead->addressDetails->house_no ?? '' }}</td></tr>
+                                                <tr><th>Locality</th><td id="v_locality">{{ $lead->addressDetails->locality ?? '' }}</td></tr>
+                                                <tr><th>Pincode</th><td id="v_pincode">{{ $lead->addressDetails->pincode ?? '' }}</td></tr>
+                                                <tr><th>City</th><td id="v_city">{{ $lead->addressDetails->city ?? '' }}</td></tr>
+                                                <tr><th>State</th><td id="v_state">{{ $lead->addressDetails->state ?? '' }}</td></tr>
+                                                <tr><th>Relation</th><td id="v_relation">{{ $lead->addressDetails->relation ?? '' }}</td></tr>
+                                                <tr><th>Relative Name</th><td id="v_relative_name">{{ $lead->addressDetails->relative_name ?? '' }}</td></tr>
+                                                <tr><th>Contact Number</th><td id="v_contact_number">{{ $lead->addressDetails->contact_number ?? '' }}</td></tr>
+                                            </tbody>
+                                        </table>
+                                        @if(!$loanDisbursalExists)
+                                        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                                            <button class="btn btn-primary" id="editAddressBtn">Edit</button>
+                                        </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Edit Mode --}}
+                                    <div id="addressEdit" style="display:none;">
+                                        <form id="addressForm">
+                                            @csrf
+                                            <input type="hidden" name="id" value="{{ $lead->addressDetails->id ?? '' }}">
+                                            <input type="hidden" name="lead_id" value="{{ $lead->id }}">
+
+                                            <div class="row">
+                                                <div class="col-md-6 mb-2">
+                                                    <label>Relation</label>
+                                                    <input type="text" name="relation" class="form-control" value="{{ $lead->addressDetails->relation ?? '' }}">
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label>Relative Name</label>
+                                                    <input type="text" name="relative_name" class="form-control" value="{{ $lead->addressDetails->relative_name ?? '' }}">
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label>Contact Number</label>
+                                                    <input type="text" name="contact_number" class="form-control" value="{{ $lead->addressDetails->contact_number ?? '' }}">
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-success">Save</button>
+                                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+                                        </form>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -2536,6 +2546,47 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Change listener
     statusSelect.addEventListener("change", toggleRejectReason);
+});
+</script>
+<script>
+document.getElementById('editAddressBtn').addEventListener('click', function() {
+    document.getElementById('addressView').style.display = 'none';
+    document.getElementById('addressEdit').style.display = 'block';
+});
+
+document.getElementById('cancelEditBtn').addEventListener('click', function() {
+    document.getElementById('addressView').style.display = 'block';
+    document.getElementById('addressEdit').style.display = 'none';
+});
+
+document.getElementById('addressForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    let formData = new FormData(this);
+
+    fetch("{{ route('admin.leads.updateAddress') }}", {
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+        },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update table view values
+            document.getElementById('v_relation').innerText = data.data.relation;
+            document.getElementById('v_relative_name').innerText = data.data.relative_name;
+            document.getElementById('v_contact_number').innerText = data.data.contact_number;
+
+            // Switch back to view mode
+            document.getElementById('addressEdit').style.display = 'none';
+            document.getElementById('addressView').style.display = 'block';
+        } else {
+            alert(data.message || "Update failed!");
+        }
+    })
+    .catch(err => console.error('Error:', err));
 });
 </script>
 @endpush

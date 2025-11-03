@@ -289,7 +289,7 @@ Route::middleware('admin')->group(function () {
         Route::post('leads-createenach', 'leadsRaisePayReq')->name('createenach');
         Route::post('leads-cancelenach', 'leadsCancelRaisePayReq')->name('cancelenach');
         Route::post('leads-underwriting-store', 'leadsunderwritingstore')->name('underwriting-store');
-
+        Route::post('leads-updateAddress', 'leadsUpdateAddress')->name('updateAddress');    
      });
 
     // Loan Leads
@@ -455,6 +455,8 @@ Route::middleware('admin')->group(function () {
         Route::post('/digitapbsuploaddoc', 'checkBSAReportByDigitap')->name('digitapbsuploaddoc');
         Route::post('/digitapbsuploaddocstatus', 'checkStatusBSAReportByDigitap')->name('digitapbsuploaddocstatus');
         Route::get('/bsaDataShow/{id}', 'bsaDataShow')->name('bsaDataShow');
+        Route::post('/analyze/{leadId}', 'analyzeReports')->name('analyze');
+
     });
 
     //============Loan================//
@@ -580,6 +582,7 @@ Route::middleware('admin')->group(function () {
         ->name('banking.')
         ->group(function () {
             Route::get('banking/index', 'index')->name('index');
+            Route::post('banking/penny-drop', 'pennyDrop')->name('pennyDrop');
     });
 
     Route::controller(TemplateController::class)

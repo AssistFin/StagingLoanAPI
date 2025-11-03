@@ -16,6 +16,7 @@ use App\Models\LoanDocument;
 use App\Models\DigitapBankRequest;
 use App\Models\Underwriting;
 use App\Models\UnderwritingConfig;
+use App\Models\LoanAddressDetails;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
@@ -820,7 +821,8 @@ class LeadController extends Controller
                 'loanDocument',
                 'addressDetails',
                 'employmentDetails',
-                'bankDetails'
+                'bankDetails',
+                'digitapRequest:id,customer_id,status,report_json_data',
             ])
             ->where('admin_approval_status', 'pending')
             ->where(function ($q) {
@@ -859,7 +861,7 @@ class LeadController extends Controller
                 })->orWhere('loan_no', 'like', "%{$searchTerm}%");
             });
         }
-
+        
         // If you want to inspect SQL:
         // dd($query->toSql(), $query->getBindings());
 
@@ -1555,5 +1557,39 @@ class LeadController extends Controller
         }
         
         return response()->json(['status' => 'success', 'message' => 'Underwriting saved successfully!']);
+    }
+
+    public function leadsUpdateAddress(Request $request)
+    {
+        $request->validate([
+            'lead_id' => 'required|int',
+        ]);
+
+        if ($request) {
+            // Prepare update data
+            $updateData = [
+                'relation' => $request->relation,
+                'relative_name' => $request->relative_name,
+                'contact_number' => $request->contact_number,
+            ];
+
+            DB::table('loan_address_details')
+                ->where('loan_application_id', $request->lead_id)
+                ->update($updateData);
+
+            $address = LoanAddressDetails::find($request->id);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Address updated successfully!',
+                'data' => $address
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'Error',
+                'message' => 'Address not updated!',
+                'data' => ''
+            ]);
+        }
     }
 }
