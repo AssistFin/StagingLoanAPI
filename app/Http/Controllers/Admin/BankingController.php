@@ -7,6 +7,7 @@ use App\Models\LoanApplication;
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Response;
+use App\Models\CashfreeEnachRequestResponse;
 
 class BankingController extends Controller
 {
@@ -22,15 +23,16 @@ class BankingController extends Controller
             'bankDetails',
             'loanDisbursal',
             'loanApproval',
-            'latestActiveCashfreeEnachRequest',
         ])->where('loan_disbursal_status', 'pending')
           ->where('admin_approval_status', 'approved')
           ->where('user_acceptance_status', 'accepted')
-          ->whereHas('cashfreeEnachRequests', function ($q) {
-                // this ensures only loans that have at least one ACTIVE non-null reference are returned
-                $q->whereNotNull('reference_id')
-                ->where('status', 'ACTIVE');
-            })
+          ->addSelect([
+            'latest_reference_id' => CashfreeEnachRequestResponse::select('reference_id')
+                ->whereColumn('subscription_id', 'loan_applications.loan_no')
+                ->whereNotNull('reference_id')
+                ->orderByDesc('created_at')
+                ->limit(1)
+            ])
           ->orderByRaw('created_at DESC');
         
         // dd(vsprintf(
@@ -64,7 +66,7 @@ class BankingController extends Controller
 
                 $csvData[] = [
                     'Loan Application No' => $lead->loan_no,
-                    'E-mandate Reference No' => optional($lead->latestActiveCashfreeEnachRequest)->reference_id,
+                    'E-mandate Reference No' => $lead->latest_reference_id ?? '',
                     'Beneficiary Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Beneficiary Account Number' => "'".$lead->bankDetails->account_number ?? '',
                     'IFSC' => $lead->bankDetails->ifsc_code ?? '',
