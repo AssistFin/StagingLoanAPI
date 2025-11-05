@@ -469,6 +469,7 @@ class LeadController extends Controller
                         'source' => $lead->user->utmTracking->utm_source ?? '',
                         'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
                         'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
+                        'CPA' => optional($lead->loanApproval->creditedBy)->name ?? 'N/A',
                     ];
                 }else{
                     $csvData[] = [

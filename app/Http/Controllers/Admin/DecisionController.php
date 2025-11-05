@@ -263,16 +263,25 @@ class DecisionController extends Controller
             foreach ($leads as $lead) {
 
                 $loanAmount = $lead->collections->sum('collection_amt');
+
+                $dpd = 0;
+                if ($lead->loanApproval && $lead->loanApproval->repay_date) {
+                    $repayDate = Carbon::parse($lead->loanApproval->repay_date);
+                    $dpd = $repayDate->isPast() ? $repayDate->diffInDays(now()) : 0;
+                }
                 
                 $csvData[] = [
+                    'Closed Date' => $lead->loan_closed_date ? $lead->loan_closed_date : 0,
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Customer Mobile' => "'" . $lead->user->mobile,
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => optional($lead->loanApproval)->approval_amount ?? 0,
                     'Repayment Amount' =>  optional($lead->loanApproval)->repayment_amount ?? 0,
                     'Paid Amount' => number_format($loanAmount, 2),
+                    'Repayment Date' => optional($lead->loanApproval)->repay_date ?? 0,
+                    'Collection Amount' => $lead->collections->pluck('collection_amt')->implode(', '),
+                    'DPD' => $dpd,
                     'Payment ID' => $lead->collections->pluck('payment_id')->implode(', '),
-                    'Closed Date' => $lead->loan_closed_date ? $lead->loan_closed_date : 0,
                 ];
             }
 
