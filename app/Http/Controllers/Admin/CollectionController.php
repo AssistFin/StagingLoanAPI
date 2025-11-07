@@ -35,8 +35,8 @@ class CollectionController extends Controller
                 'loanApproval',
                 'experianCreditReport',
             ])->where('loan_applications.loan_closed_status', '!=', 'closed')
-            //->orderByRaw('created_at DESC');
-            ->where('loan_applications.id', 1606);
+            ->orderByRaw('created_at DESC');
+            //->where('loan_applications.id', 1606);
 
         $searchTerm = $request->get('search');
         $dateRange = $request->get('date_range');
@@ -285,8 +285,8 @@ class CollectionController extends Controller
                 'loanApproval',
                 'experianCreditReport',
             ])->where('loan_applications.loan_closed_status', '!=', 'closed')
-            //->orderByRaw('created_at DESC');
-            ->where('loan_applications.id', 1606);
+            ->orderByRaw('created_at DESC');
+            //->where('loan_applications.id', 1606);
 
         $searchTerm = $request->get('search');
         $dateRange = $request->get('date_range');
