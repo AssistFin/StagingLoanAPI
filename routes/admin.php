@@ -314,6 +314,8 @@ Route::middleware('admin')->group(function () {
         Route::get('collection-predue', 'collectionPredue')->name('predue');
         Route::get('collection-overdue', 'collectionOverdue')->name('overdue');
         Route::get('collection-all', 'collectionAll')->name('all');
+        Route::post('send-predue-sms', 'sendPredueSms')->name('sendPredueSms');
+
     });
 
 
@@ -438,7 +440,7 @@ Route::middleware('admin')->group(function () {
     Route::name('creditbureau.')->prefix('creditbureau')->controller(CreditBureauController::class)->group(function () {
         Route::get('/index', 'index')->name('index');
         Route::get('/checkReport', 'checkReportByExperian')->name('checkReport');
-        Route::get('/checkBankAccNo', 'checkBankAccNo')->name('checkBankAccNo');
+        Route::get('/checkBankAccNo', 'checkBankAccNoByApproval')->name('checkBankAccNo');
         Route::get('/show/{id}', 'show')->name('show');
 
     });
@@ -590,7 +592,7 @@ Route::middleware('admin')->group(function () {
         ->group(function () {
             Route::get('template/emailindex', 'emailindex')->name('emailindex');
             Route::get('template/createemail', 'createemail')->name('createemail');
-            Route::post('/', 'store')->name('store');
+            Route::post('/xxx', 'store')->name('store');
             Route::get('/template/edit-emailtemplates/{id}','editemailTemplates')->name('edit.emailtemplates');
             Route::post('/template/update-emailtemplates/{id}','updateemailTemplates')->name('update.emailtemplates');
             Route::post('email-template/activate/{id}', 'activate')->name('email-template.activate');

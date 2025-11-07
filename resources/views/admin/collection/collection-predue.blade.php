@@ -90,6 +90,13 @@
                                 <input type="text" id="to_date" name="to_date" class="datepicker" placeholder="To Date" autocomplete="off" />
                             </div>
                         </div>
+
+                        <!-- ✅ New DPD filter row -->
+                        <div class="filter-row">
+                            <input type="number" id="dpd_from" name="dpd_from" class="form-control" placeholder="DPD From" style="width: 150px;">
+                            <input type="number" id="dpd_to" name="dpd_to" class="form-control" placeholder="DPD To" style="width: 150px;">
+                            <button type="button" id="filterByDPD" class="btn btn-success form-control" style="width: 150px;">Filter by DPD</button>
+                        </div>
                         
                     </div>
                     <div class="table-responsive--md  table-responsive">
@@ -139,6 +146,27 @@
             </div>
         </div>
     </div>
+
+<!-- SMS Confirmation Modal -->
+<div class="modal fade" id="smsConfirmModal" tabindex="-1" aria-labelledby="smsConfirmLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="smsConfirmLabel">Send SMS Confirmation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="smsMessage" class="text-secondary">{{ strip_tags($textMessage ?? 'Are you sure you want to send SMS to selected customers ?') }}</p>
+        <input type="hidden" id="smsMessagess" value="{{ strip_tags($textMessage ?? 'Are you sure you want to send SMS to selected customers ?') }}">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="sendSmsBtn" class="btn btn-primary">Send SMS</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 @endsection
 
 @push('breadcrumb-plugins')
@@ -158,6 +186,8 @@
         const fromDate = $('#from_date').val();
         const toDate = $('#to_date').val();
         const searchTerm = $('#c-pd-search-input').val();
+        const dpdFrom = $('#dpd_from').val();
+        const dpdTo = $('#dpd_to').val();
 
         $.ajax({
             url: "{{ route('admin.collection.predue') }}",
@@ -167,7 +197,9 @@
                 date_range: dateRange,
                 from_date: fromDate,
                 to_date: toDate,
-                search: searchTerm
+                search: searchTerm,
+                dpd_from: dpdFrom,
+                dpd_to: dpdTo
             },
             success: function(response) {
                 $('#cPredueTable').html($(response).find('#cPredueTable').html());
@@ -175,6 +207,13 @@
                 $('#total_records').val($(response).find('#total_records').val());
                 $('#total_aa_records').val($(response).find('#total_aa_records').val());
                 $('#total_ds_records').val($(response).find('#total_ds_records').val());
+
+                // ✅ Extract text message dynamically from response if updated
+                let msg = $(response).find('#smsMessage').text();
+                $('#smsMessage').text(msg);
+
+                // ✅ Open the modal after data refresh
+                $('#smsConfirmModal').modal('show');
             }
         });
     }
@@ -251,10 +290,51 @@
                 from_date: $('#from_date').val(),
                 to_date: $('#to_date').val(),
                 search: $('#c-pd-search-input').val(),
+                dpd_from: $('#dpd_from').val(),
+                dpd_to: $('#dpd_to').val(),
                 export: 'csv'
             };
             const query = $.param(params);
             window.location.href = "{{ route('admin.collection.predue') }}?" + query;
+        });
+
+        $('#filterByDPD').on('click', function() {
+            const dpdFrom = $('#dpd_from').val();
+            const dpdTo = $('#dpd_to').val();
+
+            if (!dpdFrom && !dpdTo) {
+                alert('Please enter at least one DPD value.');
+                return;
+            }
+
+            fetchCPDs(); // this will include the DPD params automatically
+        });
+    });
+
+    $(document).on('click', '#sendSmsBtn', function() {
+        const dpdFrom = $('#dpd_from').val();
+        const dpdTo = $('#dpd_to').val();
+        const msg = $('#smsMessagess').val();
+
+        $.ajax({
+            url: "{{ route('admin.collection.sendPredueSms') }}", // 👈 New route
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                dpd_from: dpdFrom,
+                dpd_to: dpdTo,
+                message: msg
+            },
+            beforeSend: function() {
+                $('#sendSmsBtn').prop('disabled', true).text('Sending...');
+            },
+            success: function(response) {
+                alert(response.message || 'SMS sent successfully!');
+                $('#smsConfirmModal').modal('hide');
+            },
+            complete: function() {
+                $('#sendSmsBtn').prop('disabled', false).text('Send SMS');
+            }
         });
     });
 </script>

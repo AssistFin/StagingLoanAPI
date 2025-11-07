@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
 use App\Models\LoanApplication;
+use App\Models\MessageTemplate;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Http;
 
 class CollectionController extends Controller
 {
@@ -33,12 +35,15 @@ class CollectionController extends Controller
                 'loanApproval',
                 'experianCreditReport',
             ])->where('loan_applications.loan_closed_status', '!=', 'closed')
-            ->orderByRaw('created_at DESC');
+            //->orderByRaw('created_at DESC');
+            ->where('loan_applications.id', 1606);
 
         $searchTerm = $request->get('search');
         $dateRange = $request->get('date_range');
         $fromDate = $request->get('from_date');
         $toDate = $request->get('to_date');
+        $dpdFrom = $request->get('dpd_from');
+        $dpdTo = $request->get('dpd_to');
 
         if ($dateRange) {
             if ($dateRange === 'custom' && $fromDate && $toDate) {
@@ -55,6 +60,20 @@ class CollectionController extends Controller
                         ->orWhere('email', 'like', "%{$searchTerm}%")
                         ->orWhere('mobile', 'like', "%{$searchTerm}%");
                 })->orWhere('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        if ($dpdFrom && $dpdTo) {
+            $query->whereHas('loanApproval', function ($q) use ($dpdFrom, $dpdTo, $today) {
+                $q->whereRaw("DATEDIFF(repay_date, ?) BETWEEN ? AND ?", [$today, $dpdFrom, $dpdTo]);
+            });
+        } elseif ($dpdFrom) {
+            $query->whereHas('loanApproval', function ($q) use ($dpdFrom, $today) {
+                $q->whereRaw("DATEDIFF(repay_date, ?) >= ?", [$today, $dpdFrom]);
+            });
+        } elseif ($dpdTo) {
+            $query->whereHas('loanApproval', function ($q) use ($dpdTo, $today) {
+                $q->whereRaw("DATEDIFF(repay_date, ?) <= ?", [$today, $dpdTo]);
             });
         }
 
@@ -192,6 +211,8 @@ class CollectionController extends Controller
         // 2️⃣ Paginate first
         $leads = $query->paginate(25);
 
+        $textMessage = MessageTemplate::where(['type'=>'sms', 'subject'=>'predue','status'=>'active'])->pluck('body')->first();
+
         // 3️⃣ For each lead, add your computed data
         $leads->getCollection()->transform(function ($lead) use ($today) {
 
@@ -236,7 +257,7 @@ class CollectionController extends Controller
             return $lead;
         });
 
-        return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
+        return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount','textMessage'));
     }
 
     public function collectionOverdue(Request $request)
@@ -264,12 +285,15 @@ class CollectionController extends Controller
                 'loanApproval',
                 'experianCreditReport',
             ])->where('loan_applications.loan_closed_status', '!=', 'closed')
-            ->orderByRaw('created_at DESC');
+            //->orderByRaw('created_at DESC');
+            ->where('loan_applications.id', 1606);
 
         $searchTerm = $request->get('search');
         $dateRange = $request->get('date_range');
         $fromDate = $request->get('from_date');
         $toDate = $request->get('to_date');
+        $dpdFrom = $request->get('dpd_from');
+        $dpdTo = $request->get('dpd_to');
 
         if ($dateRange) {
             if ($dateRange === 'custom' && $fromDate && $toDate) {
@@ -286,6 +310,20 @@ class CollectionController extends Controller
                         ->orWhere('email', 'like', "%{$searchTerm}%")
                         ->orWhere('mobile', 'like', "%{$searchTerm}%");
                 })->orWhere('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        if ($dpdFrom && $dpdTo) {
+            $query->whereHas('loanApproval', function ($q) use ($dpdFrom, $dpdTo, $today) {
+                $q->whereRaw("DATEDIFF(?, repay_date) BETWEEN ? AND ?", [$today, $dpdFrom, $dpdTo]);
+            });
+        } elseif ($dpdFrom) {
+            $query->whereHas('loanApproval', function ($q) use ($dpdFrom, $today) {
+                $q->whereRaw("DATEDIFF(?, repay_date) >= ?", [$today, $dpdFrom]);
+            });
+        } elseif ($dpdTo) {
+            $query->whereHas('loanApproval', function ($q) use ($dpdTo, $today) {
+                $q->whereRaw("DATEDIFF(?, repay_date) <= ?", [$today, $dpdTo]);
             });
         }
 
@@ -485,7 +523,9 @@ class CollectionController extends Controller
             return $lead;
         });
 
-        return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
+        $textMessage = MessageTemplate::where(['type'=>'sms', 'subject'=>'overdue','status'=>'active'])->pluck('body')->first();
+
+        return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount','textMessage'));
     }
 
     public function collectionAll(Request $request)
@@ -672,4 +712,124 @@ class CollectionController extends Controller
 
         return view('admin.collection.collection-all', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
+
+    public function sendPredueSms(Request $request)
+    {
+        $today = now()->toDateString();
+
+        // 1️⃣ Base query (same as collectionPredue)
+        $query = LoanApplication::whereHas('loanDisbursal')
+            ->whereHas('loanApproval', function ($q) use ($today) {
+                $q->whereDate('repay_date', '>=', $today);
+            });
+
+        // Apply DPD filters
+        if ($request->dpd_from && $request->dpd_to) {
+            $query->whereHas('loanApproval', function ($q) use ($request, $today) {
+                $q->whereRaw("DATEDIFF(repay_date, ?) BETWEEN ? AND ?", [
+                    $today,
+                    $request->dpd_from,
+                    $request->dpd_to,
+                ]);
+            });
+        }
+
+        // 2️⃣ Fetch customers with relationships
+        $customers = $query->with(['user', 'loanDisbursal', 'loanApproval'])->get();
+
+        foreach ($customers as $lead) {
+            // --- Step 1: Compute repay amount (total dues) ---
+            $loans = DB::table('loan_applications as la')
+                ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
+                ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
+                ->leftJoin(
+                    DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'),
+                    'uc.loan_application_id',
+                    '=',
+                    'la.id'
+                )
+                ->select([
+                    'la.id',
+                    'lap.approval_amount',
+                    DB::raw("DATEDIFF('$today', ld.created_at) as days_since_disbursal"),
+                    DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
+                    DB::raw('IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount) as remaining_principal'),
+                    DB::raw('(lap.approval_amount * lap.roi / 100 ) * DATEDIFF("' . $today . '", ld.created_at) as interest'),
+                    DB::raw('
+                        IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                            (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
+                            0
+                        ) as penal_interest'),
+                    DB::raw('
+                        (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) +
+                        ((lap.approval_amount * lap.roi / 100 ) * DATEDIFF("' . $today . '", ld.created_at)) +
+                        IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                            (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
+                            0
+                        ) as total_dues')
+                ])
+                ->where('la.id', $lead->id)
+                ->where('la.loan_closed_status', 'pending')
+                ->first();
+
+            $amt = !empty($loans->total_dues) ? (int)$loans->total_dues : 0;
+
+            // --- Step 2: Prepare SMS message ---
+            $mobile = $lead->user->mobile;
+            $paymentLink = config('services.docs.app_url') . '/api/pay/' . base64_encode($lead->id);
+            $message = $request->message;
+
+            // Replace {#var#} placeholders in sequence
+            $replacements = [$amt, $paymentLink];
+            foreach ($replacements as $replace) {
+                $message = preg_replace('/\{#var#\}/', $replace, $message, 1);
+            }
+
+            // Remove HTML tags if present
+            $message = strip_tags($message);
+
+            // Equence credentials
+            $username = config('services.equence.send_sms_user');
+            $password = config('services.equence.send_sms_pass');
+            $senderId = config('services.equence.send_sms_from');
+
+            try {
+                $response = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                ])->post(config('services.equence.send_sms_url'), [
+                    'username' => $username,
+                    'password' => $password,
+                    'to' => $mobile,
+                    'from' => $senderId,
+                    'text' => $message,
+                ]);
+
+        //     // dd($response->json(), $text);
+        //     Log::info("Equence SMS Response: ", $response->json());
+
+        //     return response()->json([
+        //         'remark'  => 'code_sent',
+        //         'status'  => 'success',
+        //         'message' => ['success' => ['Verification code sent successfully']],
+        //     ]);
+            } catch (\Exception $e) {
+                Log::error("Failed to send OTP via Equence: " . $e->getMessage());
+
+                return response()->json([
+                    'remark'  => 'sms_failed',
+                    'status'  => 'error',
+                    'message' => ['error' => ['Failed to send message']],
+                ]);
+            }
+
+        //     // Optional: Log for debugging
+        //     Log::info("Pre-due SMS sent to {$mobile}", [
+        //         'loan_id' => $lead->id,
+        //         'amount' => $amt,
+        //         'link' => $paymentLink,
+        //         'message' => $message,
+        //     ]);
+        }
+    }
+
 }
