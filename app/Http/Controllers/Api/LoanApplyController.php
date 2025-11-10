@@ -288,6 +288,10 @@ class LoanApplyController extends Controller
             ]);
 
             if ($validator->fails()) {
+                Log::info('Uploaded selfie:', [
+                    'hasFile' => $request->hasFile('selfie_image'),
+                    'file' => $request->file('selfie_image')
+                ]);
                 return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
             }
 
@@ -413,11 +417,39 @@ class LoanApplyController extends Controller
                 'education_qualification' => 'required|string',
                 'marital_status' => 'required|string',
                 'work_experience_years' => 'required|numeric',
+                'salary_date' => 'required|integer|min:1|max:31',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
             }
+
+            // ✅ Determine actual salary date
+            $today = now();
+            $selectedDay = (int)$request->salary_date;
+
+            // Generate salary_date based on whether selected day is passed or upcoming
+            $salaryDate = now()->setDay($selectedDay);
+
+            // If selected day already passed in current month, move to next month
+            if ($salaryDate->isPast() && $salaryDate->day !== now()->day) {
+                $salaryDate->addMonthNoOverflow();
+            }
+
+            $repayDate = $salaryDate->copy()->addDay();
+            $tenureDays = $today->diffInDays($salaryDate);
+
+            // ✅ Calculate date difference in days
+            $diffInDays = $today->diffInDays($salaryDate);
+
+            if ($diffInDays < 15 || $diffInDays > 45) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Salary date must be between 15 and 45 days from today.'
+                ], 422);
+            }
+
+            
 
             $employmentDetails = LoanEmploymentDetails::updateOrCreate(
                 ['loan_application_id' => $request->loan_application_id],
@@ -438,6 +470,29 @@ class LoanApplyController extends Controller
                 $loan->next_step = 'bankinfo';
                 $loan->save();
             }
+
+            // Merge computed salary_date into request data
+            $data = [];
+            $data['salary_date'] = $salaryDate->format('Y-m-d');
+            $data['repay_date'] =  $repayDate->format('Y-m-d'); // store full date
+            $data['loan_tenure_days'] = $tenureDays;
+            $data['loan_application_id'] = $request->loan_application_id;
+            $data['user_id'] = auth()->id();
+            $data['loan_number'] = $loan->loan_no;
+            $data['loan_type'] = 'Personal Loan';
+            $data['branch'] = 'DELHI';
+            $data['approval_amount'] = 0.00;
+            $data['repayment_amount'] = 0.00;
+            $data['disbursal_amount'] = 0.00;
+            $data['roi'] = 1;
+            $data['processing_fee'] = 10;
+            $data['monthly_income'] = 0;
+            $data['status'] = 0;
+
+            $loanApprovalDetails = loanApproval::updateOrCreate(
+                ['loan_application_id' => $request->loan_application_id],
+                $data
+            );
 
             return response()->json([
                 'status' => true,
