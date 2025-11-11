@@ -80,7 +80,7 @@
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                     <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
                                     <td>{{ $lead->loan_amount }}</td>
-                                    <td>
+                                    <!--td>
                                       @if(!empty($lead->digitapRequest->report_json_data) && $lead->digitapRequest->status == 'xlsx_report_saved' )
                                       <!--button class="btn btn-primary btn-check-status" data-lead-id="{{ $lead->id }}">Check Status</button-->
                                       @else
@@ -94,7 +94,7 @@
                                       data-apply-date="{{ $lead->created_at->format('Y-m-d') }}"
                                       data-cpa-name="{{ auth()->guard('admin')->user()->name }}"
                                       data-bs-toggle="modal"
-                                      data-bs-target="#underwritingModal" >Check UW</button--></td>
+                                      data-bs-target="#underwritingModal" >Check UW</button></td-->
                                 </tr>
                             @empty
                                 <tr>
