@@ -224,4 +224,14 @@ class DigitapController extends Controller
             return response()->json(['message' => 'Webhook Failed'], 301);
         }
     }
+
+    public function analyzeReports($leadId, DigitapBankStatementService $service)
+    {
+        $statusResponse = $service->processReports($leadId);
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'BSA Report Process Completed !!',
+            'data'    => $statusResponse ?? []
+        ]);
+    }
 }

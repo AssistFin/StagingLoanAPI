@@ -519,14 +519,14 @@
                             <!-- Approval Amount -->
                             <div class="col-md-6">
                                 <label for="approval_amount" class="form-label">Approval Amount</label>
-                                <input type="number" class="form-control" id="approval_amount" name="approval_amount" required min="0" max="100000" required value="{{isset($loanApproval) ? round($loanApproval->approval_amount) : "0"}}">
+                                <input type="number" class="form-control" id="approval_amount" name="approval_amount" min="0" max="40000" required value="{{isset($loanApproval) ? round($loanApproval->approval_amount) : "0"}}" oninput="validateApprovalAmount(this)">
                                 <span class="error-message text-danger"></span>
                             </div>
     
                             <!-- Processing Fee -->
                             <div class="col-md-6">
                                 <label for="processing_fee" class="form-label">Processing Fee (%)</label>
-                                <input type="number" class="form-control" id="processing_fee" name="processing_fee" required step="0.01" value="{{isset($loanApproval) ? $loanApproval->processing_fee : ""}}">
+                                <input type="number" class="form-control" id="processing_fee" name="processing_fee" step="0.01" required value="{{isset($loanApproval) ? $loanApproval->processing_fee : ""}}" oninput="validateProcessingFee(this)">
                                 <span class="error-message text-danger"></span>
                             </div>
 
@@ -573,7 +573,7 @@
     
                             <div class="col-md-6">
                                 <label>Loan Tenure Days</label>
-                                <input type="text" name="loan_tenure_days" id="loan_tenure_days" class="form-control" required readonly value="{{ isset($loanApproval) ? $loanApproval->loan_tenure_days : '' }}">
+                                <input type="text" name="loan_tenure_days" id="loan_tenure_days" class="form-control" required readonly min="15" max="45" value="{{ isset($loanApproval) ? $loanApproval->loan_tenure_days : '' }}">
                                 <span class="error-message text-danger"></span>
                             </div>
                             
@@ -586,28 +586,28 @@
                             <!-- ROI -->
                             <div class="col-md-6">
                                 <label for="roi" class="form-label">Rate of Interest (%)</label>
-                                <input type="number" class="form-control" id="roi" name="roi" step="0.01" required value="{{isset($loanApproval) ? $loanApproval->roi : ""}}">
+                                <input type="number" class="form-control" id="roi" name="roi" step="0.01" required value="{{isset($loanApproval) ? $loanApproval->roi : ""}}" oninput="validateROI(this)">
                                 <span class="error-message text-danger"></span>
                             </div>
     
                              <!-- repayment_amount -->
                              <div class="col-md-6">
                                 <label for="repayment_amount" class="form-label">Repayment Amount</label>
-                                <input type="number" class="form-control" id="repayment_amount" name="repayment_amount" readonly required min="0" required value="{{isset($loanApproval) ? round($loanApproval->repayment_amount) : "0"}}">
+                                <input type="number" class="form-control" id="repayment_amount" name="repayment_amount" readonly required min="0" value="{{isset($loanApproval) ? round($loanApproval->repayment_amount) : "0"}}">
                                 <span class="error-message text-danger"></span>
                             </div>
                 
                             <!-- CIBIL Score -->
                             <div class="col-md-6">
                                 <label for="cibil_score" class="form-label">CIBIL Score</label>
-                                <input type="number" class="form-control" id="cibil_score" name="cibil_score" required value="{{isset($loanApproval) ? $loanApproval->cibil_score : ""}}">
+                                <input type="number" class="form-control" id="cibil_score" name="cibil_score" required value="{{isset($loanApproval) ? $loanApproval->cibil_score : ""}}" min="550" oninput="validateCIBIL(this)">
                                 <span class="error-message text-danger"></span>
                             </div>
                 
                             <!-- Monthly Income -->
                             <div class="col-md-6">
                                 <label for="monthly_income" class="form-label">Monthly Income</label>
-                                <input type="number" class="form-control" id="monthly_income" name="monthly_income" required step="0.01" value="{{isset($loanApproval) ? round($loanApproval->monthly_income) : ""}}">
+                                <input type="number" class="form-control" id="monthly_income" name="monthly_income" required step="0.01" value="{{isset($loanApproval) ? round($loanApproval->monthly_income) : ""}}" oninput="validateMonthlyIncome(this)" >
                                 <span class="error-message text-danger"></span>
                             </div>
                 
@@ -1345,7 +1345,10 @@
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'ReportGenerated')
                                         <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-info">View Report</button>
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'xlsx_report_saved' && !empty($digitapBankRequestData->report_xlsx_data))
-                                        <a href="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}" target="_blank" class="btn btn-primary"> View Excel Report</a>
+                                        <a href="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}"
+                                        target="_blank" class="btn btn-primary btn-check-status"
+                                        data-lead-id="{{ $lead->id }}" data-excel-url="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}">View Excel Report</a>
+
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'json_report_saved' && !empty($digitapBankRequestData->report_json_data))
                                         <button class="btn btn-primary view-bsa-report" 
                                                 data-id="{{ $lead->id }}" 
@@ -1584,6 +1587,24 @@
     <div class="d-flex">
       <div class="toast-body">
         Link copied to clipboard!
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Modal -->
+<div class="modal fade" id="analyzeModal" tabindex="-1" aria-labelledby="analyzeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="analyzeModalLabel">Check Status Result</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="analyzeModalBody">
+        <p class="text-center text-muted">Click "Check Status" to start analysis.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
@@ -2217,7 +2238,7 @@
                     location.reload();
                 },
                 error: function() {
-                    alert("Request failed!");
+                    alert("Request failed !!");
 
                     // Re-enable button if error occurs
                     btn.disabled = false;
@@ -2588,5 +2609,183 @@ document.getElementById('addressForm').addEventListener('submit', function(e) {
     })
     .catch(err => console.error('Error:', err));
 });
+
+function validateApprovalAmount(input) {
+    const errorSpan = input.nextElementSibling;
+    if (input.value > 40000) {
+        errorSpan.textContent = "Approval amount cannot exceed 40,000.";
+        input.value = 0;
+    } else {
+        errorSpan.textContent = "";
+    }
+}
+
+function validateProcessingFee(input){
+    const errorSpan = input.nextElementSibling;
+    if (input.value < 7 || input.value > 10) {
+        errorSpan.textContent = "Processing fee must be between 7% and 10%.";
+        input.value = 0;
+    } else {
+        errorSpan.textContent = '';
+    }
+}
+
+function validateROI(input){
+    const errorSpan = input.nextElementSibling;
+
+    if (input.value < 0.75 || input.value > 1) {
+        errorSpan.textContent = "ROI must be between 0.75% and 1%.";
+    } else {
+        errorSpan.textContent = '';
+    }
+}
+
+function validateCIBIL(input){
+    const errorSpan = input.nextElementSibling;
+
+    if (input.value < 550) {
+        errorSpan.textContent = "Cibil Score must be minimum 550.";
+    } else {
+        errorSpan.textContent = '';
+    }
+}
+
+function validateMonthlyIncome(input){
+    const errorSpan = input.nextElementSibling;
+
+    if (input.value < 25000) {
+        errorSpan.textContent = "Monthly Income must be minimum 25000.";
+    } else {
+        errorSpan.textContent = '';
+    }
+}
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const analyzeModal = new bootstrap.Modal(document.getElementById('analyzeModal'));
+    const modalBody = document.getElementById('analyzeModalBody');
+
+    document.querySelectorAll('.btn-check-status').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault(); // Stop default link click
+
+            const leadId = this.dataset.leadId;
+            const excelUrl = this.dataset.excelUrl;
+
+            // Open Excel report in a new tab immediately
+            window.open(excelUrl, '_blank');
+
+            // Show modal loading
+            // modalBody.innerHTML = `
+            //     <div class="text-center">
+            //         <div class="spinner-border text-primary" role="status"></div>
+            //         <p class="mt-2">Checking Digitap Status for Lead #${leadId}...</p>
+            //     </div>
+            // `;
+            // analyzeModal.show();
+
+            // Make API call
+            fetch(`/admin/digitap/analyze/${leadId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                // if (data.status) {
+                //     const result = data.data || {};
+                //     let html = `
+                //     <div class="alert alert-success d-flex align-items-center mb-3" style="font-weight:600;">
+                //         <i class="bi bi-check-circle-fill me-2"></i> 
+                //         ${data.message}
+                //     </div>
+                //     `;
+
+                //     if (result.digitap) {
+                //         html += `
+                //         <div class="p-3 rounded mb-3" style="background-color:#e8f5e9;">
+                //             <h6 class="fw-bold mb-2 text-success">Digitap Report</h6>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Approval Amount :</div>
+                //                 <div class="col-7 text-dark">${result.digitap.approved_amount ?? '-'}</div>
+                //             </div>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Tag :</div>
+                //                 <div class="col-7 text-dark">${result.digitap.salary_or_business_tag ?? '-'}</div>
+                //             </div>
+                //             <div class="row">
+                //                 <div class="col-5 fw-bold text-secondary">Reason :</div>
+                //                 <div class="col-7 text-dark">${result.digitap.rejected_reason ?? '-'}</div>
+                //             </div>
+                //         </div>`;
+                //     }
+
+                //     if (result.monthly_salary_check) {
+                //         html += `
+                //         <div class="p-3 rounded" style="background-color:#fff3cd;">
+                //             <h6 class="fw-bold mb-2 text-warning">Monthly Salary</h6>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Bureau Score :</div>
+                //                 <div class="col-7 text-dark">${result.monthly_salary_check.bureau_score ?? '-'}</div>
+                //             </div>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Approval Amount :</div>
+                //                 <div class="col-7 text-dark">${result.monthly_salary_check.approved_amount ?? '-'}</div>
+                //             </div>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Tag :</div>
+                //                 <div class="col-7 text-dark">${result.monthly_salary_check.salary_or_business_tag ?? '-'}</div>
+                //             </div>
+                //             <div class="row">
+                //                 <div class="col-5 fw-bold text-secondary">Reason :</div>
+                //                 <div class="col-7 text-dark">${result.monthly_salary_check.rejected_reason ?? '-'}</div>
+                //             </div>
+                //         </div>`;
+                //     }
+
+                //     if (result.final) {
+                //         html += `
+                //         <div class="p-3 rounded" style="background-color:#e8f0fe;">
+                //             <h6 class="fw-bold mb-2 text-primary">Final Decision</h6>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Final Approved Amount :</div>
+                //                 <div class="col-7 text-dark">${result.final.final_approved_amount ?? '-'}</div>
+                //             </div>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Decision :</div>
+                //                 <div class="col-7 text-dark">${result.final.decision ?? '-'}</div>
+                //             </div>
+                //             <div class="row mb-2">
+                //                 <div class="col-5 fw-bold text-secondary">Reason :</div>
+                //                 <div class="col-7 text-dark">${result.final.reason ?? '-'}</div>
+                //             </div>
+                //             <div class="row">
+                //                 <div class="col-5 fw-bold text-secondary">Logic :</div>
+                //                 <div class="col-7 text-dark">${result.final.logic ?? '-'}</div>
+                //             </div>
+                //         </div>`;
+                //     }
+
+                //     modalBody.innerHTML = html;
+                // } else {
+                //     modalBody.innerHTML = `
+                //         <div class="alert alert-warning text-center">
+                //             ⚠️ ${data.message}
+                //         </div>`;
+                // }
+            })
+            // .catch(err => {
+            //     modalBody.innerHTML = `
+            //         <div class="alert alert-danger text-center">
+            //             ❌ Error: ${err.message}
+            //         </div>`;
+            // });
+        });
+    });
+});
+</script>
+
 @endpush
