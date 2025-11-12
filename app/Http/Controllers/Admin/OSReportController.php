@@ -629,10 +629,10 @@ class OSReportController extends Controller
                 }
 
                 $csvData[] = [
-                    'Sr No' => $index++,
+                    'Sr No' => $index + 1,
                     'Disb Month' => !empty($lead->loanDisbursal->disbursal_date) ? date('M-Y',strtotime($lead->loanDisbursal->disbursal_date)) : '',
                     'Collection Month' => !empty($loans->last_payment_date) ? date('M-Y',strtotime($loans->last_payment_date)) : '',
-                    'Paid Month' => !empty($loans->last_payment_date) ? date('M-Y',strtotime($loans->last_payment_date)) : '',
+                    'Paid Month' => !empty($loans->last_payment_date) ? date('m-Y',strtotime($loans->last_payment_date)) : '',
                     'Appl. No.' => $lead->loan_no,
                     'Appl. ID' => $lead->id,
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
