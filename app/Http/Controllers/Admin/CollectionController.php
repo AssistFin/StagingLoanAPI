@@ -545,7 +545,7 @@ class CollectionController extends Controller
                     SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid, SUM(penal) as total_penal_paid,
                     MAX(collection_date) as last_collection_date, MAX(created_at) as last_payment_date FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount', 'uc.total_principal_paid', 'uc.total_interest_paid', 'uc.total_penal_paid', 'uc.last_collection_date', 'uc.last_payment_date', 'uc.total_paid',
+                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount', 'uc.total_principal_paid', 'uc.total_interest_paid', 'uc.total_penal_paid', 'uc.last_collection_date', 'uc.last_payment_date', 'uc.total_paid','ld.disbursal_date',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
@@ -558,6 +558,7 @@ class CollectionController extends Controller
                 $totalDues = max((int)($loans->total_dues ?? 0), 0);
                 $daysAfterDue = max((int)($loans->days_after_due ?? 0), 0);
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
+                $disbursal_date = !empty($loans->disbursal_date) ? $loans->disbursal_date : '';
                 $loanStatus = $totalDues == 0 ? 'Paid' : 'Unpaid';
 
                 $csvData[] = [
@@ -567,6 +568,7 @@ class CollectionController extends Controller
                         'Loan Amount'        => number_format($loans->approval_amount ?? 0, 0),
                         'Total Due'          => number_format($totalDues, 0),
                         'Repayment Amount'   => number_format($loans->repayment_amount ?? 0, 0),
+                        'Disbursement date'  => $disbursal_date,
                         'Repayment date'     => $repayDate,
                         'Collection Date'    => $loans->last_collection_date ?? '',
                         'Collection Amount'    => number_format($loans->total_paid ?? 0, 0),

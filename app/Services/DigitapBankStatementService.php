@@ -414,13 +414,13 @@ class DigitapBankStatementService
                     'digitap_biz_total' => $resData['digitap']['biz_total'] ?? null,
                     'digitap_max_monthly_credit' => $resData['digitap']['max_monthly_credit'] ?? null,
                     'digitap_total_days' => $resData['digitap']['total_days'] ?? null,
-                    'bureau_score' => $resData['monthly_salary_check']['bureau_score'] ?? null,
+                    'bureau_score' => $data2['SCORE']['BureauScore'] ?? null,
                     'final_decision' => $resData['final']['decision'] ?? 'Rejected',
                     'final_approved_amount' => $resData['final']['final_approved_amount'] ?? 0,
-                    'digitap_result' => json_encode($resData['digitap'] ?? []),
-                    'experian_result' => json_encode($resData['experian'] ?? []),
-                    'monthly_salary_check_result' => json_encode($resData['monthly_salary_check'] ?? []),
-                    'final_result' => json_encode($resData['final'] ?? []),
+                    'digitap_result' => $resData['digitap'] ?? [],
+                    'experian_result' => $resData['experian'] ?? [],
+                    'monthly_salary_check_result' => $resData['monthly_salary_check'] ?? [],
+                    'final_result' => $resData['final'] ?? [],
                 ]
             );
         }
