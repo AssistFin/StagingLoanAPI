@@ -13,6 +13,7 @@ use App\Models\LoanAddressDetails;
 use App\Models\LoanPersonalDetails;
 use App\Models\LoanEmploymentDetails;
 use App\Models\DigitapBankRequest;
+use App\Models\BreData;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -97,5 +98,10 @@ class LoanApplication extends Model
     public function digitapRequest()
     {
         return $this->hasOne(DigitapBankRequest::class, 'customer_id', 'id');
+    }
+
+    public function bredata()
+    {
+        return $this->hasOne(BreData::class, 'lead_id');
     }
 }

@@ -458,7 +458,7 @@ Route::middleware('admin')->group(function () {
         Route::post('/digitapbsuploaddocstatus', 'checkStatusBSAReportByDigitap')->name('digitapbsuploaddocstatus');
         Route::get('/bsaDataShow/{id}', 'bsaDataShow')->name('bsaDataShow');
         Route::post('/analyze/{leadId}', 'analyzeReports')->name('analyze');
-
+        Route::post('/analyzeReportData/{leadId}', 'analyzeReportData')->name('analyzeReportData');
     });
 
     //============Loan================//

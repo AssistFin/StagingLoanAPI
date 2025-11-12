@@ -47,7 +47,8 @@ class LeadController extends Controller
                 'employmentDetails',
                 'loanDocument',
                 'addressDetails',
-                'bankDetails'
+                'bankDetails',
+                'bredata'
             ])->whereNotIn('user_id', $excludedUserIds)
             ->orderByDesc('user_id');
 

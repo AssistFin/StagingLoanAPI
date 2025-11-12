@@ -127,8 +127,9 @@
                                     <th>@lang('View')</th>
                                     <th>@lang('Loan Application No.')</th>
                                     <th>@lang('Loan Amount')</th>
-                                    <th>@lang('Purpose Of Loan')</th>
-                                    <!--th>@lang('Personal Details')</th>
+                                    <th>@lang('Action')</th>
+                                    <!--th>@lang('Purpose Of Loan')</th>
+                                    <th>@lang('Personal Details')</th>
                                     <th>@lang('KYC Details')</th>
                                     <th>@lang('Selfie Document')</th>
                                     <th>@lang('Address Details')</th>
@@ -169,10 +170,18 @@
                                                 </a>
                                             </td>
                                             <td>{{ isset($lead->loanApproval->approval_amount) ? number_format(($lead->loanApproval->approval_amount), 0) : 0 }}</td>
-                                            <td>{{ $lead->purpose_of_loan }}</td>
+                                            <td>
+                                                @if($lead->bredata_exists)
+                                                    <button class="btn btn-primary btn-check-status" data-lead-id="{{ $lead->id }}">BRE Status</button>
+                                                @else
+                                                    <span class="badge bg-danger">No BRE Data</span>
+                                                @endif
+                                            </td>
+
+                                            <!--td>{{ $lead->purpose_of_loan }}</td>
                         
                                             {{-- Personal Details --}}
-                                            <!--td>
+                                            <td>
                                                 {!! $lead->personal_details_exists 
                                                     ? '<i class="fas fa-check" style="color: green;"></i>' 
                                                     : '<i class="fas fa-times" style="color: red;"></i>' !!}
@@ -245,6 +254,24 @@
             </div>
         </div>
     </div>
+
+<!-- ✅ Modal -->
+<div class="modal fade" id="analyzeModal" tabindex="-1" aria-labelledby="analyzeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="analyzeModalLabel">Check Status Result</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="analyzeModalBody">
+        <p class="text-center text-muted">Click "Check Status" to start analysis.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('breadcrumb-plugins')
@@ -378,5 +405,212 @@
             window.location.href = "{{ route('admin.leads.all') }}?" + query;
         });
     });
-    </script>
+</script>
+<script>
+    // Handle click on any "Check Status" button
+    document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-check-status')) {
+        const btn = e.target.closest('.btn-check-status');
+        const leadId = btn.dataset.leadId;
+
+        const analyzeModal = new bootstrap.Modal(document.getElementById('analyzeModal'));
+        const modalBody = document.getElementById('analyzeModalBody');
+
+        modalBody.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Checking Digitap Status for Lead #${leadId}...</p>
+            </div>
+        `;
+        analyzeModal.show();
+
+            // Show loading state in modal
+            modalBody.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Checking Digitap Status for Lead #${leadId}...</p>
+                </div>
+            `;
+            analyzeModal.show();
+
+            // Make AJAX POST request
+            fetch(`/admin/digitap/analyzeReportData/${leadId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status) {
+                    const result = data.data || {};
+                    // Parse the JSON columns safely
+                    const digitap = result.digitap_result ? JSON.parse(result.digitap_result) : null;
+                    const experian = result.experian_result ? JSON.parse(result.experian_result) : null;
+                    const monthly_salary_check = result.monthly_salary_check_result ? JSON.parse(result.monthly_salary_check_result) : null;
+                    const final = result.final_result ? JSON.parse(result.final_result) : null;
+
+                    let html = `
+                    <div class="alert alert-success d-flex align-items-center mb-3" style="font-weight:600;">
+                        <i class="bi bi-check-circle-fill me-2"></i> 
+                        ${data.message}
+                    </div>
+                    `;
+
+                    // ✅ DIGITAP DATA
+                    if (digitap) {
+                        html += `
+                        <div class="p-3 rounded mb-3" style="background-color:#e8f5e9;">
+                            <h6 class="fw-bold mb-2 text-success">Digitap Report</h6>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Approval Amount :</div>
+                                <div class="col-7 text-dark">${digitap.approved_amount ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Tag :</div>
+                                <div class="col-7 text-dark">${digitap.salary_or_business_tag ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Reason :</div>
+                                <div class="col-7 text-dark">${digitap.rejected_reason ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Monthly Salary :</div>
+                                <div class="col-7 text-dark">${digitap.monthly_salary ? '₹' + Math.round(digitap.monthly_salary).toLocaleString('en-IN') : '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Confidence Score :</div>
+                                <div class="col-7 text-dark">${
+                                digitap.confidence_score ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Bounced Count :</div>
+                                <div class="col-7 text-dark">${digitap.bounced ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Salary Count :</div>
+                                <div class="col-7 text-dark">${digitap.salary_count ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Business Count :</div>
+                                <div class="col-7 text-dark">${digitap.biz_count ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Salary Total :</div>
+                                <div class="col-7 text-dark">${digitap.salary_total ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Business Total :</div>
+                                <div class="col-7 text-dark">${digitap.biz_total ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Max Monthly Credit:</div>
+                                <div class="col-7 text-dark">${digitap.max_monthly_credit ?? '-'}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-5 fw-bold text-secondary">Total Days :</div>
+                                <div class="col-7 text-dark">${digitap.total_days ?? '-'}</div>
+                            </div>
+                        </div>
+                        `;
+                    }
+
+                    // ✅ EXPERIAN DATA
+                    if (experian) {
+                        html += `
+                        <div class="p-3 rounded mb-3" style="background-color:#e3f2fd;">
+                            <h6 class="fw-bold mb-2 text-primary">Experian Report</h6>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Bureau Score :</div>
+                                <div class="col-7 text-dark">${experian.score ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Approval Amount :</div>
+                                <div class="col-7 text-dark">${experian.approved_amount ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Tag :</div>
+                                <div class="col-7 text-dark">${experian.salary_or_business_tag ?? '-'}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-5 fw-bold text-secondary">Reason :</div>
+                                <div class="col-7 text-dark">${experian.rejected_reason ?? '-'}</div>
+                            </div>
+                        </div>
+                        `;
+                    }
+
+                    // ✅ 3️⃣ MONTHLY SALARY × 0.35 CHECK
+                    if (monthly_salary_check) {
+                        html += `
+                        <div class="p-3 rounded mb-3" style="background-color:#fff3cd;">
+                            <h6 class="fw-bold mb-2 text-warning">Monthly Salary</h6>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Bureau Score :</div>
+                                <div class="col-7 text-dark">${monthly_salary_check.bureau_score ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Approval Amount :</div>
+                                <div class="col-7 text-dark">${monthly_salary_check.approved_amount ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Tag :</div>
+                                <div class="col-7 text-dark">${monthly_salary_check.salary_or_business_tag ?? '-'}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-5 fw-bold text-secondary">Reason :</div>
+                                <div class="col-7 text-dark">${monthly_salary_check.rejected_reason ?? '-'}</div>
+                            </div>
+                        </div>
+                        `;
+                    }
+
+                    // ✅ FINAL RESULT
+                    if (final) {
+                        html += `
+                        <div class="p-3 rounded mb-3" style="background-color:#e8f0fe;">
+                            <h6 class="fw-bold mb-2 text-primary">Final Decision</h6>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Final Approved Amount :</div>
+                                <div class="col-7 text-dark">${final.final_approved_amount ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Decision :</div>
+                                <div class="col-7 text-dark">${final.decision ?? '-'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 fw-bold text-secondary">Reason :</div>
+                                <div class="col-7 text-dark">${final.reason ?? '-'}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-5 fw-bold text-secondary">Logic :</div>
+                                <div class="col-7 text-dark">${final.logic ?? '-'}</div>
+                            </div>
+                        </div>
+                        `;
+                    }
+
+                    modalBody.innerHTML = html;
+
+                } else {
+                    modalBody.innerHTML = `
+                        <div class="alert alert-warning text-center">
+                            ⚠️ ${data.message}
+                        </div>
+                    `;
+                }
+            })
+            .catch(err => {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger text-center">
+                        ❌ Error: ${err.message}
+                    </div>
+                `;
+            });
+
+        };
+    });
+</script>
 @endpush

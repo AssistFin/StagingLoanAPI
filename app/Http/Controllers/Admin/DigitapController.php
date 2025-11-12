@@ -234,4 +234,19 @@ class DigitapController extends Controller
             'data'    => $statusResponse ?? []
         ]);
     }
+
+    public function analyzeReportData($id)
+    {
+        $record = DB::table('bre_data')->where('lead_id', $id)->first();
+
+        if (!$record) {
+            return response('Record not found.', 404);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'BSA Report Process Completed !!',
+            'data'    => $record ?? []
+        ]);
+    }
 }
