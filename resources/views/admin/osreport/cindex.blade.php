@@ -67,6 +67,11 @@
                         <div class="filter-row">
                             <select id="date_range" name="date_range" class="form-control">
                                 <option value="">Select Date Range</option>
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="last_3_days">Last 3 Days</option>
+                                <option value="last_7_days">Last 7 Days</option>
+                                <option value="last_15_days">Last 15 Days</option>
                                 <option value="current_month">Current Month</option>
                                 <option value="previous_month">Previous Month</option>
                                 <option value="custom">Custom Range</option>

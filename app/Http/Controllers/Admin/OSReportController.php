@@ -475,6 +475,31 @@ class OSReportController extends Controller
 
         if ($dateRange) {
             switch ($dateRange) {
+                case 'today':
+                    $query->whereHas('collections', function ($q) {
+                        $q->whereDate('created_at', Carbon::today());
+                    });
+                    break;
+                case 'yesterday':
+                    $query->whereHas('collections', function ($q) {
+                        $q->whereDate('collection_date', Carbon::yesterday());
+                    });
+                    break;
+                case 'last_3_days':
+                    $query->whereHas('collections', function ($q) {
+                        $q->whereBetween('collection_date', [now()->subDays(3), now()]);
+                    });
+                    break;
+                case 'last_7_days':
+                    $query->whereHas('collections', function ($q) {
+                        $q->whereBetween('collection_date', [now()->subDays(7), now()]);
+                    });
+                    break;
+                case 'last_15_days':
+                    $query->whereHas('collections', function ($q) {
+                        $q->whereBetween('collection_date', [now()->subDays(15), now()]);
+                    });
+                    break;
                 case 'current_month':
                     $query->whereHas('collections', function ($q) {
                         $q->whereBetween('collection_date', [
@@ -522,7 +547,8 @@ class OSReportController extends Controller
                             SUM(principal) as total_principal_paid,
                             SUM(interest) as total_interest_paid,
                             SUM(penal) as total_penal_paid,
-                            MAX(created_at) as last_payment_date
+                            MAX(created_at) as last_payment_date,
+                            MAX(status) as ucstatus
                         FROM utr_collections
                         GROUP BY loan_application_id
                     ) as uc'), 'uc.loan_application_id', '=', 'la.id')
@@ -535,6 +561,7 @@ class OSReportController extends Controller
                         'uc.total_interest_paid',
                         'uc.total_penal_paid',
                         'uc.last_payment_date',
+                        'uc.ucstatus',
                         DB::raw("DATEDIFF('$today', ld.created_at) as days_since_disbursal"),
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) as remaining_principal'),
@@ -624,6 +651,7 @@ class OSReportController extends Controller
                     'Interest Due'    => number_format(max($loans->interest, 0), 2),
                     'Penal Due'       => number_format(max($loans->penal_interest, 0), 2),
                     'Paid Date' => (!empty($loans->last_payment_date)) ? date('d-m-Y',strtotime($loans->last_payment_date)) : '',
+                    'Payment Status' => (!empty($loans->ucstatus)) ? $loans->ucstatus : '',
                     'Total Amt Collected' => !empty($loans->total_paid) ? number_format($loans->total_paid, 2) : 0,
                     'Principal Collect.' => (!empty($loans->total_principal_paid)) ? number_format($loans->total_principal_paid, 2) : 0 ,
                     'Interest Collect.' => (!empty($loans->total_interest_paid)) ? number_format($loans->total_interest_paid, 2) : 0 ,
