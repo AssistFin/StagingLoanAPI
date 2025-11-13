@@ -128,32 +128,32 @@ class LeadController extends Controller
                 switch ($dateRange) {
                     case 'today':
                         $query->whereHas('loanApproval', function ($q) {
-                            $q->whereDate('created_at', Carbon::today());
+                            $q->whereDate('updated_at', Carbon::today());
                         });
                         break;
                     case 'yesterday':
                         $query->whereHas('loanApproval', function ($q) {
-                            $q->whereDate('created_at', Carbon::yesterday());
+                            $q->whereDate('updated_at', Carbon::yesterday());
                         });
                         break;
                     case 'last_3_days':
                         $query->whereHas('loanApproval', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(3), now()]);
+                            $q->whereBetween('updated_at', [now()->subDays(3), now()]);
                         });
                         break;
                     case 'last_7_days':
                         $query->whereHas('loanApproval', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(7), now()]);
+                            $q->whereBetween('updated_at', [now()->subDays(7), now()]);
                         });
                         break;
                     case 'last_15_days':
                         $query->whereHas('loanApproval', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(15), now()]);
+                            $q->whereBetween('updated_at', [now()->subDays(15), now()]);
                         });
                         break;
                     case 'current_month':
                         $query->whereHas('loanApproval', function ($q) {
-                            $q->whereBetween('created_at', [
+                            $q->whereBetween('updated_at', [
                                 Carbon::now()->startOfMonth(),
                                 Carbon::now()->endOfMonth()
                             ]);
@@ -161,7 +161,7 @@ class LeadController extends Controller
                         break;
                     case 'previous_month':
                         $query->whereHas('loanApproval', function ($q) {
-                            $q->whereBetween('created_at', [
+                            $q->whereBetween('updated_at', [
                                 Carbon::now()->subMonth()->startOfMonth(),
                                 Carbon::now()->subMonth()->endOfMonth()
                             ]);
@@ -170,7 +170,7 @@ class LeadController extends Controller
                     case 'custom':
                         if ($request->get('from_date') && $request->get('to_date')) {
                             $query->whereHas('loanApproval', function ($q) use ($request) {
-                                $q->whereBetween('created_at', [$request->get('from_date'), $request->get('to_date')]);
+                                $q->whereBetween('updated_at', [$request->get('from_date'), $request->get('to_date')]);
                             });
                         }
                         break;

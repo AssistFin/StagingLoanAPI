@@ -577,7 +577,7 @@ Route::middleware('admin')->group(function () {
         ->name('vendors.')
         ->group(function () {
             Route::get('vendors/index', 'index')->name('index');
-            Route::post('/{vendor}/{field}', 'toggle')->name('toggle');
+            Route::post('admin/{vendor}/{field}', 'toggle')->name('toggle');
     });
 
     Route::controller(BankingController::class)
