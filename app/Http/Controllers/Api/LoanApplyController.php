@@ -74,19 +74,21 @@ class LoanApplyController extends Controller
                 }
                 $loans["aadharAddress"] = $aadharAddress;
 
-                $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
-                if(!empty($loanApprovalData->kfs_path)){
-                    $loanNo = $loans['id'];
-                    $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
-                    if (!file_exists($outputPath)) {
-                        $arrayData["loan_application_id"] = $loans['id'];
-                        $arrayData["current_step"] = 'loanstatus';
-                        $arrayData["next_step"] = 'viewloan';
-                        $requestObj = Request::create('', 'POST', $arrayData);
-                        $this->updateLoanStep($requestObj);
-                    }
+            $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
+            if(!empty($loanApprovalData->kfs_path)){
+                $loanNo = $loans['id'];
+                $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
+                if (!file_exists($outputPath)) {
+                    $arrayData["loan_application_id"] = $loans['id'];
+                    $arrayData["current_step"] = 'loanstatus';
+                    $arrayData["next_step"] = 'viewloan';
+                    $requestObj = Request::create('', 'POST', $arrayData);
+                    $this->updateLoanStep($requestObj);
                 }
             }
+            }
+
+
 
             return response()->json(['status' => true, 'data' => $loans]);
         } catch (\Exception $e) {
@@ -282,59 +284,94 @@ class LoanApplyController extends Controller
         Log::info('Received loan document upload request', $request->all());
 
         try {
+            // ✅ Step 1: Validate incoming fields
             $validator = Validator::make($request->all(), [
                 'loan_application_id' => 'required|exists:loan_applications,id',
-                'selfie_image' => 'required|image|max:2048',
+                'selfie_image' => 'required|file|mimes:jpeg,png,jpg|max:2048', // safer than 'image'
             ]);
 
             if ($validator->fails()) {
-                Log::info('Uploaded selfie:', [
-                    'hasFile' => $request->hasFile('selfie_image'),
-                    'file' => $request->file('selfie_image')
-                ]);
+                Log::warning('Validation failed', ['errors' => $validator->errors()]);
                 return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
             }
 
-            $securePath = config('services.docs.upload_kfs_doc');
+            // ✅ Step 2: Extract file object safely
+            $file = $request->file('selfie_image');
 
+            Log::info('File debug before save', [
+                'hasFile' => $request->hasFile('selfie_image'),
+                'isValid' => $file ? $file->isValid() : false,
+                'path' => $file ? $file->getPathname() : null,
+                'exists' => $file && file_exists($file->getPathname()),
+                'mime' => $file ? $file->getMimeType() : null,
+                'size' => $file ? $file->getSize() : null,
+            ]);
+
+            if (!$file || !$file->isValid() || !file_exists($file->getPathname())) {
+                Log::error('Invalid or missing uploaded file', ['file' => $file]);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid file upload or corrupted file received.'
+                ], 422);
+            }
+
+            // ✅ Step 3: Prepare secure directory
+            $securePath = config('services.docs.upload_kfs_doc');
             if (!file_exists($securePath)) {
                 mkdir($securePath, 0777, true);
             }
 
-            $fileName = uniqid() . '.' . $request->file('selfie_image')->getClientOriginalExtension();
+            // ✅ Step 4: Generate unique file name and move file
+            $fileName = uniqid('selfie_') . '.' . $file->getClientOriginalExtension();
+            try {
+                $file->move($securePath, $fileName);
+            } catch (\Exception $moveErr) {
+                Log::error('File move failed', ['error' => $moveErr->getMessage()]);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Failed to save uploaded file on the server.'
+                ], 500);
+            }
 
-            $request->file('selfie_image')->move($securePath, $fileName);
-
+            // ✅ Step 5: Update or create LoanDocument record
             $loanDocument = LoanDocument::updateOrCreate(
                 ['loan_application_id' => $request->loan_application_id],
                 ['selfie_image' => $fileName]
             );
 
-            $loan = LoanApplication::where([['user_id', auth()->id()], ['id', $request->loan_application_id]])->first();
+            // ✅ Step 6: Update current/next loan step
+            $loan = LoanApplication::where([
+                ['user_id', auth()->id()],
+                ['id', $request->loan_application_id]
+            ])->first();
+
             if ($loan) {
                 $loan->current_step = 'submitselfie';
                 $loan->next_step = 'addressconfirmation';
                 $loan->save();
             }
 
+            Log::info('Selfie uploaded successfully', ['file' => $fileName, 'loan_application_id' => $request->loan_application_id]);
+
+            // ✅ Step 7: Return success response
             return response()->json([
                 'status' => true,
-                'message' => 'Loan document uploaded successfully.',
+                'message' => 'Selfie uploaded successfully.',
                 'data' => $loanDocument
-            ]);
+            ], 200);
+
         } catch (\Exception $e) {
             Log::error('Error uploading loan document', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'status' => false,
-                'message' => 'Something went wrong. Please try again later.'
+                'message' => 'Something went wrong while uploading selfie. Please try again later.',
             ], 500);
         }
     }
-
 
     public function storeAddressDetails(Request $request)
     {
@@ -424,24 +461,26 @@ class LoanApplyController extends Controller
                 return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
             }
 
-            // ✅ Determine actual salary date
             $today = now();
-            $selectedDay = (int)$request->salary_date;
+            $selectedDay = (int) $request->salary_date;
 
-            // Generate salary_date based on whether selected day is passed or upcoming
-            $salaryDate = now()->setDay($selectedDay);
+            // Step 1: create salary date for current month
+            $salaryDate = now()->startOfMonth()->addDays($selectedDay - 1);
 
-            // If selected day already passed in current month, move to next month
-            if ($salaryDate->isPast() && $salaryDate->day !== now()->day) {
+            // Step 2: if already passed, move to next month
+            if ($salaryDate->lessThanOrEqualTo($today)) {
                 $salaryDate->addMonthNoOverflow();
             }
 
-            $repayDate = $salaryDate->copy()->addDay();
-            $tenureDays = $today->diffInDays($salaryDate);
-
-            // ✅ Calculate date difference in days
+            // Step 3: check if the difference < 15 (too near), then move to next month
             $diffInDays = $today->diffInDays($salaryDate);
 
+            if ($diffInDays < 15) {
+                $salaryDate->addMonthNoOverflow();
+                $diffInDays = $today->diffInDays($salaryDate);
+            }
+
+            // Step 4: validate final difference
             if ($diffInDays < 15 || $diffInDays > 45) {
                 return response()->json([
                     'status' => false,
@@ -449,7 +488,9 @@ class LoanApplyController extends Controller
                 ], 422);
             }
 
-            
+            // Step 5: compute related dates
+            $repayDate = $salaryDate->copy()->addDay();
+            $tenureDays = $today->diffInDays($salaryDate);
 
             $employmentDetails = LoanEmploymentDetails::updateOrCreate(
                 ['loan_application_id' => $request->loan_application_id],
@@ -525,6 +566,19 @@ class LoanApplyController extends Controller
             ]);
 
             if ($validator->fails()) {
+                Log::warning('Bank details validation failed', [
+                        'user_id' => auth()->id(),
+                        'errors' => $validator->errors()->toArray(),
+                        'has_file' => $request->hasFile('bank_statement'),
+                        'file_info' => $request->hasFile('bank_statement')
+                            ? [
+                                'original_name' => $request->file('bank_statement')->getClientOriginalName(),
+                                'size' => $request->file('bank_statement')->getSize(),
+                                'mime' => $request->file('bank_statement')->getClientMimeType(),
+                            ]
+                            : 'No file received',
+                ]);
+                
                 return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
             }
 
@@ -809,7 +863,7 @@ class LoanApplyController extends Controller
                 "customer_bank_account_type" => "SAVINGS"
             ],
             "plan_details" => [
-                "plan_id" => "100000",
+                "plan_id" => "loanone22642",
                 "plan_name" => "LoanOne Repayment",
                 "plan_type" => "ON_DEMAND",
                 "plan_currency" => "INR",
@@ -818,7 +872,7 @@ class LoanApplyController extends Controller
                 "plan_max_cycles" => 10,
                 "plan_note" => "One-time charge manually triggered"
             ],
-            "subscription_id" => $request->loan_number.'-'.$cashfreeDataCount+100,
+            "subscription_id" => $request->loan_number.'-'.$cashfreeDataCount+1,
             "authorization_details" => [
             "authorization_amount" => 100,
             "authorization_amount_refund" => true,
@@ -869,7 +923,7 @@ class LoanApplyController extends Controller
 
             $cashfreeData = CashfreeEnachRequestResponse::create([
                 'subscription_id' => $request->loan_number,
-                'alt_subscription_id' => $request->loan_number.'-'.$cashfreeDataCount+100,
+                'alt_subscription_id' => $request->loan_number.'-'.$cashfreeDataCount+1,
                 'request_data' => json_encode($data),
                 'status' => 'INITIALIZED',
             ]);
