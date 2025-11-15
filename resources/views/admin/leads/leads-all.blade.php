@@ -82,6 +82,7 @@
                                 <option value="">Select Loan Type</option>
                                 <option value="complete_app_loan">Complete Application</option>
                                 <option value="approved_loan">Approved</option>
+                                <option value="approved_not_ineterested_loan">Approved (Not Interested)</option>
                                 <option value="rejected_loan">Rejected</option>
                                 <option value="disbursed_loan">Disbursed</option>
                                 <option value="closed_loan">Closed</option>

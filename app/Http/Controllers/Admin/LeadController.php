@@ -176,6 +176,60 @@ class LeadController extends Controller
                         break;
                 }
             }
+        } else if ($loanType === 'approved_not_ineterested_loan') {
+            $query->where('admin_approval_status', 'approvednotinterested');
+            if ($dateRange) {
+                switch ($dateRange) {
+                    case 'today':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereDate('updated_at', Carbon::today());
+                        });
+                        break;
+                    case 'yesterday':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereDate('updated_at', Carbon::yesterday());
+                        });
+                        break;
+                    case 'last_3_days':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('updated_at', [now()->subDays(3), now()]);
+                        });
+                        break;
+                    case 'last_7_days':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('updated_at', [now()->subDays(7), now()]);
+                        });
+                        break;
+                    case 'last_15_days':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('updated_at', [now()->subDays(15), now()]);
+                        });
+                        break;
+                    case 'current_month':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('updated_at', [
+                                Carbon::now()->startOfMonth(),
+                                Carbon::now()->endOfMonth()
+                            ]);
+                        });
+                        break;
+                    case 'previous_month':
+                        $query->whereHas('loanApproval', function ($q) {
+                            $q->whereBetween('updated_at', [
+                                Carbon::now()->subMonth()->startOfMonth(),
+                                Carbon::now()->subMonth()->endOfMonth()
+                            ]);
+                        });
+                        break;
+                    case 'custom':
+                        if ($request->get('from_date') && $request->get('to_date')) {
+                            $query->whereHas('loanApproval', function ($q) use ($request) {
+                                $q->whereBetween('updated_at', [$request->get('from_date'), $request->get('to_date')]);
+                            });
+                        }
+                        break;
+                }
+            }
         } else if ($loanType === 'rejected_loan') {
             $query->where('admin_approval_status', 'rejected');
             if ($dateRange) {
