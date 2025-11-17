@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\DigitapController;
 
 Route::post('/scoreme/webhook', [ScoreMeWebhookController::class, 'handle']);
 Route::post('/digitap/bsu/webhook', [DigitapController::class, 'callback']);
+Route::post('/digitap/bsaa/webhook', [DigitapController::class, 'aacallback']);
 Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
 Route::get('/pay/{id}', [LoanPaymentController::class, 'generatePaymentLink']);
 Route::get('/get-city/{pincode}', [LoanApplyController::class, 'getcity']);
@@ -127,7 +128,7 @@ Route::namespace('Api')->name('api.')->group(function () {
         Route::prefix('loans')->group(function () {
             Route::get('/apply', [LoanApplyController::class, 'index']); 
             Route::post('/enach', [LoanApplyController::class, 'createEnachMandate']);
-
+            Route::post('/generateurl', [LoanApplyController::class, 'generateurlForAA']);
             Route::get('/progress', [LoanApplyController::class, 'progress']); 
             
             Route::post('/update-loan-step', [LoanApplyController::class, 'updateLoanStep']); 

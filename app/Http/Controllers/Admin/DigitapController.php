@@ -13,6 +13,16 @@ use Illuminate\Support\Facades\DB;
 
 class DigitapController extends Controller
 {
+    protected $baseUrl;
+    protected $clientId;
+    protected $clientSecret;
+
+    public function __construct()
+    {
+        $this->baseUrl = config('services.digitap.base_url');
+        $this->clientId = config('services.digitap.client_id');
+        $this->clientSecret = config('services.digitap.client_secret');
+    }
 
     public function checkBSAReportByDigitap(Request $request, DigitapBankStatementService $digitap)
     {
@@ -248,5 +258,37 @@ class DigitapController extends Controller
             'message' => 'BSA Report Process Completed !!',
             'data'    => $record ?? []
         ]);
+    }
+
+    public function aacallback(Request $request, DigitapBankStatementService $digitap)
+    {
+        Log::info('Digitap AA Callback Received', $request->all());
+
+        Log::channel('webhook')->info(
+            "========== Digitap AA API Callback Response ==========\n\n" .
+            json_encode($request->all(), JSON_PRETTY_PRINT) .
+            "\n\n===================================================="
+        );
+
+        $txn_id = $request->input('txn_id');
+        $code = !empty($request->input('code')) ? $request->input('code') : 'processing';
+        $status = !empty($request->input('status')) ? $request->input('status') : 'Failed';
+        $request_id = !empty($request->input('request_id')) ? $request->input('request_id') : null;
+
+
+        if($request_id && $txn_id){
+            $digitapBankRequest = DigitapBankRequest::where(['request_id' => $request_id])
+            ->update([
+                "status" => $code,
+                "txn_id" => $txn_id,
+            ]);
+            $loanData = DigitapBankRequest::where('request_id', $request_id)->first();
+
+            $reportData = $digitap->retrieveReport($loanData);
+
+            return response()->json(['message' => 'Webhook handled OK'], 200);
+        }else{
+            return response()->json(['message' => 'Webhook Failed'], 301);
+        }
     }
 }

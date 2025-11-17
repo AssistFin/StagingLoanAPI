@@ -32,8 +32,8 @@ class DigitapBankStatementService
             'institution_id'      => $institutionId,
             'client_ref_num'      => $refNum,
             'txn_completed_cburl' => config('services.docs.app_url').'/api/digitap/bsu/webhook',
-            'start_month'         => now()->subMonths(4)->format('Y-m'),
-            'end_month'           => now()->subMonth()->format('Y-m'),
+            'start_month'         => now()->subMonths(6)->startOfMonth()->format('Y-m-d'),
+            'end_month'           => now()->format('Y-m-d'),
             'acceptance_policy'   => 'atLeastOneTransactionInRange',
             'relaxation_days'     => '2'
         ];
