@@ -16,9 +16,12 @@ use App\Models\LoanDocument;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OSReportController extends Controller
 {
+    private $excludedUserIds = ['591','592','593','594','595','697','1003','601','1379','1680'];
+
     public function index(Request $request)
     {
         $excludedUserIds = ['591','592','593','594','595','697','1003','601','1379','1680'];
@@ -704,6 +707,175 @@ class OSReportController extends Controller
         $leads = $query->paginate(25);
 
         return view('admin.osreport.cindex', compact('leads', 'usersWithKyc', 'userIdsWithKyc', 'totalRecords'));
+    
+    }
+
+    public function findex(Request $request)
+    {
+        $excludedUserIds = ['591','592','593','594','595','697','1003','601','1379','1680'];
+
+        // 📌 Step 1: handle shortcut date filter
+        $dateRange = $request->get('date_range');
+
+        if ($dateRange) {
+            switch ($dateRange) {
+                case 'today':
+                    $from = $to = Carbon::today()->toDateString();
+                    break;
+
+                case 'yesterday':
+                    $from = $to = Carbon::yesterday()->toDateString();
+                    break;
+
+                case 'last_3_days':
+                    $from = Carbon::now()->subDays(3)->toDateString();
+                    $to   = Carbon::now()->toDateString();
+                    break;
+
+                case 'last_7_days':
+                    $from = Carbon::now()->subDays(7)->toDateString();
+                    $to   = Carbon::now()->toDateString();
+                    break;
+
+                case 'last_15_days':
+                    $from = Carbon::now()->subDays(15)->toDateString();
+                    $to   = Carbon::now()->toDateString();
+                    break;
+
+                case 'current_month':
+                    $from = Carbon::now()->startOfMonth()->toDateString();
+                    $to   = Carbon::now()->endOfMonth()->toDateString();
+                    break;
+
+                case 'previous_month':
+                    $from = Carbon::now()->subMonth()->startOfMonth()->toDateString();
+                    $to   = Carbon::now()->subMonth()->endOfMonth()->toDateString();
+                    break;
+
+                case 'custom':
+                    $from = $request->from_date;
+                    $to   = $request->to_date;
+                    break;
+
+                default:
+                    $from = $to = date('Y-m-d');
+            }
+        } else {
+            // Default if nothing selected
+            $from = $request->from ?? date('Y-m-d');
+            $to   = $request->to   ?? date('Y-m-d');
+        }
+
+        $sql = "SELECT
+            dates.creation_date,
+            COALESCE(loan_applications_counts.loan_applications_count, 0) AS Leads,
+            COALESCE(pan_counts.pan_count, 0) AS PAN,
+            COALESCE(aadhaar_counts.aadhaar_count, 0) AS Aadhar,
+            COALESCE(experian_counts.experian_count, 0) AS Bureau,
+            COALESCE(loan_docs_counts.loan_documents_count, 0) AS Selfie,
+            COALESCE(loan_bank_details_counts.loan_bank_details_count, 0) AS `Bank Statement`,
+            COALESCE(loan_approvals_counts.loan_approvals_count, 0) AS Approvals,
+            COALESCE(loan_disbursals_counts.loan_disbursals_count, 0) AS Disbursed
+        FROM
+        (
+            SELECT DATE(la.created_at) AS creation_date
+            FROM staging_finovel.loan_applications la
+            UNION
+            SELECT DATE(p.created_at) AS creation_date FROM staging_finovel.pan_data p
+            UNION
+            SELECT DATE(a.created_at) AS creation_date FROM staging_finovel.aadhaar_data a
+            UNION
+            SELECT DATE(e.created_at) AS creation_date FROM staging_finovel.experian_credit_reports e
+            UNION
+            SELECT DATE(d.created_at) AS creation_date FROM staging_finovel.loan_documents d
+            UNION
+            SELECT DATE(b.created_at) AS creation_date FROM staging_finovel.loan_bank_details b
+            UNION
+            SELECT DATE(ap.created_at) AS creation_date FROM staging_finovel.loan_approvals ap
+            UNION
+            SELECT DATE(ds.created_at) AS creation_date FROM staging_finovel.loan_disbursals ds
+        ) AS dates
+        LEFT JOIN
+        (
+            SELECT DATE(created_at) AS creation_date, COUNT(*) AS loan_applications_count
+            FROM staging_finovel.loan_applications
+            WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            GROUP BY creation_date
+        ) AS loan_applications_counts ON dates.creation_date = loan_applications_counts.creation_date
+        LEFT JOIN
+        (
+            SELECT DATE(pd.created_at) AS creation_date, COUNT(*) AS pan_count
+            FROM staging_finovel.pan_data pd
+            WHERE pd.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            GROUP BY creation_date
+        ) AS pan_counts ON dates.creation_date = pan_counts.creation_date
+        LEFT JOIN
+        (
+            SELECT DATE(ad.created_at) AS creation_date, COUNT(*) AS aadhaar_count
+            FROM staging_finovel.aadhaar_data ad
+            WHERE ad.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            GROUP BY creation_date
+        ) AS aadhaar_counts ON dates.creation_date = aadhaar_counts.creation_date
+        LEFT JOIN
+        (
+            SELECT DATE(ec.created_at) AS creation_date, COUNT(*) AS experian_count
+            FROM staging_finovel.experian_credit_reports ec
+            WHERE ec.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            GROUP BY creation_date
+        ) AS experian_counts ON dates.creation_date = experian_counts.creation_date
+        LEFT JOIN
+        (
+            SELECT DATE(ld.created_at) AS creation_date, COUNT(*) AS loan_documents_count
+            FROM staging_finovel.loan_documents ld
+            WHERE ld.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            GROUP BY creation_date
+        ) AS loan_docs_counts ON dates.creation_date = loan_docs_counts.creation_date
+        LEFT JOIN
+        (
+            SELECT DATE(lbd.created_at) AS creation_date, COUNT(*) AS loan_bank_details_count
+            FROM staging_finovel.loan_bank_details lbd
+            WHERE lbd.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            GROUP BY creation_date
+        ) AS loan_bank_details_counts ON dates.creation_date = loan_bank_details_counts.creation_date
+        LEFT JOIN
+        (
+            SELECT DATE(lap.created_at) AS creation_date, COUNT(*) AS loan_approvals_count
+            FROM staging_finovel.loan_approvals lap
+            WHERE lap.final_remark = 'Approved'
+            AND lap.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            GROUP BY creation_date
+        ) AS loan_approvals_counts ON dates.creation_date = loan_approvals_counts.creation_date
+        LEFT JOIN
+        (
+            SELECT DATE(ldis.created_at) AS creation_date, COUNT(*) AS loan_disbursals_count
+            FROM staging_finovel.loan_disbursals ldis
+            WHERE ldis.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            GROUP BY creation_date
+        ) AS loan_disbursals_counts ON dates.creation_date = loan_disbursals_counts.creation_date
+        WHERE
+            dates.creation_date BETWEEN ? AND ?
+        ORDER BY
+            dates.creation_date";
+
+        $data = collect(DB::select($sql, [$from, $to]));
+
+        //$data = DB::select($sql);
+
+        // Export if clicked
+        if ($request->export == "csv") {
+            $filename = "report_" . date('YmdHis') . ".csv";
+            $handle = fopen($filename, 'w');
+
+            fputcsv($handle, array_keys((array)$data[0])); // header
+            foreach ($data as $row) {
+                fputcsv($handle, (array)$row);
+            }
+            fclose($handle);
+
+            return response()->download($filename)->deleteFileAfterSend();
+        }
+
+        return view('admin.osreport.findex', compact('data', 'from', 'to'));
     
     }
 }

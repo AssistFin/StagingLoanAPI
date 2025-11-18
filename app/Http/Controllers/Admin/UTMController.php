@@ -69,14 +69,33 @@ class UTMController extends Controller
                 'loan_approvals.cibil_score',
                 'loan_approvals.final_remark',
                 'loan_approvals.status as approval_status',
-                'loan_approvals.approval_amount'
-            ])
-            ->whereRaw('loan_applications.id = (SELECT MIN(id) FROM loan_applications WHERE loan_applications.user_id = users.id)')
+                'loan_approvals.approval_amount',
+                'loan_approvals.disbursal_amount',
+
+                DB::raw("CASE 
+                            WHEN loan_approvals.approval_amount IS NOT NULL 
+                            AND loan_disbursals.disbursal_amount IS NOT NULL 
+                            THEN loan_approvals.approval_amount
+                            ELSE ''
+                        END as loan_amount"),
+
+                'loan_disbursals.disbursal_amount'
+            ])->whereRaw('loan_applications.id = (SELECT MIN(id) FROM loan_applications WHERE loan_applications.user_id = users.id)')
             ->orderBy('utm_tracking.created_at', 'desc');
 
         // ================= Date Filter =================
         if ($dateRange) {
-            $dateColumn = ($utm_records && $utm_records === 'tca') ? 'loan_bank_details.created_at' : 'loan_applications.created_at';
+            if($utm_records && $utm_records === 'tca'){
+                $dateColumn = 'loan_bank_details.created_at';
+            } else if($utm_records && $utm_records === 'taa'){
+                $dateColumn = 'loan_approvals.updated_at';
+            }else if($utm_records && $utm_records === 'tra'){
+                $dateColumn = 'loan_approvals.updated_at';
+            }else if($utm_records && $utm_records === 'tda'){
+                $dateColumn = 'loan_disbursals.updated_at';
+            }else{
+                $dateColumn = 'loan_applications.created_at';
+            }
 
             if ($dateRange === 'today') {
                 $query->whereDate($dateColumn, now()->today());
@@ -171,7 +190,8 @@ class UTMController extends Controller
                         'Customer Name' => $utmRecord->firstname . ' ' . $utmRecord->lastname,
                         'Customer Mobile' => "'" . $utmRecord->mobile,
                         'Loan Application No' => $utmRecord->loan_no ?? '',
-                        'Loan Amount' => $utmRecord->approval_amount ?? '',
+                        'Loan Amount' => $utmRecord->loan_amount ?? '',
+                        //'Disb Amount' => $utmRecord->disbursal_amount ?? '',
                         'Employment Type' => $utmRecord->employment_type ?? '',
                         'Monthly Income' => $utmRecord->monthly_income ?? '',
                         'Income Received In' => $utmRecord->income_received_in ?? '',

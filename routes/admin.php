@@ -626,7 +626,8 @@ Route::middleware('admin')->group(function () {
         ->group(function () {
             Route::get('osreport/index', 'index')->name('index');
             Route::get('osreport/cindex', 'cindex')->name('cindex');
-    });
+            Route::get('osreport/findex', 'findex')->name('findex');
+    });     
 
     Route::controller(AdminController::class)
         ->name('admins.')
