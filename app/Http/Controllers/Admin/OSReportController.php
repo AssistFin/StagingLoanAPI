@@ -779,77 +779,77 @@ class OSReportController extends Controller
         FROM
         (
             SELECT DATE(la.created_at) AS creation_date
-            FROM staging_finovel.loan_applications la
+            FROM finovel.loan_applications la
             UNION
-            SELECT DATE(p.created_at) AS creation_date FROM staging_finovel.pan_data p
+            SELECT DATE(p.created_at) AS creation_date FROM finovel.pan_data p
             UNION
-            SELECT DATE(a.created_at) AS creation_date FROM staging_finovel.aadhaar_data a
+            SELECT DATE(a.created_at) AS creation_date FROM finovel.aadhaar_data a
             UNION
-            SELECT DATE(e.created_at) AS creation_date FROM staging_finovel.experian_credit_reports e
+            SELECT DATE(e.created_at) AS creation_date FROM finovel.experian_credit_reports e
             UNION
-            SELECT DATE(d.created_at) AS creation_date FROM staging_finovel.loan_documents d
+            SELECT DATE(d.created_at) AS creation_date FROM finovel.loan_documents d
             UNION
-            SELECT DATE(b.created_at) AS creation_date FROM staging_finovel.loan_bank_details b
+            SELECT DATE(b.created_at) AS creation_date FROM finovel.loan_bank_details b
             UNION
-            SELECT DATE(ap.created_at) AS creation_date FROM staging_finovel.loan_approvals ap
+            SELECT DATE(ap.updated_at) AS creation_date FROM finovel.loan_approvals ap
             UNION
-            SELECT DATE(ds.created_at) AS creation_date FROM staging_finovel.loan_disbursals ds
+            SELECT DATE(ds.created_at) AS creation_date FROM finovel.loan_disbursals ds
         ) AS dates
         LEFT JOIN
         (
             SELECT DATE(created_at) AS creation_date, COUNT(*) AS loan_applications_count
-            FROM staging_finovel.loan_applications
+            FROM finovel.loan_applications
             WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
             GROUP BY creation_date
         ) AS loan_applications_counts ON dates.creation_date = loan_applications_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(pd.created_at) AS creation_date, COUNT(*) AS pan_count
-            FROM staging_finovel.pan_data pd
+            FROM finovel.pan_data pd
             WHERE pd.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
             GROUP BY creation_date
         ) AS pan_counts ON dates.creation_date = pan_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(ad.created_at) AS creation_date, COUNT(*) AS aadhaar_count
-            FROM staging_finovel.aadhaar_data ad
+            FROM finovel.aadhaar_data ad
             WHERE ad.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
             GROUP BY creation_date
         ) AS aadhaar_counts ON dates.creation_date = aadhaar_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(ec.created_at) AS creation_date, COUNT(*) AS experian_count
-            FROM staging_finovel.experian_credit_reports ec
+            FROM finovel.experian_credit_reports ec
             WHERE ec.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
             GROUP BY creation_date
         ) AS experian_counts ON dates.creation_date = experian_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(ld.created_at) AS creation_date, COUNT(*) AS loan_documents_count
-            FROM staging_finovel.loan_documents ld
-            WHERE ld.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            FROM finovel.loan_documents ld
+            WHERE ld.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
             GROUP BY creation_date
         ) AS loan_docs_counts ON dates.creation_date = loan_docs_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(lbd.created_at) AS creation_date, COUNT(*) AS loan_bank_details_count
-            FROM staging_finovel.loan_bank_details lbd
-            WHERE lbd.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            FROM finovel.loan_bank_details lbd
+            WHERE lbd.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
             GROUP BY creation_date
         ) AS loan_bank_details_counts ON dates.creation_date = loan_bank_details_counts.creation_date
         LEFT JOIN
         (
-            SELECT DATE(lap.created_at) AS creation_date, COUNT(*) AS loan_approvals_count
-            FROM staging_finovel.loan_approvals lap
+            SELECT DATE(lap.updated_at) AS creation_date, COUNT(*) AS loan_approvals_count
+            FROM finovel.loan_approvals lap
             WHERE lap.final_remark = 'Approved'
-            AND lap.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            AND lap.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
             GROUP BY creation_date
         ) AS loan_approvals_counts ON dates.creation_date = loan_approvals_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(ldis.created_at) AS creation_date, COUNT(*) AS loan_disbursals_count
-            FROM staging_finovel.loan_disbursals ldis
-            WHERE ldis.loan_application_id IN (SELECT id FROM staging_finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            FROM finovel.loan_disbursals ldis
+            WHERE ldis.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
             GROUP BY creation_date
         ) AS loan_disbursals_counts ON dates.creation_date = loan_disbursals_counts.creation_date
         WHERE
