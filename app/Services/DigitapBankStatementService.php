@@ -86,7 +86,8 @@ class DigitapBankStatementService
             ];
         }
 
-        $response = Http::asMultipart()
+        $response = Http::timeout(180)                // <-- increase total timeout
+            ->connectTimeout(60)->asMultipart()
             ->post($this->baseUrl . '/uploadstmt', $multipart)
             ->json();
 
