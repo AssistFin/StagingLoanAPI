@@ -462,7 +462,7 @@ class LoanApplyController extends Controller
             if ($validator->fails()) {
                 return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
             }
-
+             
             $today = now();
             $selectedDay = (int) $request->salary_date;
 
@@ -540,7 +540,7 @@ class LoanApplyController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Employment details saved.',
-                'data' => $employmentDetails
+                'data' => $employmentDetails,
             ]);
         } catch (\Exception $e) {
             Log::error('Error storing employment details', [
@@ -563,47 +563,28 @@ class LoanApplyController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'loan_application_id' => 'required|exists:loan_applications,id',
-                'bank_name' => 'required|string',
-                'bank_statement' => 'nullable|file|mimes:pdf|max:5120',
             ]);
 
             if ($validator->fails()) {
                 Log::warning('Bank details validation failed', [
                         'user_id' => auth()->id(),
                         'errors' => $validator->errors()->toArray(),
-                        'has_file' => $request->hasFile('bank_statement'),
-                        'file_info' => $request->hasFile('bank_statement')
-                            ? [
-                                'original_name' => $request->file('bank_statement')->getClientOriginalName(),
-                                'size' => $request->file('bank_statement')->getSize(),
-                                'mime' => $request->file('bank_statement')->getClientMimeType(),
-                            ]
-                            : 'No file received',
                 ]);
                 
                 return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
             }
 
-            $data = $request->only(['loan_application_id', 'bank_name', 'bank_statement_password']);
-
-            if ($request->hasFile('bank_statement')) {
-                $securePath = config('services.docs.upload_kfs_doc');
-
-                if (!file_exists($securePath)) {
-                    mkdir($securePath, 0777, true);
-                }
-
-                $fileName = uniqid() . '.' . $request->file('bank_statement')->getClientOriginalExtension();
-                $request->file('bank_statement')->move($securePath, $fileName);
-
-                $data['bank_statement'] = $securePath . '/' . $fileName;
-            }
+            $data = $request->only(['loan_application_id']);
 
             $bankDetails = LoanBankDetails::updateOrCreate(
                 ['loan_application_id' => $request->loan_application_id],
                 $data
             );
 
+            $loan_application_id = $request->loan_application_id;
+            
+            $url = $this->generateurlForAA($loan_application_id, auth()->id());
+            //return $url;
             $loan = LoanApplication::where([
                 ['user_id', auth()->id()],
                 ['id', $request->loan_application_id]
@@ -611,14 +592,15 @@ class LoanApplyController extends Controller
 
             if ($loan) {
                 $loan->current_step = 'bankinfo';
-                $loan->next_step = 'loanstatus';
+                $loan->next_step = 'aareturnurl';
                 $loan->save();
             }
 
             return response()->json([
                 'status' => true,
                 'message' => 'Bank details saved.',
-                'data' => $bankDetails
+                'data' => $bankDetails,
+                'data2' => $url,
             ]);
         } catch (\Exception $e) {
             Log::error('Error storing bank details', [
@@ -989,15 +971,11 @@ class LoanApplyController extends Controller
         }
     }
 
-    public function generateurlForAA(Request $request)
+    public function generateurlForAA($loan_number, $user_id)
     {
-        $request->validate([
-            'loan_application_id' => 'required',
-            'user_id' => 'required',
-        ]);
 
-        $loanId = $request->loan_number;
-        $userId = $request->user_id;
+        $loanId = $loan_number;
+        $userId = $user_id;
 
         // Fetch user mobile number (assuming mobile field exists)
         $user = User::find($userId);
@@ -1015,104 +993,14 @@ class LoanApplyController extends Controller
 
         // Ensure exactly 10 digits
         $mobile = substr($mobile, -10);
-        $bank_name = $request->bank_name;
-        $stateCode = '0';
-
-        if(strtolower($bank_name) == strtolower('HDFC')){ $stateCode = '1';}
-        if(strtolower($bank_name) == strtolower('SBI')){ $stateCode = '2';}
-        if(strtolower($bank_name) == strtolower('ICICI')){ $stateCode = '3';}
-        if(strtolower($bank_name) == strtolower('Axis')){ $stateCode = '4';}
-        if(strtolower($bank_name) == strtolower('Kotak')){ $stateCode = '5';}
-        if(strtolower($bank_name) == strtolower('Andhra Bank')){ $stateCode = '6';}
-        if(strtolower($bank_name) == strtolower('IDBI')){ $stateCode = '7';}
-        if(strtolower($bank_name) == strtolower('Canara')){ $stateCode = '8';}
-        if(strtolower($bank_name) == strtolower('PNB')){ $stateCode = '9';}
-        if(strtolower($bank_name) == strtolower('Central')){ $stateCode = '10';}
-        if(strtolower($bank_name) == strtolower('Yes')){ $stateCode = '11';}
-        if(strtolower($bank_name) == strtolower('Indian')){ $stateCode = '12';}
-        if(strtolower($bank_name) == strtolower('Federal')){ $stateCode = '13';}
-        if(strtolower($bank_name) == strtolower('Citi')){ $stateCode = '14';}
-        if(strtolower($bank_name) == strtolower('BOI')){ $stateCode = '15';}
-        if(strtolower($bank_name) == strtolower('Union')){ $stateCode = '16';}
-        if(strtolower($bank_name) == strtolower('Baroda')){ $stateCode = '17';}
-        if(strtolower($bank_name) == strtolower('Dena Bank')){ $stateCode = '19';}
-        if(strtolower($bank_name) == strtolower('Vijaya Bank')){ $stateCode = '20';}
-        if(strtolower($bank_name) == strtolower('Corporation Bank')){ $stateCode = '21';}
-        if(strtolower($bank_name) == strtolower('Oriental Bank of Commerce')){ $stateCode = '22';}
-        if(strtolower($bank_name) == strtolower('United Bank of India')){ $stateCode = '23';}
-        if(strtolower($bank_name) == strtolower('Syndicate')){ $stateCode = '24';}
-        if(strtolower($bank_name) == strtolower('Standard')){ $stateCode = '25';}
-        if(strtolower($bank_name) == strtolower('Induslnd')){ $stateCode = '26';}
-        if(strtolower($bank_name) == strtolower('Allahabad Bank')){ $stateCode = '27';}
-        if(strtolower($bank_name) == strtolower('Karnataka')){ $stateCode = '28';}
-        if(strtolower($bank_name) == strtolower('IDFC')){ $stateCode = '29';}
-        if(strtolower($bank_name) == strtolower('Overseas')){ $stateCode = '30';}
-        if(strtolower($bank_name) == strtolower('Paytm')){ $stateCode = '31';}
-        if(strtolower($bank_name) == strtolower('Karur Vysya Bank')){ $stateCode = '32';}
-        if(strtolower($bank_name) == strtolower('Ujjivan')){ $stateCode = '33';}
-        if(strtolower($bank_name) == strtolower('UCO')){ $stateCode = '34';}
-        if(strtolower($bank_name) == strtolower('South')){ $stateCode = '35';}
-        if(strtolower($bank_name) == strtolower('RBL')){ $stateCode = '36';}
-        if(strtolower($bank_name) == strtolower('Fino')){ $stateCode = '37';}
-        if(strtolower($bank_name) == strtolower('Maharashtra')){ $stateCode = '38';}
-        if(strtolower($bank_name) == strtolower('AUSFB')){ $stateCode = '39';}
-        if(strtolower($bank_name) == strtolower('FincareSFB')){ $stateCode = '41';}
-        if(strtolower($bank_name) == strtolower('DBS')){ $stateCode = '42';}
-        if(strtolower($bank_name) == strtolower('Bandhan')){ $stateCode = '43';}
-        if(strtolower($bank_name) == strtolower('Municipal Bank')){ $stateCode = '44';}
-        if(strtolower($bank_name) == strtolower('UtkarshSFB')){ $stateCode = '45';}
-        if(strtolower($bank_name) == strtolower('Jana')){ $stateCode = '46';}
-        if(strtolower($bank_name) == strtolower('ESAFSFB')){ $stateCode = '47';}
-        if(strtolower($bank_name) == strtolower('Equitas')){ $stateCode = '48';}
-        if(strtolower($bank_name) == strtolower('City')){ $stateCode = '49';}
-        if(strtolower($bank_name) == strtolower('IndiaPost')){ $stateCode = '50';}
-        if(strtolower($bank_name) == strtolower('DCB')){ $stateCode = '51';}
-        if(strtolower($bank_name) == strtolower('Saraswat')){ $stateCode = '69';}
-        if(strtolower($bank_name) == strtolower('Airtel')){ $stateCode = '70';}
-        if(strtolower($bank_name) == strtolower('Tamilnad')){ $stateCode = '71';}
-        if(strtolower($bank_name) == strtolower('Rajasthan')){ $stateCode = '72';}
-        if(strtolower($bank_name) == strtolower('Abhyudaya')){ $stateCode = '73';}
-        if(strtolower($bank_name) == strtolower('Jammu')){ $stateCode = '74';}
-        if(strtolower($bank_name) == strtolower('KarnatakaG')){ $stateCode = '75';}
-        if(strtolower($bank_name) == strtolower('APGVB')){ $stateCode = '76';}
-        if(strtolower($bank_name) == strtolower('PunjabSind')){ $stateCode = '77';}
-        if(strtolower($bank_name) == strtolower('Thane Janata Sahakari Bank')){ $stateCode = '78';}
-        if(strtolower($bank_name) == strtolower('Cosmos')){ $stateCode = '79';}
-        if(strtolower($bank_name) == strtolower('CSB')){ $stateCode = '80';}
-        if(strtolower($bank_name) == strtolower('GP Parsik Bank')){ $stateCode = '81';}
-        if(strtolower($bank_name) == strtolower('Dhanlaxmi Bank')){ $stateCode = '82';}
-        if(strtolower($bank_name) == strtolower('SVC')){ $stateCode = '83';}
-        if(strtolower($bank_name) == strtolower('Telangana State Co-operative Apex Bank Ltd')){ $stateCode = '84';}
-        if(strtolower($bank_name) == strtolower('Janata Sahakari Bank Ltd')){ $stateCode = '85';}
-        if(strtolower($bank_name) == strtolower('Kalyan Janata Sahakari Bank Ltd')){ $stateCode = '86';}
-        if(strtolower($bank_name) == strtolower('kallapana awade Bank')){ $stateCode = '87';}
-        if(strtolower($bank_name) == strtolower('Sarva Haryana Gramin Bank')){ $stateCode = '88';}
-        if(strtolower($bank_name) == strtolower('Post Office Saving Bank')){ $stateCode = '89';}
-        if(strtolower($bank_name) == strtolower('Sarvodaya Commercial Co-Operactive Bank Limited')){ $stateCode = '90';}
-        if(strtolower($bank_name) == strtolower('NKGSB')){ $stateCode = '91';}
-        if(strtolower($bank_name) == strtolower('HSBC')){ $stateCode = '92';}
-        if(strtolower($bank_name) == strtolower('Tripura Gramin Bank')){ $stateCode = '98';}
-        if(strtolower($bank_name) == strtolower('Andhra Pragathi Grameena Bank')){ $stateCode = '101';}
-        if(strtolower($bank_name) == strtolower('Chhattisgarh Rajya Gramin Bank')){ $stateCode = '109';}
-        if(strtolower($bank_name) == strtolower('Kerala')){ $stateCode = '116';}
-        if(strtolower($bank_name) == strtolower('MaharashtraG')){ $stateCode = '118';}
-        if(strtolower($bank_name) == strtolower('Apna Sahakari Bank')){ $stateCode = '135';}
-        if(strtolower($bank_name) == strtolower('NorthEastSFB')){ $stateCode = '138';}
-        if(strtolower($bank_name) == strtolower('Suryoday Small Finance Bank')){ $stateCode = '139';}
-        if(strtolower($bank_name) == strtolower('Kalupur Commercial Co-operative Bank')){ $stateCode = '141';}
-        if(strtolower($bank_name) == strtolower('Jio Payments Bank Ltd')){ $stateCode = '169';}
-        if(strtolower($bank_name) == strtolower('Tumkur Grain Merchants Co-operative Bank')){ $stateCode = '277';}
-        if(strtolower($bank_name) == strtolower('Bharat Co-operative Bank')){ $stateCode = '278';}
 
         $payload = [
             'client_ref_num'            => $loanId,
             'txn_completed_cburl'       => config('services.docs.app_url').'/api/digitap/bsaa/webhook',
-            'destination'               => "accountaggregator",
+            'destination'               => "choice",
             'acceptance_policy'         => "atLeastOneTransactionInRange",
-            'return_url'                => config('services.cashfree.app_url').'loanstatus',
+            'return_url'                => config('services.cashfree.app_url').'aareturnurl',
             'mobile_num'                => $mobile,
-            'aa_vendor'                 => 'onemoney',
-            'institution_id'            => '95',
             'consent_request' => [
                 [
                 'fetch_type' => "ONETIME",
@@ -1125,9 +1013,10 @@ class LoanApplyController extends Controller
             ],
         ];
 
-        //return $payload;
+        
 
         $response = $this->httpPost('/generateurl', $payload);
+        //return $response;
         \Log::info('Digitap generateurl Payload', ['payload' => $payload]);
         \Log::info('Digitap generateurl Response', ['response' => $response]);
         if (!is_array($response) || empty($response)) {
@@ -1139,7 +1028,7 @@ class LoanApplyController extends Controller
         }
 
         DigitapBankRequest::create([
-            'customer_id'           => $request->loan_application_id,
+            'customer_id'           => $loanId,
             'request_id'            => $response['request_id'] ?? null,
             'txn_id'                => $response['txn_id'] ?? null,
             'token'                 => $response['url'] ?? null,
@@ -1147,10 +1036,7 @@ class LoanApplyController extends Controller
             'start_upload_response' => $response
         ]);
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $response,
-        ]);
+        return $response['url'] ?? null;
 
     }
 
@@ -1177,6 +1063,27 @@ class LoanApplyController extends Controller
             'status_code' => $res->status(),
             'raw'         => $res->body()
         ];
+    }
+
+    public function aauserresponse(Request $request)
+    {
+
+        $loan_application_id = $request->loan_application_id;
+        $user_id = $request->user_id;
+
+        $digitAAData = DigitapBankRequest::where('customer_id', $loan_application_id)->orderBy('id','desc')->first();
+
+        if(!empty($digitAAData) && ($digitAAData->status == 'xlsx_report_saved' || $digitAAData->status == 'json_report_saved')){
+            return response()->json([
+                'status' => true,
+                'aaData' => 'success',
+            ]);
+        }else{
+            return response()->json([
+                'status' => false,
+                'aaData' => 'error'
+            ], 404);
+        }
     }
 
 }

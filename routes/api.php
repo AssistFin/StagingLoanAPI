@@ -128,8 +128,8 @@ Route::namespace('Api')->name('api.')->group(function () {
         Route::prefix('loans')->group(function () {
             Route::get('/apply', [LoanApplyController::class, 'index']); 
             Route::post('/enach', [LoanApplyController::class, 'createEnachMandate']);
-            Route::post('/generateurl', [LoanApplyController::class, 'generateurlForAA']);
             Route::get('/progress', [LoanApplyController::class, 'progress']); 
+            Route::post('/aauserresponse', [LoanApplyController::class, 'aauserresponse']);
             
             Route::post('/update-loan-step', [LoanApplyController::class, 'updateLoanStep']); 
 

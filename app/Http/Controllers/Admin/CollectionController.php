@@ -69,6 +69,12 @@ class CollectionController extends Controller
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
+
+                     ->leftJoin('cashfree_enach_request_response_data as cerd', function($join) {
+                        $join->on('cerd.subscription_id', '=', 'la.loan_no')
+                            ->where('cerd.status', '=', 'ACTIVE');
+                    })
+
                     ->select([
                         'lap.repay_date','lap.approval_amount','lap.repayment_amount',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
@@ -78,7 +84,8 @@ class CollectionController extends Controller
                             IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
                                 (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
                                 0
-                            ) as total_dues')
+                            ) as total_dues'),
+                        'cerd.reference_id'
                     ])
                     ->where('la.id', $lead->id)
                     ->where('la.loan_closed_status', 'pending')
@@ -131,6 +138,7 @@ class CollectionController extends Controller
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
                     'Total Due' => number_format($totalDues, 0),
+                    'Cashfree Reference No' => $loans->reference_id ?? '',
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
                     'Payment Link' => $paymentLink,
@@ -302,13 +310,18 @@ class CollectionController extends Controller
                     ->leftJoin('admins as a', 'a.id', '=', 'lap.credited_by')
                     ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
                     SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
+                    ->leftJoin('cashfree_enach_request_response_data as cerd', function($join) {
+                        $join->on('cerd.subscription_id', '=', 'la.loan_no')
+                            ->where('cerd.status', '=', 'ACTIVE');
+                    })
                     ->select([
                         'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','lap.cibil_score','ld.loan_disbursal_number','ld.disbursal_date','a.name as credited_by_name',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
                         + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", ld.created_at) - IFNULL(uc.total_interest_paid, 0))
-                        + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0, (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date), 0 ) as total_dues')
+                        + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0, (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date), 0 ) as total_dues'),
+                        'cerd.reference_id'
                     ])
                     ->where('la.id', $lead->id)
                     ->where('la.loan_closed_status', 'pending')
@@ -368,6 +381,7 @@ class CollectionController extends Controller
                     'Loan Account No' => $loans->loan_disbursal_number ?? '',
                     'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
                     'Total Due' => number_format($totalDues, 0),
+                    'Cashfree Reference No' => $loans->reference_id ?? '',
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
                     'Loan Disbursal Date' => $loans->disbursal_date ?? '',
