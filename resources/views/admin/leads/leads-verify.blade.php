@@ -1313,15 +1313,15 @@
                             <thead>
                                 <tr>
                                     <th>User Name</th>
-                                    <th>Bank Statement</th>
-                                    <th>Bank Statement Password</th>
+                                    <!--th>Bank Statement</th>
+                                    <th>Bank Statement Password</th-->
                                     <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td>{{ isset($lead->user) ? $lead->user->firstname : "" }} {{ isset($lead->user) ? $lead->user->lastname : "" }}</td>
-                                    <td>@php
+                                    <!--td>@php
                                             $filename = isset($lead->bankDetails) ? basename($lead->bankDetails->bank_statement) : '';
                                         @endphp
                                         @if(isset($lead->bankDetails) && $lead->bankDetails->bank_statement)
@@ -1331,7 +1331,7 @@
                                         @else
                                             Not Provided
                                         @endif</td>
-                                    <td>{{ $lead->bankDetails->bank_statement_password ?? 'Not Provided' }}</td>
+                                    <td>{{ $lead->bankDetails->bank_statement_password ?? 'Not Provided' }}</td-->
                                     <td>
                                     <input type="hidden" id="bank_statement_filename" value="{{ isset($lead->bankDetails) && $lead->bankDetails->bank_statement ? $filename : '' }}">
                                     <input type="hidden" id="bank_statement" value="{{ isset($lead->bankDetails) && $lead->bankDetails->bank_statement ? url('/admin/secure-document/'.$filename) : '' }}">
@@ -1350,10 +1350,10 @@
                                         data-lead-id="{{ $lead->id }}" data-excel-url="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}">View Excel Report</a>
 
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'json_report_saved' && !empty($digitapBankRequestData->report_json_data))
-                                        <button class="btn btn-primary view-bsa-report" 
+                                        <!--button class="btn btn-primary view-bsa-report" 
                                                 data-id="{{ $lead->id }}" 
                                                 data-url="{{ route('admin.digitap.bsaDataShow', $lead->id) }}">View Report
-                                        </button>
+                                        </button--> Txn Not Completed
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'report_saved' && empty($digitapBankRequestData->report_json_data))
                                         <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-success">Check Status</button>
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'TxnDateRange')

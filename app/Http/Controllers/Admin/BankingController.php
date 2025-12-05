@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Response;
 use App\Models\CashfreeEnachRequestResponse;
+use Illuminate\Support\Facades\Http;
 
 class BankingController extends Controller
 {
@@ -63,6 +64,21 @@ class BankingController extends Controller
             $csvData = [];
 
             foreach ($leads as $lead) {
+
+                $accountNumber = $lead->bankDetails->account_number ?? null;
+                $ifsc = $lead->bankDetails->ifsc_code ?? null;
+                $customerName = $lead->user->firstname . ' ' . $lead->user->lastname;
+
+                // --------------------------------------------
+                // 🔍 1. CALL PENNY DROP API FOR EACH LEAD
+                // --------------------------------------------
+                $pennyResult = $this->checkPennyDrop(
+                    $accountNumber,
+                    $ifsc,
+                    $customerName,
+                    $lead->loan_no
+                );
+                //return $pennyResult;
                 // Default amount value
                 $loanAmount = $lead->loan_amount;
                 $loandate = $lead->created_at;
@@ -80,6 +96,10 @@ class BankingController extends Controller
                     'Amount' => number_format($lead->loanApproval->disbursal_amount, 2),
                     'Currency' => 'INR',
                     'Beneficiary Email ID' => $lead->user->email,
+                    'Name Matched Status' => $pennyResult['status'] ?? null,
+                    'Name Matched' => $pennyResult['data']['model']['isNameMatch'] ?? null,
+                    'Name Matched (%)' => $pennyResult['data']['model']['matchingScore'] ?? null,
+                    'PennyDrop Desc' => $pennyResult['data']['model']['desc'] ?? null,
                     'Remarks' => '',
                     'Custom Header 1' => '',
                     'Custom Header 2' => '',
@@ -112,6 +132,50 @@ class BankingController extends Controller
         $bankings = $query->paginate(25);
 
         return view('admin.banking.index', compact('bankings'));
+    }
+
+    private function checkPennyDrop($accountNumber, $ifsc, $customerName, $ref_no)
+    {
+        if (!$accountNumber || !$ifsc) {
+            return [
+                'status' => 'failed',
+                'matched' => false,
+                'api_name' => null,
+            ];
+        }
+
+        try {
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Basic ' . base64_encode(config('services.digitap.client_id'). ':' . config('services.digitap.client_secret')),
+            ])->post(('https://api.digitap.ai/penny-drop/v2/check-valid'), [
+                'accNo' => $accountNumber,
+                'ifsc' => $ifsc,
+                'benificiaryName' => $customerName,
+                'clientRefNum' => $ref_no,
+            ]);
+
+            if (!$response->successful()) {
+                return [
+                    'status' => 'failed',
+                    'data' => [],
+                ];
+            }
+
+            $data = $response->json();
+
+            return [
+                'status'  => $data['status'] ?? 'failed',
+                'data' => $data
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'status' => 'failed',
+                'data' => [],
+            ];
+        }
     }
 
 }
