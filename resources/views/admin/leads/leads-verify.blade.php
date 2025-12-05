@@ -1355,11 +1355,11 @@
                                                 data-url="{{ route('admin.digitap.bsaDataShow', $lead->id) }}">View Report
                                         </button--> Txn Not Completed
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'report_saved' && empty($digitapBankRequestData->report_json_data))
-                                        <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-success">Check Status</button>
+                                        <!--button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-success">Check Status</button--> Txn Not Completed
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'TxnDateRange')
                                         <span>No bank transactions in the expected date range.</span>
                                     @else
-                                        <button type="button" id="checkBSABtn2_{{ $lead->id }}" onclick="checkBSAScore({{ $lead->id }})" class="btn btn-danger">Check BSA Report</button>
+                                        <!--button type="button" id="checkBSABtn2_{{ $lead->id }}" onclick="checkBSAScore({{ $lead->id }})" class="btn btn-danger">Check BSA Report</button-->Txn Not Completed
                                     @endif
                                     </td>
                                 </tr>
