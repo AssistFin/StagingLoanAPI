@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Response;
 use App\Models\CashfreeEnachRequestResponse;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class BankingController extends Controller
 {
@@ -78,6 +79,13 @@ class BankingController extends Controller
                     $customerName,
                     $lead->loan_no
                 );
+                Log::channel('webhook')->info('Digitap PennyDrop Payload Received', [$accountNumber, $ifsc, $customerName, $lead->loan_no]);
+
+                Log::channel('webhook')->info(
+                    "========== Digitap PennyDrop Response ==========\n\n" .
+                    json_encode($pennyResult, JSON_PRETTY_PRINT) .
+                    "\n\n===================================================="
+                );
                 //return $pennyResult;
                 // Default amount value
                 $loanAmount = $lead->loan_amount;
@@ -96,7 +104,7 @@ class BankingController extends Controller
                     'Amount' => number_format($lead->loanApproval->disbursal_amount, 2),
                     'Currency' => 'INR',
                     'Beneficiary Email ID' => $lead->user->email,
-                    'Name Matched Status' => $pennyResult['status'] ?? null,
+                    'Name Matched Status' => $pennyResult['data']['model']['status'] ?? null,
                     'Name Matched' => $pennyResult['data']['model']['isNameMatch'] ?? null,
                     'Name Matched (%)' => $pennyResult['data']['model']['matchingScore'] ?? null,
                     'PennyDrop Desc' => $pennyResult['data']['model']['desc'] ?? null,

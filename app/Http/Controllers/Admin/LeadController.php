@@ -17,6 +17,7 @@ use App\Models\DigitapBankRequest;
 use App\Models\Underwriting;
 use App\Models\UnderwritingConfig;
 use App\Models\LoanAddressDetails;
+use App\Models\LoanBankDetails;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
@@ -881,6 +882,9 @@ class LeadController extends Controller
                 'digitapRequest:id,customer_id,status,report_json_data',
             ])
             ->where('admin_approval_status', 'pending')
+            ->whereHas('digitapRequest', function ($q) {
+                $q->where('status', 'xlsx_report_saved');
+            })
             ->where(function ($q) {
                 $q->where(function ($q1) {
                     // New user with all details filled in current (pending) loan
@@ -1060,6 +1064,9 @@ class LeadController extends Controller
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
+
+        $bankDetailsData = LoanBankDetails::where('loan_application_id', $id)->orderBy('id','desc')->first();
+
         $cfreeSubsData = $allcfreeSubData = $allcfreeSubPayReqData = [];
         if(!empty($cashfreeData)){
             $allcfreeSubData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->get();
@@ -1247,7 +1254,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData','cfreeSubsData', 'allcfreeSubData', 'allcfreeSubPayReqData'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData','cfreeSubsData', 'allcfreeSubData', 'allcfreeSubPayReqData', 'bankDetailsData'));
     }
 
     public function deleteLead($id)

@@ -1086,4 +1086,62 @@ class LoanApplyController extends Controller
         }
     }
 
+    public function aabankdetails(Request $request)
+    {
+
+        $loan_application_id = $request->loan_application_id;
+
+        $digitAAData = DigitapBankRequest::where('status', 'xlsx_report_saved')
+            ->where('customer_id', $loan_application_id)
+            ->orderBy('id','desc')->first();
+
+        if(!empty($digitAAData) && $digitAAData->status == 'xlsx_report_saved'){
+            $data = json_decode($digitAAData->report_json_data, true);
+            $resData['source_of_data'] = $data['source_of_data'] ?? null;
+            $resData['customer_name'] = $data['source_of_data'] == 'Uploaded Statements' ? $data['customer_info']['name'] : $data['banks'][0]['accounts'][0]['customer_info']['holders'][0]['name'];
+            $resData['bankName'] = $data['source_of_data'] == 'Uploaded Statements' ? $data['accounts'][0]['bank'] : $data['banks'][0]['bank'];
+            $resData['maskedAcc'] = $data['source_of_data'] == 'Uploaded Statements' ? $data['accounts'][0]['account_number'] : $data['banks'][0]['accounts'][0]['account_number'];
+            $resData['last4'] = $data['source_of_data'] == 'Uploaded Statements' ? substr($data['accounts'][0]['account_number'], -4) : substr($data['banks'][0]['accounts'][0]['account_number'], -4);
+            $resData['ifsc'] = $data['source_of_data'] == 'Uploaded Statements' ? $data['accounts'][0]['ifsc_code'] : $data['banks'][0]['accounts'][0]['ifsc_code'];
+            $resData['loan_application_id'] = $loan_application_id ?? null;
+
+            return response()->json([
+                'status' => true,
+                'data' => $resData,
+            ]);
+        }else{
+            return response()->json([
+                'status' => false,
+                'aaData' => 'error'
+            ], 404);
+        }
+    }
+
+    public function aabankdetailsSubmit(Request $request)
+    {
+
+        $loan_application_id = $request->loan_application_id;
+
+        if(!empty($loan_application_id)){
+
+            $bankDetails = LoanBankDetails::create(
+                [
+                    'loan_application_id' => $request->loan_application_id,
+                    'bank_name' => $request->bank_name,
+                    'account_number' => $request->account_number,
+                    'ifsc_code' => $request->ifsc_code,
+                    'account_holder_name' => $request->customer_name,
+                ]);
+            return response()->json([
+                'status' => true,
+                'data' => $loan_application_id,
+            ]);
+        }else{
+            return response()->json([
+                'status' => false,
+                'aaData' => 'error'
+            ], 404);
+        }
+    }
+    
 }

@@ -551,7 +551,10 @@ class OSReportController extends Controller
                             SUM(interest) as total_interest_paid,
                             SUM(penal) as total_penal_paid,
                             MAX(created_at) as last_payment_date,
-                            MAX(status) as ucstatus
+                            MAX(status) as ucstatus,
+                            discount_principal as dspr,
+                            discount_interest as dsit,
+                            discount_penal as dspl
                         FROM utr_collections
                         GROUP BY loan_application_id
                     ) as uc'), 'uc.loan_application_id', '=', 'la.id')
@@ -565,6 +568,9 @@ class OSReportController extends Controller
                         'uc.total_penal_paid',
                         'uc.last_payment_date',
                         'uc.ucstatus',
+                        'uc.dspr',
+                        'uc.dsit',
+                        'uc.dspl',
                         DB::raw("DATEDIFF('$today', ld.created_at) as days_since_disbursal"),
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) as remaining_principal'),
@@ -659,6 +665,9 @@ class OSReportController extends Controller
                     'Principal Collect.' => (!empty($loans->total_principal_paid)) ? number_format($loans->total_principal_paid, 2) : 0 ,
                     'Interest Collect.' => (!empty($loans->total_interest_paid)) ? number_format($loans->total_interest_paid, 2) : 0 ,
                     'Penal Collect.' => (!empty($loans->total_penal_paid)) ? number_format($loans->total_penal_paid, 2) : 0 ,
+                    'Principal Discount' => (!empty($loans->dspr)) ? $loans->dspr : '',
+                    'Interest Discount' => (!empty($loans->dsit)) ? $loans->dsit : '',
+                    'Penal Discount' => (!empty($loans->dspl)) ? $loans->dspl : '',
                     'Collection Tenure' => $collectionTenure,
                     'Total O/s' => $totalos,
                     'Principal O/s' => $totalprncos,
@@ -716,6 +725,7 @@ class OSReportController extends Controller
 
         // 📌 Step 1: handle shortcut date filter
         $dateRange = $request->get('date_range');
+        $userType = $request->get('user_type', 'new'); // default new
 
         if ($dateRange) {
             switch ($dateRange) {
@@ -766,6 +776,29 @@ class OSReportController extends Controller
             $to   = $request->to   ?? date('Y-m-d');
         }
 
+        // get all users who applied before the selected date range
+        $existingUsersSQL = "
+            SELECT DISTINCT user_id 
+            FROM finovel.loan_applications 
+            WHERE created_at < '{$from} 00:00:00'
+        ";
+
+        if ($userType == 'new') {
+
+            $userFilter = "AND user_id NOT IN ($existingUsersSQL)";
+            $userFilterGeneric = "AND user_id NOT IN ($existingUsersSQL)";
+
+        } elseif ($userType == 'existing') {
+
+            $userFilter = "AND user_id IN ($existingUsersSQL)";
+            $userFilterGeneric = "AND user_id IN ($existingUsersSQL)";
+
+        } else {
+
+            $userFilter = "";
+            $userFilterGeneric = "";
+        }
+
         $sql = "SELECT
             dates.creation_date,
             COALESCE(loan_applications_counts.loan_applications_count, 0) AS Leads,
@@ -800,6 +833,7 @@ class OSReportController extends Controller
             SELECT DATE(created_at) AS creation_date, COUNT(*) AS loan_applications_count
             FROM finovel.loan_applications
             WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilter
             GROUP BY creation_date
         ) AS loan_applications_counts ON dates.creation_date = loan_applications_counts.creation_date
         LEFT JOIN
@@ -807,6 +841,7 @@ class OSReportController extends Controller
             SELECT DATE(pd.created_at) AS creation_date, COUNT(*) AS pan_count
             FROM finovel.pan_data pd
             WHERE pd.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilterGeneric
             GROUP BY creation_date
         ) AS pan_counts ON dates.creation_date = pan_counts.creation_date
         LEFT JOIN
@@ -814,6 +849,7 @@ class OSReportController extends Controller
             SELECT DATE(ad.created_at) AS creation_date, COUNT(*) AS aadhaar_count
             FROM finovel.aadhaar_data ad
             WHERE ad.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilterGeneric
             GROUP BY creation_date
         ) AS aadhaar_counts ON dates.creation_date = aadhaar_counts.creation_date
         LEFT JOIN
@@ -821,20 +857,23 @@ class OSReportController extends Controller
             SELECT DATE(ec.created_at) AS creation_date, COUNT(*) AS experian_count
             FROM finovel.experian_credit_reports ec
             WHERE ec.user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilterGeneric
             GROUP BY creation_date
         ) AS experian_counts ON dates.creation_date = experian_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(ld.created_at) AS creation_date, COUNT(*) AS loan_documents_count
             FROM finovel.loan_documents ld
-            WHERE ld.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            WHERE ld.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilter )
             GROUP BY creation_date
         ) AS loan_docs_counts ON dates.creation_date = loan_docs_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(lbd.created_at) AS creation_date, COUNT(*) AS loan_bank_details_count
             FROM finovel.loan_bank_details lbd
-            WHERE lbd.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            WHERE lbd.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilter )
             GROUP BY creation_date
         ) AS loan_bank_details_counts ON dates.creation_date = loan_bank_details_counts.creation_date
         LEFT JOIN
@@ -842,14 +881,16 @@ class OSReportController extends Controller
             SELECT DATE(lap.updated_at) AS creation_date, COUNT(*) AS loan_approvals_count
             FROM finovel.loan_approvals lap
             WHERE lap.final_remark = 'Approved'
-            AND lap.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            AND lap.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilter )
             GROUP BY creation_date
         ) AS loan_approvals_counts ON dates.creation_date = loan_approvals_counts.creation_date
         LEFT JOIN
         (
             SELECT DATE(ldis.created_at) AS creation_date, COUNT(*) AS loan_disbursals_count
             FROM finovel.loan_disbursals ldis
-            WHERE ldis.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . "))
+            WHERE ldis.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilter )
             GROUP BY creation_date
         ) AS loan_disbursals_counts ON dates.creation_date = loan_disbursals_counts.creation_date
         WHERE

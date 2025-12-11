@@ -130,6 +130,8 @@ Route::namespace('Api')->name('api.')->group(function () {
             Route::post('/enach', [LoanApplyController::class, 'createEnachMandate']);
             Route::get('/progress', [LoanApplyController::class, 'progress']); 
             Route::post('/aauserresponse', [LoanApplyController::class, 'aauserresponse']);
+            Route::post('/get-bank-from-aa', [LoanApplyController::class, 'aabankdetails']);
+            Route::post('/submit-aa-bank-details', [LoanApplyController::class, 'aabankdetailsSubmit']);
             
             Route::post('/update-loan-step', [LoanApplyController::class, 'updateLoanStep']); 
 

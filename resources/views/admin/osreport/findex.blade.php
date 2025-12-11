@@ -77,6 +77,13 @@
                                 <option value="custom">Custom Range</option>
                             </select>
 
+                            <select name="user_type" class="form-control">
+                                <option value="new" {{ request('user_type','new')=='new' ? 'selected':'' }}>New Customers</option>
+                                <option value="existing" {{ request('user_type')=='existing' ? 'selected':'' }}>Existing Customers</option>
+                                <option value="all" {{ request('user_type')=='all' ? 'selected':'' }}>All Customers</option>
+                            </select>
+
+
                             <button type="button" id="report_export" class="btn btn-primary form-control">Export CSV</button>
                         </div>
 
@@ -150,6 +157,7 @@
         const dateRange = $('#date_range').val();
         const fromDate = $('#from_date').val();
         const toDate = $('#to_date').val();
+        const user_type = $('#user_type').val();
 
         $.ajax({
             url: "{{ route('admin.osreport.findex') }}",
@@ -159,6 +167,7 @@
                 date_range: dateRange,
                 from_date: fromDate,
                 to_date: toDate,
+                user_type:user_type,
             },
             success: function(response) {
                 $('#reportsTable').html($(response).find('#reportsTable').html());
@@ -167,7 +176,7 @@
     }
 
     $(document).ready(function () {
-        $('#date_range, #loan_type, #customer_type').on('change', () => fetchReports());
+        $('#date_range, #loan_type, #user_type').on('change', () => fetchReports());
 
         $('#date_range').on('change', function () {
             // Initialize datepickers but don't show them immediately
@@ -222,6 +231,7 @@
                 date_range: $('#date_range').val(),
                 from_date: $('#from_date').val(),
                 to_date: $('#to_date').val(),
+                user_type: $('#user_type').val(),
                 export: 'csv'
             };
             const query = $.param(params);
