@@ -692,12 +692,12 @@
                                 <span class="error-message text-danger"></span>
                             </div>
                             <!-- Bank Acc No -->
-                             @php
-                                $allowedRoles = ['Admin', 'Superadmin', 'Sub Admin', 'Chief Technical Officer'];
-                                $user = auth('admin')->user();
+                            {{--@php
+                                //$allowedRoles = ['Admin', 'Superadmin', 'Sub Admin', 'Chief Technical Officer'];
+                                //$user = auth('admin')->user();
                                 //dd(auth('admin'));
                             @endphp
-                            @if($user && $user->roles()->whereIn('name', $allowedRoles)->exists())
+                            @if($user && $user->roles()->whereIn('name', $allowedRoles)->exists()) --}}
                             <div class="col-md-6">
                                 <label for="bank_acc_no" class="form-label">Bank Account No</label>
                                 <input type="number" class="form-control" id="bank_acc_no" name="bank_acc_no" step="0.01" value="{{ $bankDetailsData->account_number ?? '' }}">
@@ -792,7 +792,7 @@
                                     </select>
                                 <span class="error-message text-danger"></span>
                             </div>
-                            @endif
+                            {{-- @endif --}}
                             {{-- @if(isset($loanApproval) && !$loanApproval->status == "2")
                                 
                             @endif --}}

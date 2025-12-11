@@ -20,18 +20,11 @@
             <div class="card b-radius--10 ">
                 <div class="card-body">
                     <div class="d-flex justify-content-end mb-3">
-                        <button type="button" id="penny_drop" class="btn btn-success form-control" style="width: fit-content;">
-                            <span class="btn-text">Penny Drop</span>
-                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                        </button>
-                        &nbsp;&nbsp;&nbsp;&nbsp;
                         <input type="text" id="d-disbursed-search-input" class="form-control" 
                             placeholder="Search by Name / Mobile No / Loan App No / Email..." 
                             style="max-width: 400px;">
                             &nbsp;&nbsp;&nbsp;&nbsp;
-                            <button type="button" id="all_disbursal_export" class="btn btn-danger form-control" style="width: fit-content;" readonly>Export CSV</button>
-                            &nbsp;&nbsp;&nbsp;&nbsp;
-                            <button type="button" id="all_disbursal_export" class="btn btn-primary form-control" style="width: fit-content;" readonly>Export CSV</button>
+                            <button type="button" id="all_disbursal_export" class="btn btn-primary form-control" style="width: fit-content;">Export CSV</button>
                     </div>
                     <div class="table-responsive--md  table-responsive">
                         <table class="table table--light style--two">
@@ -149,64 +142,6 @@
             };
             const query = $.param(params);
             window.location.href = "{{ route('admin.banking.index') }}?" + query;
-        });
-    });
-</script>
-<script>
-    let previousLoanIds = []; // store last batch of IDs
-
-    $(document).ready(function () {
-
-        $('#penny_drop').on('click', function () {
-            const $btn = $(this);
-            const $btnText = $btn.find('.btn-text');
-            const $spinner = $btn.find('.spinner-border');
-
-            // Disable button and show processing state
-            $btn.prop('disabled', true);
-            $btnText.text('Processing...');
-            $spinner.removeClass('d-none');
-
-            // Collect all loan IDs from the table
-            const loanIds = [];
-            $('#dDisbursedTable tr').each(function() {
-                const loanNo = $(this).find('td:nth-child(2)').text().trim();
-                if (loanNo) loanIds.push(loanNo);
-            });
-
-            // Send to controller
-            $.ajax({
-                url: "{{ route('admin.banking.pennyDrop') }}", // create this route in your web.php
-                method: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    loan_ids: loanIds
-                },
-                success: function (response) {
-                    // Example: response.new_loan_ids = array of loan IDs after processing
-                    const newLoanIds = response.new_loan_ids || [];
-
-                    // Check if new IDs are different from previous
-                    const isNewData = JSON.stringify(previousLoanIds) !== JSON.stringify(newLoanIds);
-
-                    if (isNewData) {
-                        previousLoanIds = newLoanIds;
-                        $btn.prop('disabled', false);
-                        $btnText.text('Penny Drop');
-                    } else {
-                        $btn.prop('disabled', true);
-                        $btnText.text('No New Loans');
-                    }
-                },
-                error: function (xhr) {
-                    console.error(xhr.responseText);
-                    $btn.prop('disabled', false);
-                    $btnText.text('Retry Penny Drop');
-                },
-                complete: function () {
-                    $spinner.addClass('d-none');
-                }
-            });
         });
     });
     </script>

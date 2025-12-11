@@ -74,12 +74,12 @@ class BankingController extends Controller
                 // 🔍 1. CALL PENNY DROP API FOR EACH LEAD
                 // --------------------------------------------
                 $pennyResult = $this->checkPennyDrop(
-                    $accountNumber,
+                    ltrim($accountNumber, '0'),
                     $ifsc,
                     $customerName,
                     $lead->loan_no
                 );
-                Log::channel('webhook')->info('Digitap PennyDrop Payload Received', [$accountNumber, $ifsc, $customerName, $lead->loan_no]);
+                Log::channel('webhook')->info('Digitap PennyDrop Payload Received', [ltrim($accountNumber,'0'), $ifsc, $customerName, $lead->loan_no]);
 
                 Log::channel('webhook')->info(
                     "========== Digitap PennyDrop Response ==========\n\n" .
