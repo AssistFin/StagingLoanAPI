@@ -692,7 +692,7 @@ class LoanApplyController extends Controller
 
         $cashfreeExistingActiveDataStatus = 0;
 
-        $bankDetails = LoanBankDetails::where('loan_application_id', $request->loan_application_id)->first();
+        $bankDetails = LoanBankDetails::where('loan_application_id', $request->loan_application_id)->orderBy('id','desc')->first();
 
         $cashfreeExistingActiveData = CashfreeEnachRequestResponse::where('subscription_id', $request->loan_number)->where('reference_id', '!=', '')->where('status', 'INACTIVE')->orderBy('id','desc')->get();
 
@@ -830,7 +830,7 @@ class LoanApplyController extends Controller
         }
 
         $user = User::where('id', $request->user_id)->first();
-        $bankDetails = LoanBankDetails::where('loan_application_id', $request->loan_application_id)->first();
+        $bankDetails = LoanBankDetails::where('loan_application_id', $request->loan_application_id)->orderBy('id','desc')->first();
 
         $url = config('services.cashfree.base_url') . '/pg/subscriptions';
 
@@ -998,7 +998,7 @@ class LoanApplyController extends Controller
             'client_ref_num'            => $loanId,
             'txn_completed_cburl'       => config('services.docs.app_url').'/api/digitap/bsaa/webhook',
             'destination'               => "choice",
-            'acceptance_policy'         => "atLeastOneTransactionInRange",
+            'acceptance_policy'         => "atLeastOneTransactionPerMonthInRange",
             'return_url'                => config('services.cashfree.app_url').'aareturnurl',
             'mobile_num'                => $mobile,
             'consent_request' => [

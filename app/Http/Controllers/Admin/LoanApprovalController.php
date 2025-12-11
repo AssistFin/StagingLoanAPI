@@ -60,8 +60,8 @@ class LoanApprovalController extends Controller
             'processing_fee_amount' => 0,
             'gst' => 0,
             'gst_amount' => 0,
-            'cibil_score' => "",
-            'monthly_income' => 0,
+            'cibil_score' => $request->cibil_score ?? '0',
+            'monthly_income' => $request->monthly_income ?? '0',
             'kfs_path' => "",
             'loan_purpose' => "",
         ];

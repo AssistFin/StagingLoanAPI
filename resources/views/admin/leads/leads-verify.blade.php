@@ -862,13 +862,13 @@
                     
                             <div class="col-md-6">
                                 <label>Customer Account No</label>
-                                <input type="text" name="account_no" class="form-control" required value="{{ $lead->bankDetails->account_number ?? '' }}" readonly>
+                                <input type="text" name="account_no" class="form-control" required value="{{ $bankDetailsData->account_number ?? '' }}" readonly>
                                 <span class="error-message text-danger"></span>
                             </div>
                     
                             <div class="col-md-6">
                                 <label>IFSC Code</label>
-                                <input type="text" name="ifsc" class="form-control" required value="{{ $lead->bankDetails->ifsc_code ?? '' }}" readonly>
+                                <input type="text" name="ifsc" class="form-control" required value="{{ $bankDetailsData->ifsc_code ?? '' }}" readonly>
                                 <span class="error-message text-danger"></span>
                             </div>
                     

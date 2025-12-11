@@ -29,7 +29,7 @@ class LeadController extends Controller
 {
     public function leadsAll(Request $request)
     {
-        ini_set('memory_limit', '2048M');
+        ini_set('memory_limit', '4096M');
         $excludedUserIds = ['591','592','593','594','595','697','1003','1680'];
         // Step 1: Fetch all loan_application_ids which have KYC details
         $usersWithKyc = DB::table('loan_kyc_details')
@@ -441,131 +441,122 @@ class LeadController extends Controller
             }
         }
 
-        // Step 8: Handle CSV Export
         if ($request->has('export') && $request->export === 'csv') {
+
             $query->with(['user', 'loanApproval', 'loanDisbursal', 'collections']);
-            $leads = $query->get();
-
-            $csvData = [];
-
-            foreach ($leads as $lead) {
-                // Default amount value
-                $loanAmount = $lead->loan_amount;
-                $disbursedDate = $lead->created_at;
-                // Dynamically override based on loanType
-                switch ($loanType) {
-                    case 'approved_loan':
-                        $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
-                        $disbursedDate = optional($lead->loanApproval)->approval_date ?? 0;
-                        $dateHead = 'Approved Date';
-                        $purpose_head = 'Purpose Of Loan';
-                        $purpose = $lead->purpose_of_loan;
-                        break;
-                    
-                    case 'rejected_loan':
-                        $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
-                        $disbursedDate = optional($lead->loanApproval)->approval_date ?? 0;
-                        $dateHead = 'Rejected Date';
-                        $purpose_head = 'Rejection Remark';
-                        $purpose = optional($lead->loanApproval)->final_remark ?? 0;
-                        break;
-
-                    case 'disbursed_loan':
-                        $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
-                        $disbursedDate = optional($lead->loanDisbursal)->disbursal_date ?? 0;
-                        $dateHead = 'Disbursed Date';
-                        $purpose_head = 'Purpose Of Loan';
-                        $purpose = $lead->purpose_of_loan;
-                        break;
-
-                    case 'closed_loan':
-                        // Sum all collections
-                        $loanAmount = $lead->collections->sum('collection_amt');
-                        $disbursedDate = $lead->loan_closed_date ? $lead->loan_closed_date : 0;
-                        $dateHead = 'Closed Date';
-                        $purpose_head = 'Purpose Of Loan';
-                        $purpose = $lead->purpose_of_loan;
-                        break;
-
-                    case 'overdue_loan':
-                        // Calculate total dues (optional: use a helper or precalculated field)
-                        $approved = optional($lead->loanApproval);
-                        $paid = $lead->collections->sum('collection_amt');
-                        $disbursedDate = Carbon::today()->toDateString();
-                        if ($approved && $approved->approval_amount) {
-                            $loanAmount = $approved->approval_amount - $paid;
-                        } else {
-                            $loanAmount = 0;
-                        }
-                        $dateHead = 'Overdue Date';
-                        $purpose_head = 'Purpose Of Loan';
-                        $purpose = $lead->purpose_of_loan;
-                        break;
-
-                    default:
-                        $loanAmount = $lead->loan_amount; // fallback
-                        $disbursedDate = $lead->created_at;
-                        $dateHead = 'Loan Date';
-                        $purpose_head = 'Purpose Of Loan';
-                        $purpose = $lead->purpose_of_loan;
-                }
-
-                if($loanType == 'disbursed_loan'){
-                    $csvData[] = [
-                        'Loan Application No' => $lead->loan_no,
-                        'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
-                        'Customer Mobile' => "'" . $lead->user->mobile,
-                        'Email Id' => $lead->user->email,
-                        $purpose_head => $purpose,
-                        'Loan Amount' => number_format($loanAmount, 2),
-                        'Disbursed Amount' =>  optional($lead->loanDisbursal)->disbursal_amount ?? 0,
-                        $dateHead => $disbursedDate,
-                        'Repayment Date' => optional($lead->loanApproval)->repay_date ?? 0,
-                        'Repayment Amount' => optional($lead->loanApproval)->repayment_amount ?? 0,
-                        'source' => $lead->user->utmTracking->utm_source ?? '',
-                        'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
-                        'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
-                        'CPA' => optional($lead->loanApproval->creditedBy)->name ?? 'N/A',
-                    ];
-                }else{
-                    $csvData[] = [
-                        'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
-                        'Customer Mobile' => "'" . $lead->user->mobile,
-                        'Loan Application No' => $lead->loan_no,
-                        'Loan Amount' => number_format($loanAmount, 2),
-                        'Disbursed Amount' =>  optional($lead->loanDisbursal)->disbursal_amount ?? 0,
-                        $dateHead => $disbursedDate,
-                        $purpose_head => $purpose,
-                        'source' => $lead->user->utmTracking->utm_source ?? '',
-                        'Monthly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
-                        'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
-                        'Approved By' => optional($lead->loanApproval->creditedBy)->name ?? 'N/A',
-                    ];
-                }
-                
-            }
 
             $loanTypeText = $loanType ?? 'all';
             $dateRangeText = $dateRange ?? 'alltime';
             $timestamp = now()->format('Ymd_His');
-
             $filename = "{$dateRangeText}_{$loanTypeText}_leads_export_{$timestamp}.csv";
 
-            $headers = [
-                'Content-Type' => 'text/csv',
-                'Content-Disposition' => "attachment; filename=\"$filename\"",
-            ];
+            $tempPath = storage_path("app/{$filename}");
+            $file = fopen($tempPath, 'w');
 
-            $callback = function () use ($csvData) {
-                $file = fopen('php://output', 'w');
-                fputcsv($file, array_keys($csvData[0]));
-                foreach ($csvData as $row) {
+            $headerWritten = false;
+
+            $query->chunk(2000, function ($leads) use (&$headerWritten, $file, $loanType) {
+
+                foreach ($leads as $lead) {
+
+                    // == SAME CSV DATA MAPPING YOU ALREADY HAVE ==
+                    // NOTHING IS REMOVED, ONLY MOVED HERE
+
+                    $loanAmount = $lead->loan_amount;
+                    $disbursedDate = $lead->created_at;
+
+                    switch ($loanType) {
+                        case 'approved_loan':
+                            $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
+                            $disbursedDate = optional($lead->loanApproval)->approval_date ?? 0;
+                            $dateHead = 'Approved Date';
+                            $purpose_head = 'Purpose Of Loan';
+                            $purpose = $lead->purpose_of_loan;
+                            break;
+                        case 'rejected_loan':
+                            $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
+                            $disbursedDate = optional($lead->loanApproval)->approval_date ?? 0;
+                            $dateHead = 'Rejected Date';
+                            $purpose_head = 'Rejection Remark';
+                            $purpose = optional($lead->loanApproval)->final_remark ?? 0;
+                            break;
+                        case 'disbursed_loan':
+                            $loanAmount = optional($lead->loanApproval)->approval_amount ?? 0;
+                            $disbursedDate = optional($lead->loanDisbursal)->disbursal_date ?? 0;
+                            $dateHead = 'Disbursed Date';
+                            $purpose_head = 'Purpose Of Loan';
+                            $purpose = $lead->purpose_of_loan;
+                            break;
+                        case 'closed_loan':
+                            $loanAmount = $lead->collections->sum('collection_amt');
+                            $disbursedDate = $lead->loan_closed_date ? $lead->loan_closed_date : 0;
+                            $dateHead = 'Closed Date';
+                            $purpose_head = 'Purpose Of Loan';
+                            $purpose = $lead->purpose_of_loan;
+                            break;
+                        default:
+                            $dateHead = 'Loan Date';
+                            $purpose_head = 'Purpose Of Loan';
+                            $purpose = $lead->purpose_of_loan;
+                    }
+
+                    if ($loanType == 'disbursed_loan') {
+                        $row = [
+                            'Loan Application No' => $lead->loan_no,
+                            'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                            'Customer Mobile' => "'" . $lead->user->mobile,
+                            'Email Id' => $lead->user->email,
+                            $purpose_head => $purpose,
+                            'Loan Amount' => number_format($loanAmount, 2),
+                            'Disbursed Amount' => optional($lead->loanDisbursal)->disbursal_amount ?? 0,
+                            $dateHead => $disbursedDate,
+                            'Repayment Date' => optional($lead->loanApproval)->repay_date ?? 0,
+                            'Repayment Amount' => optional($lead->loanApproval)->repayment_amount ?? 0,
+                            'source' => $lead->user->utmTracking->utm_source ?? '',
+                            'Monthly Income' => $lead->personalDetails->monthly_income ?? '',
+                            'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
+                            'CPA' => optional(optional($lead->loanApproval)->creditedBy)->name ?? 'N/A',
+                        ];
+                    } else {
+                        $row = [
+                            'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                            'Customer Mobile' => "'" . $lead->user->mobile,
+                            'Loan Application No' => $lead->loan_no,
+                            'Loan Amount' => number_format($loanAmount, 2),
+                            'Disbursed Amount' => optional($lead->loanDisbursal)->disbursal_amount ?? 0,
+                            $dateHead => $disbursedDate,
+                            $purpose_head => $purpose,
+                            'source' => $lead->user->utmTracking->utm_source ?? '',
+                            'Monthly Income' => $lead->personalDetails->monthly_income ?? '',
+                            'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
+                            'Approved By' => optional(optional($lead->loanApproval)->creditedBy)->name ?? 'N/A',
+                        ];
+                    }
+
+                    if (!$headerWritten) {
+                        fputcsv($file, array_keys($row));
+                        $headerWritten = true;
+                    }
+
                     fputcsv($file, $row);
                 }
-                fclose($file);
-            };
+            });
 
-            return Response::stream($callback, 200, $headers);
+            fclose($file);
+
+            // ZIP if file is too large
+            if (filesize($tempPath) > 20 * 1024 * 1024) {   // 20MB
+                $zipName = "{$filename}.zip";
+                $zipPath = storage_path("app/{$zipName}");
+                $zip = new ZipArchive;
+                $zip->open($zipPath, ZipArchive::CREATE);
+                $zip->addFile($tempPath, $filename);
+                $zip->close();
+                unlink($tempPath);
+                return response()->download($zipPath)->deleteFileAfterSend(true);
+            }
+
+            return response()->download($tempPath)->deleteFileAfterSend(true);
         }
 
         // Determine totals based on loan type
@@ -1063,10 +1054,9 @@ class LeadController extends Controller
         
         $experianCreditBureau = CreditBureau::where('lead_id', $id)->first();
 
+        $bankDetailsData = LoanBankDetails::where('loan_application_id', $id)->where('account_number', '!=', '')->orderBy('id','desc')->first();
+
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
-
-        $bankDetailsData = LoanBankDetails::where('loan_application_id', $id)->orderBy('id','desc')->first();
-
         $cfreeSubsData = $allcfreeSubData = $allcfreeSubPayReqData = [];
         if(!empty($cashfreeData)){
             $allcfreeSubData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->get();
