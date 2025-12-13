@@ -192,6 +192,72 @@ class LoanApplyController extends Controller
                 $request->all()
             );
 
+            $shouldReject = strtolower($request->employment_type) === 'self-employed' || $request->monthly_income < 25000 || strtolower($request->income_received_in) !== 'account';
+
+            if ($shouldReject) {
+                $data = [
+                    'loan_application_id' => $request->loan_application_id,
+                    'user_id' => auth()->id(),
+                    'loan_number' => $request->loan_number,
+                    'credited_by' => '1',
+                    'status' => 2, 
+                    'reject_reason' => 'Eligibility criteria not met',
+                    'final_remark' => 'rejected',
+                    'additional_remark' => 'Rejected due to eligibility criteria',
+                    'approval_date' => now(),
+                    'loan_type' => "",
+                    'branch' => "",
+                    'approval_amount' => 0,
+                    'repayment_amount' => 0,
+                    'disbursal_amount' => 0,
+                    'loan_tenure' => "",
+                    'tentative_disbursal_date' => "",
+                    'loan_tenure_days' => 0,
+                    'loan_tenure_date' => "",
+                    'roi' => 0,
+                    'salary_date' => "",
+                    'repay_date' => "",
+                    'processing_fee' => 0,
+                    'processing_fee_amount' => 0,
+                    'gst' => 0,
+                    'gst_amount' => 0,
+                    'cibil_score' => '0',
+                    'monthly_income' => $request->monthly_income ?? '0',
+                    'kfs_path' => "",
+                    'loan_purpose' => "",
+                ];
+
+                $loanApproval = LoanApproval::updateOrCreate([
+                    'loan_application_id' => $request->loan_application_id,
+                    'user_id' => auth()->id()
+                ],$data);
+
+                // Update loan as rejected
+                $loan = LoanApplication::where([
+                    ['user_id', auth()->id()],
+                    ['id', $request->loan_application_id]
+                ])->first();
+
+                if ($loan) {
+                    $loan->current_step = 'loanstatus';
+                    $loan->next_step = 'noteligible';
+                    $loan->admin_approval_status = "rejected";
+                    $loan->admin_approval_date = now();
+                    $loan->save();
+                }
+
+                Log::info('Loan auto rejected due to eligibility rules', [
+                    'employment_type' => $request->employment_type,
+                    'monthly_income' => $request->monthly_income,
+                    'income_received_in' => $request->income_received_in,
+                ]);
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Sorry, you are not eligible for this loan, eligibility criteria not met !!'
+                ], 200);
+            }
+
             $loan = LoanApplication::where([['user_id', auth()->id()], ['id', $request->loan_application_id]])->first();
 
             if ($loan) {
@@ -199,6 +265,8 @@ class LoanApplyController extends Controller
                 $loan->next_step = 'completekyc';
                 $loan->save();
             }
+
+
 
             if ($loan) {
                 $recentClosedLoan = LoanApplication::where('user_id', auth()->id())
@@ -1001,12 +1069,15 @@ class LoanApplyController extends Controller
             'acceptance_policy'         => "atLeastOneTransactionPerMonthInRange",
             'return_url'                => config('services.cashfree.app_url').'aareturnurl',
             'mobile_num'                => $mobile,
+            "start_month" => now()->subMonths(3)->startOfMonth()->format('Y-m'),
+            "end_month" => now()->format('Y-m'),
+            "relaxation_days" => "1",
             'consent_request' => [
                 [
                 'fetch_type' => "ONETIME",
                     "fi_types"=> ["DEPOSIT"],
                     "fi_date_range"=> [
-                        "start_date"=> now()->subMonths(6)->startOfMonth()->format('Y-m-d'),
+                        "start_date"=> now()->subMonths(3)->startOfMonth()->format('Y-m-d'),
                         "end_date"=> now()->format('Y-m-d'),
                     ],
                 ],

@@ -439,7 +439,7 @@
                 Altura Financial Services Limited<br>
                 Ground Floor Plot No-121, Block-B, Pocket-4, Sector-23, Dwarka, New Delhi- 110077<br>
                 Email: grievance@alturafinancials.com<br>
-                Contact: 770084054
+                Contact: 7700840543
             </li>
         </ol>
 
