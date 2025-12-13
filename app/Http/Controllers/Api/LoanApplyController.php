@@ -198,7 +198,7 @@ class LoanApplyController extends Controller
                 $data = [
                     'loan_application_id' => $request->loan_application_id,
                     'user_id' => auth()->id(),
-                    'loan_number' => $request->loan_number,
+                    'loan_number' => $request->loan_application_id,
                     'credited_by' => '1',
                     'status' => 2, 
                     'reject_reason' => 'Eligibility criteria not met',
@@ -253,8 +253,9 @@ class LoanApplyController extends Controller
                 ]);
 
                 return response()->json([
-                    'status' => false,
-                    'message' => 'Sorry, you are not eligible for this loan, eligibility criteria not met !!'
+                    'status' => true,
+                    'message' => 'Sorry, you are not eligible for this loan, eligibility criteria not met !!',
+                    'data' => $personalDetails
                 ], 200);
             }
 
@@ -265,8 +266,6 @@ class LoanApplyController extends Controller
                 $loan->next_step = 'completekyc';
                 $loan->save();
             }
-
-
 
             if ($loan) {
                 $recentClosedLoan = LoanApplication::where('user_id', auth()->id())
