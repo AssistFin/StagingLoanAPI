@@ -7,11 +7,13 @@ use Illuminate\Http\Request;
 use App\Models\LoanApplication;
 use App\Models\LoanBankDetails;
 use App\Models\CashfreeEnachRequestResponse;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 
 class LoanApprovalController extends Controller
 {
@@ -91,6 +93,31 @@ class LoanApprovalController extends Controller
         
         if ($adminData) {
             eventLog($adminData->id, $request->user_id, 'Loan Approval - rejected', json_encode($request->all()));
+        }
+
+        $user = User::where('id', $request->user_id)->first();
+        // Equence credentials
+        $username = config('services.equence.send_sms_user');
+        $password = config('services.equence.send_sms_pass');
+        $senderId = config('services.equence.send_sms_from');
+        $mobileWithCountryCode = $user->mobile;
+        $text = "Dear User, your loan application (Ref ID: {$request->loan_number}) has been rejected based on eligibility norms. You may apply again in the future. Thanks, LoanOne";
+
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post(config('services.equence.send_sms_url'), [
+                'username' => $username,
+                'password' => $password,
+                'to' => $mobileWithCountryCode,
+                'from' => $senderId,
+                'text' => $text,
+            ]);
+
+            // dd($response->json(), $text);
+            Log::info("Equence SMS For loan rejection Response : ", $response->json());
+        } catch (\Exception $e) {
+            Log::error("Failed to send OTP For loan rejection via Equence: " . $e->getMessage());
         }
 
         return redirect()->back()->with('success', 'Loan has been rejected successfully');
@@ -443,6 +470,32 @@ class LoanApprovalController extends Controller
         
         if ($adminData) {
             eventLog($adminData->id, $user->id, 'Loan Approval - '.$admin_approval_status, json_encode($request->all()));
+        }
+
+        $user = User::where('id', $user->id)->first();
+        // Equence credentials
+        $username = config('services.equence.send_sms_user');
+        $password = config('services.equence.send_sms_pass');
+        $senderId = config('services.equence.send_sms_from');
+        $mobileWithCountryCode = $user->mobile;
+        $loginUrl = 'https://loanone.in/';
+        $text = "Dear User,Your loan application on LoanOne has been approved with Altura Financial Services Ltd.  Approved Amount: ₹{$request->approval_amount}. Please login to {$loginUrl} to accept the offer. Thank you,  LoanOne";
+
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post(config('services.equence.send_sms_url'), [
+                'username' => $username,
+                'password' => $password,
+                'to' => $mobileWithCountryCode,
+                'from' => $senderId,
+                'text' => $text,
+            ]);
+
+            // dd($response->json(), $text);
+            Log::info("Equence SMS For loan approval Response : ", $response->json());
+        } catch (\Exception $e) {
+            Log::error("Failed to send OTP For loan approval via Equence: " . $e->getMessage());
         }
         return redirect()->back()->with('success', 'Loan Approved and KFS PDF Generated Successfully');
     }
