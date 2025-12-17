@@ -125,7 +125,6 @@
                             </thead>
                             <tbody id="wbsLeadsTable">
                             @forelse($leads as $lead)
-                                @if(!isset($lead->bankDetails))
                                     <tr>
                                         <td style="cursor: pointer">
                                             <a href="{{route('admin.leads.verify', $lead->id)}}"><i class="fas fa-eye"></i></a>
@@ -140,9 +139,8 @@
                                         <td>{!! $lead->loanDocument ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
                                         <td>{!! $lead->addressDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
                                         <td>{!! $lead->employmentDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
-                                        <td>{!! $lead->bankDetails ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
+                                        <td>{!! $lead->bankDetails && !empty($lead->bankDetails->account_number) ? '<i class="fas fa-check" style="color: green;"></i>' : '<i class="fas fa-times" style="color: red;"></i>' !!}</td>
                                     </tr>
-                                @endif
                             @empty
                                 <tr>
                                     <td colspan="11" class="text-center">@lang('No data found')</td>

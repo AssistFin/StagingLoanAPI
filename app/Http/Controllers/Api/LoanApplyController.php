@@ -15,6 +15,7 @@ use App\Models\LoanBankDetails;
 use App\Models\LoanAddressDetails;
 use App\Models\CashfreeEnachRequestResponse;
 use App\Models\DigitapBankRequest;
+use App\Models\ExperianCreditReport;
 use Illuminate\Support\Facades\DB;
 use App\Models\LoanPersonalDetails;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,7 @@ use App\Models\LoanEmploymentDetails;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class LoanApplyController extends Controller
 {
@@ -347,7 +349,6 @@ class LoanApplyController extends Controller
         }
     }
 
-
     public function uploadLoanDocument(Request $request)
     {
         Log::info('Received loan document upload request', $request->all());
@@ -489,6 +490,28 @@ class LoanApplyController extends Controller
                 $loan->next_step = 'otherinformation';
                 $loan->save();
             }
+
+            $userData = DB::table('users')->where('id', auth()->id())->first();
+            $panData = DB::table('pan_data')->where('user_id', auth()->id())->first();
+            $aadhaarData = DB::table('aadhaar_data')->where('user_id', auth()->id())->select('house', 'street', 'pincode', 'district as city', 'state')->first();
+
+            $arr = [];
+            $arr['firstname'] = $userData->firstname ?? null;
+            $arr['lastname']  = $userData->lastname ?? null;
+            $arr['mobile']    = $userData->mobile ?? null;
+            $arr['dob']       = $panData->date_of_birth ?? null;
+            $arr['house_no']  = !empty($request->house_no) ? str_replace('&', '', $request->house_no) : '01';
+            $arr['pan']       = $panData->pan ?? null;
+            $arr['gender']    = isset($aadhaarData->gender) && $aadhaarData->gender == 'M' ? '1' : '2';
+            $arr['city']      = $aadhaarData->city ?? null;
+            $arr['state']     = $aadhaarData->state ?? null;
+            $arr['pincode']   = $aadhaarData->pincode ?? null;
+            $arr['loan_no']   = $request->loan_application_id ?? null;
+            $arr['user_id']   = auth()->id();
+
+            if(!empty($arr['firstname']) && !empty($arr['lastname']) && !empty($arr['mobile']) && !empty($arr['dob']) && !empty($arr['house_no']) && !empty($arr['pan']) && !empty($arr['gender']) && !empty($arr['city']) && !empty($arr['state']) && !empty($arr['pincode']) && !empty($arr['loan_no']) && !empty($arr['user_id'])){
+                $this->checkBureauReportByExperian($arr);
+            }
     
             return response()->json([
                 'status' => true,
@@ -508,7 +531,6 @@ class LoanApplyController extends Controller
         }
     }
     
-
     public function storeEmploymentDetails(Request $request)
     {
         Log::info('Received employment details request', $request->all());
@@ -570,39 +592,116 @@ class LoanApplyController extends Controller
                 'email' => $request->email
             ]);
 
-            $loan = LoanApplication::where([
-                ['user_id', auth()->id()],
-                ['id', $request->loan_application_id]
-            ])->first();
+            $experianData = ExperianCreditReport::whereNotNull('response_data')
+                ->where('lead_id', $request->loan_application_id)
+                ->orderBy('ecr_id','desc')->first();
 
-            if ($loan) {
-                $loan->current_step = 'otherinformation';
-                $loan->next_step = 'bankinfo';
-                $loan->save();
+            $bscore = 0;
+            if(!empty($experianData)){
+                $data = json_decode($experianData->response_data, true);
+                if($data['UserMessage']['UserMessageText'] == 'Normal Response'){
+                    $bscore = $data['SCORE']['BureauScore'];
+                }else{
+                    $bscore = 0;
+                }
             }
 
-            // Merge computed salary_date into request data
-            $data = [];
-            $data['salary_date'] = $salaryDate->format('Y-m-d');
-            $data['repay_date'] =  $repayDate->format('Y-m-d'); // store full date
-            $data['loan_tenure_days'] = $tenureDays;
-            $data['loan_application_id'] = $request->loan_application_id;
-            $data['user_id'] = auth()->id();
-            $data['loan_number'] = $loan->loan_no;
-            $data['loan_type'] = 'Personal Loan';
-            $data['branch'] = 'DELHI';
-            $data['approval_amount'] = 0.00;
-            $data['repayment_amount'] = 0.00;
-            $data['disbursal_amount'] = 0.00;
-            $data['roi'] = 1;
-            $data['processing_fee'] = 10;
-            $data['monthly_income'] = 0;
-            $data['status'] = 0;
+            if($bscore < 550){
+                $data = [
+                    'loan_application_id' => $request->loan_application_id,
+                    'user_id' => auth()->id(),
+                    'loan_number' => $request->loan_application_id,
+                    'credited_by' => '1',
+                    'status' => 2, 
+                    'reject_reason' => 'Eligibility/Bureau Score criteria not met',
+                    'final_remark' => 'rejected due to cibil score',
+                    'additional_remark' => 'Rejected due to bureau score eligibility criteria',
+                    'approval_date' => now(),
+                    'loan_type' => "",
+                    'branch' => "",
+                    'approval_amount' => 0,
+                    'repayment_amount' => 0,
+                    'disbursal_amount' => 0,
+                    'loan_tenure' => "",
+                    'tentative_disbursal_date' => "",
+                    'loan_tenure_days' => 0,
+                    'loan_tenure_date' => "",
+                    'roi' => 0,
+                    'salary_date' => $salaryDate->format('Y-m-d'),
+                    'repay_date' =>  $repayDate->format('Y-m-d'), // store full date
+                    'processing_fee' => 0,
+                    'processing_fee_amount' => 0,
+                    'gst' => 0,
+                    'gst_amount' => 0,
+                    'cibil_score' => $bscore,
+                    'monthly_income' => '0',
+                    'kfs_path' => "",
+                    'loan_purpose' => "",
+                ];
 
-            $loanApprovalDetails = loanApproval::updateOrCreate(
-                ['loan_application_id' => $request->loan_application_id],
-                $data
-            );
+                $loanApproval = LoanApproval::updateOrCreate([
+                    'loan_application_id' => $request->loan_application_id,
+                    'user_id' => auth()->id()
+                ],$data);
+
+                // Update loan as rejected
+                $loan = LoanApplication::where([
+                    ['user_id', auth()->id()],
+                    ['id', $request->loan_application_id]
+                ])->first();
+
+                if ($loan) {
+                    $loan->current_step = 'loanstatus';
+                    $loan->next_step = 'noteligible';
+                    $loan->admin_approval_status = "rejected";
+                    $loan->admin_approval_date = now();
+                    $loan->save();
+                }
+
+                Log::info('Loan auto rejected due to bureau score rules', [
+                    'bureau score' => $bscore,
+                ]);
+
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Sorry, you are not eligible for this loan, bureau score is low !!',
+                    'data' => $employmentDetails
+                ], 200);
+            }else{
+                $loan = LoanApplication::where([
+                ['user_id', auth()->id()],
+                ['id', $request->loan_application_id]
+                ])->first();
+
+                if ($loan) {
+                    $loan->current_step = 'otherinformation';
+                    $loan->next_step = 'bankinfo';
+                    $loan->save();
+                }
+
+                // Merge computed salary_date into request data
+                $data = [];
+                $data['salary_date'] = $salaryDate->format('Y-m-d');
+                $data['repay_date'] =  $repayDate->format('Y-m-d'); // store full date
+                $data['loan_tenure_days'] = $tenureDays;
+                $data['loan_application_id'] = $request->loan_application_id;
+                $data['user_id'] = auth()->id();
+                $data['loan_number'] = $loan->loan_no;
+                $data['loan_type'] = 'Personal Loan';
+                $data['branch'] = 'DELHI';
+                $data['approval_amount'] = 0.00;
+                $data['repayment_amount'] = 0.00;
+                $data['disbursal_amount'] = 0.00;
+                $data['roi'] = 1;
+                $data['processing_fee'] = 10;
+                $data['monthly_income'] = 0;
+                $data['status'] = 0;
+
+                $loanApprovalDetails = loanApproval::updateOrCreate(
+                    ['loan_application_id' => $request->loan_application_id],
+                    $data
+                );
+            }
 
             return response()->json([
                 'status' => true,
@@ -1212,6 +1311,144 @@ class LoanApplyController extends Controller
                 'aaData' => 'error'
             ], 404);
         }
+    }
+
+    protected function checkBureauReportByExperian($arr)
+    {
+        $firstname      =    $arr['firstname'];
+        $lastname       =    $arr['lastname'];
+        $mobile         =    $arr['mobile'];
+        $dob            =    $arr['dob'];
+        $house_no       =    $arr['house_no'];
+        $pan            =    $arr['pan'];
+        $gender         =    $arr['gender'];
+        $city           =    $arr['city'];
+        $state          =    $arr['state'];
+        $pincode        =    $arr['pincode'];
+        $loan_no        =    $arr['loan_no'];
+        $user_id        =    $arr['user_id'];
+        $stateCode      =    '99';
+        if(ucwords($state) == 'JAMMU & KASHMIR' || ucwords($state) == 'J & K' || ucwords($state) == 'JAMMU AND KASHMIR'){ $stateCode = '01';}
+        if(ucwords($state) == 'HIMACHAL PRADESH'){ $stateCode = '02';}
+        if(ucwords($state) == 'PUNJAB'){ $stateCode = '03';}
+        if(ucwords($state) == 'CHANDIGARH'){ $stateCode = '04';}
+        if(ucwords($state) == 'UTTRANCHAL' || ucwords($state) == 'UTTRAKHAND'){ $stateCode = '05';}
+        if(ucwords($state) == 'HARAYANA'){ $stateCode = '06';}
+        if(ucwords($state) == 'DELHI'){ $stateCode = '07';}
+        if(ucwords($state) == 'RAJASTHAN'){ $stateCode = '08';}
+        if(ucwords($state) == 'UTTAR PRADESH'){ $stateCode = '09';}
+        if(ucwords($state) == 'BIHAR'){ $stateCode = '10';}
+        if(ucwords($state) == 'SIKKIM'){ $stateCode = '11';}
+        if(ucwords($state) == 'ARUNACHAL PRADESH'){ $stateCode = '12';}
+        if(ucwords($state) == 'NAGALAND'){ $stateCode = '13';}
+        if(ucwords($state) == 'MANIPUR'){ $stateCode = '14';}
+        if(ucwords($state) == 'MIZORAM'){ $stateCode = '15';}
+        if(ucwords($state) == 'TRIPURA'){ $stateCode = '16';}
+        if(ucwords($state) == 'MEGHALAYA'){ $stateCode = '17';}
+        if(ucwords($state) == 'ASSAM'){ $stateCode = '18';}
+        if(ucwords($state) == 'WEST BENGAL'){ $stateCode = '19';}
+        if(ucwords($state) == 'JHARKHAND'){ $stateCode = '20';}
+        if(ucwords($state) == 'ORRISA'){ $stateCode = '21';}
+        if(ucwords($state) == 'CHHATTISGARH'){ $stateCode = '22';}
+        if(ucwords($state) == 'MADHYA PRADESH'){ $stateCode = '23';}
+        if(ucwords($state) == 'GUJRAT'){ $stateCode = '24';}
+        if(ucwords($state) == 'DAMAN and DIU'){ $stateCode = '25';}
+        if(ucwords($state) == 'DADARA and NAGAR HAVELI'){ $stateCode = '26';}
+        if(ucwords($state) == 'MAHARASHTRA'){ $stateCode = '27';}
+        if(ucwords($state) == 'ANDHRA PRADESH'){ $stateCode = '28';}
+        if(ucwords($state) == 'KARNATAKA' || $state == 'Karnataka'){ $stateCode = '29';}
+        if(ucwords($state) == 'GOA'){ $stateCode = '30';}
+        if(ucwords($state) == 'LAKSHADWEEP'){ $stateCode = '31';}
+        if(ucwords($state) == 'KERALA'){ $stateCode = '32';}
+        if(ucwords($state) == 'TAMILNADU'){ $stateCode = '33';}
+        if(ucwords($state) == 'PONDICHERRY'){ $stateCode = '34';}
+        if(ucwords($state) == 'ANDAMAN and NICOBAR ISLANDS'){ $stateCode = '35';}
+        if(ucwords($state) == 'TELANGANA'){ $stateCode = '36';}
+
+        $xmlRequestBody = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:cbv2">
+                <soapenv:Header/>
+                <soapenv:Body>
+                    <urn:process>
+                        <urn:in>
+                            <INProfileRequest>
+                            <Identification>
+                            <XMLUser>'.config('services.experiancreditbureau.ecb_user').'</XMLUser>
+                                <XMLPassword>'.config('services.experiancreditbureau.ecb_password').'</XMLPassword>
+                            </Identification>
+                            <Application>
+                                <EnquiryReason>6</EnquiryReason>
+                                <AmountFinanced>0</AmountFinanced>
+                                <DurationOfAgreement>0</DurationOfAgreement>
+                                <ScoreFlag>3</ScoreFlag>
+                                <PSVFlag>0</PSVFlag>
+                            </Application>
+                            <Applicant>
+                                <Surname>'.$lastname.'</Surname>
+                                <FirstName>'.$firstname.'</FirstName>
+                                <MiddleName/>
+                                <GenderCode>'.$gender.'</GenderCode>
+                                <IncomeTaxPAN>'.$pan.'</IncomeTaxPAN>
+                                <PassportNumber/>
+                                <VoterIdentityCard/>
+                                <Driver_License_Number/>
+                                <Ration_Card_Number/>
+                                <Universal_ID_Number/>
+                                <DateOfBirth>'.$dob.'</DateOfBirth>
+                                <MobilePhone>'.substr($mobile, -10).'</MobilePhone>
+                                <EMailId></EMailId>
+                            </Applicant>
+                            <Address>
+                                <FlatNoPlotNoHouseNo>'.$house_no.'</FlatNoPlotNoHouseNo>
+                                <BldgNoSocietyName/>
+                                <City>'.$city.'</City>
+                                <State>'.$stateCode.'</State>
+                                <PinCode>'.$pincode.'</PinCode>
+                            </Address>
+                            </INProfileRequest>
+                        </urn:in>
+                    </urn:process>
+                </soapenv:Body>
+                </soapenv:Envelope>';
+        
+        //\Log::info('Experian CB Payload', ['payload' => $xmlRequestBody]);
+
+        $response = Http::withHeaders([
+                'Content-Type' => 'text/xml; charset=utf-8',
+            ])->withBody($xmlRequestBody, 'text/xml')
+            ->post(config('services.experiancreditbureau.ecb_url'));
+
+        try {
+            $soapXml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NOCDATA);
+            $body = $soapXml->children('http://schemas.xmlsoap.org/soap/envelope/')->Body;
+            $rawOut = (string) $body->children('urn:cbv2')->processResponse->out ?? null;
+
+            if (!$rawOut || !str_contains($rawOut, '<?xml')) {
+                throw new \Exception('Invalid inner XML in <out> tag');
+            }
+
+            $parsed = simplexml_load_string($rawOut, 'SimpleXMLElement', LIBXML_NOCDATA);
+            $jsonData = json_decode(json_encode($parsed), true);
+
+        } catch (\Exception $e) {
+            \Log::error('XML Parsing Failed: ' . $e->getMessage());
+        }
+
+
+        // 4. Store raw request & response
+        $randomString = Str::random(10);
+        $timestamp = now()->format('Ymd_His');
+        $pdfPath = '';
+        DB::table('experian_credit_reports')->insert([
+            'user_id' => $user_id,
+            'lead_id' => $loan_no,
+            'request_data' => $xmlRequestBody,
+            'response_data' => json_encode($jsonData),
+            'pdf_url' => $pdfPath,
+            'created_at' => now(),
+        ]);
+        // return $data ?? [
+        //     'data' => json_encode($jsonData)
+        // ];
     }
     
 }
