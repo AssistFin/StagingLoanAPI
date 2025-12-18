@@ -526,6 +526,7 @@ class LeadController extends Controller
                             'Disbursed Amount' => optional($lead->loanDisbursal)->disbursal_amount ?? 0,
                             $dateHead => $disbursedDate,
                             $purpose_head => $purpose,
+                            'Cibil Score' => optional($lead->loanApproval)->cibil_score ?? 0,
                             'source' => $lead->user->utmTracking->utm_source ?? '',
                             'Monthly Income' => $lead->personalDetails->monthly_income ?? '',
                             'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
@@ -816,6 +817,7 @@ class LeadController extends Controller
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loanAmount, 0),
                     'Apply Date' => $loandate,
+                    'Last Activity' => $lead->last_activity_at ? $lead->last_activity_at->format('Y-m-d H:i:s') : 'No Activity',
                     'Purpose Of Loan' => $lead->purpose_of_loan,
                 ];
             }

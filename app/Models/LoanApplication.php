@@ -104,4 +104,38 @@ class LoanApplication extends Model
     {
         return $this->hasOne(BreData::class, 'lead_id');
     }
+
+    public function getLastActivityAtAttribute()
+    {
+        $timestamps = [];
+
+        if ($this->personalDetails?->updated_at) {
+            $timestamps[] = $this->personalDetails->updated_at;
+        }
+
+        if ($this->kycDetails?->updated_at) {
+            $timestamps[] = $this->kycDetails->updated_at;
+        }
+
+        if ($this->loanDocument?->updated_at) {
+            $timestamps[] = $this->loanDocument->updated_at;
+        }
+
+        if ($this->addressDetails?->updated_at) {
+            $timestamps[] = $this->addressDetails->updated_at;
+        }
+
+        if ($this->employmentDetails?->updated_at) {
+            $timestamps[] = $this->employmentDetails->updated_at;
+        }
+
+        if ($this->bankDetails?->updated_at) {
+            $timestamps[] = $this->bankDetails->updated_at;
+        }
+
+        return !empty($timestamps)
+            ? collect($timestamps)->max()
+            : null;
+    }
+
 }

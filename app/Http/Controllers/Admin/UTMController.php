@@ -31,15 +31,45 @@ class UTMController extends Controller
             ->select('ut1.*')
             ->whereRaw('ut1.id = (SELECT MAX(ut2.id) FROM utm_tracking ut2 WHERE ut2.user_id = ut1.user_id)');
 
+        $latestApproval = DB::table(DB::raw('loan_approvals la1'))
+            ->select('la1.*')
+            ->whereRaw('la1.id = (
+                SELECT MAX(la2.id)
+                FROM loan_approvals la2
+                WHERE la2.loan_application_id = la1.loan_application_id
+            )');
+
+        $latestDisbursal = DB::table(DB::raw('loan_disbursals ld1'))
+            ->select('ld1.*')
+            ->whereRaw('ld1.id = (
+                SELECT MAX(ld2.id)
+                FROM loan_disbursals ld2
+                WHERE ld2.loan_application_id = ld1.loan_application_id
+            )');
+
+        $latestBank = DB::table(DB::raw('loan_bank_details lb1'))
+            ->select('lb1.*')
+            ->whereRaw('lb1.id = (
+                SELECT MAX(lb2.id)
+                FROM loan_bank_details lb2
+                WHERE lb2.loan_application_id = lb1.loan_application_id
+            )');
+
         // Main query starts with reduced utm_tracking
         $query = DB::table(DB::raw('(' . $latestUtm->toSql() . ') as utm_tracking'))
             ->mergeBindings($latestUtm)
             ->leftJoin('users', 'utm_tracking.user_id', '=', 'users.id')
             ->leftJoin('loan_applications', 'loan_applications.user_id', '=', 'users.id')
             ->leftJoin('loan_personal_details', 'loan_personal_details.loan_application_id', '=', 'loan_applications.id')
-            ->leftJoin('loan_disbursals', 'loan_disbursals.loan_application_id', '=', 'loan_applications.id')
-            ->leftJoin('loan_approvals', 'loan_approvals.loan_application_id', '=', 'loan_applications.id')
-            ->leftJoin('loan_bank_details', 'loan_bank_details.loan_application_id', '=', 'loan_applications.id')
+            ->leftJoinSub($latestApproval, 'loan_approvals', function ($join) {
+                $join->on('loan_approvals.loan_application_id', '=', 'loan_applications.id');
+            })
+            ->leftJoinSub($latestDisbursal, 'loan_disbursals', function ($join) {
+                $join->on('loan_disbursals.loan_application_id', '=', 'loan_applications.id');
+            })
+            ->leftJoinSub($latestBank, 'loan_bank_details', function ($join) {
+                $join->on('loan_bank_details.loan_application_id', '=', 'loan_applications.id');
+            })
             ->select([
                 'utm_tracking.id as utm_id',
                 'utm_tracking.user_id as utm_user_id',
@@ -80,7 +110,8 @@ class UTMController extends Controller
                         END as loan_amount"),
 
                 'loan_disbursals.disbursal_amount'
-            ])->whereRaw('loan_applications.id = (SELECT MIN(id) FROM loan_applications WHERE loan_applications.user_id = users.id)')
+            ])->distinct('users.id')
+            ->whereRaw('loan_applications.id = (SELECT MIN(id) FROM loan_applications WHERE loan_applications.user_id = users.id)')
             ->orderBy('utm_tracking.created_at', 'desc');
 
         // ================= Date Filter =================
@@ -243,7 +274,6 @@ class UTMController extends Controller
 
         return view('admin.leads.utm-details', compact('pageTitle', 'utmRecords', 'campaignIds', 'totalRecords'));
     }
-
 
     // Store UTM data for anonymous users
     public function store(Request $request)

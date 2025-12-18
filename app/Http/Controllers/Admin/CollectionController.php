@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Response;
+use Carbon\Carbon;
 
 class CollectionController extends Controller
 {
@@ -509,6 +510,7 @@ class CollectionController extends Controller
 
         // 1️⃣ Base query
         $query = LoanApplication::whereHas('loanDisbursal')
+            ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'loan_applications.id')
             ->with([
                 'user',
                 'personalDetails',
@@ -520,7 +522,8 @@ class CollectionController extends Controller
                 'loanDisbursal',
                 'loanApproval',
             ])
-            ->orderByRaw('created_at DESC');
+            ->select('loan_applications.*')
+            ->orderBy('lap.repay_date', 'DESC');
 
         $searchTerm = $request->get('search');
         $dateRange = $request->get('date_range');
@@ -528,11 +531,25 @@ class CollectionController extends Controller
         $toDate = $request->get('to_date');
 
         if ($dateRange) {
-            if ($dateRange === 'custom' && $fromDate && $toDate) {
-                $query->whereHas('loanApproval', function ($q) use($fromDate, $toDate) {
-                $q->whereBetween('repay_date', [$fromDate, $toDate]);
-                });
-            }
+            $query->whereHas('loanApproval', function ($collectionQuery) use ($dateRange, $fromDate, $toDate) {
+                if ($dateRange === 'today') {
+                    $collectionQuery->whereDate('repay_date', now()->today());
+                } elseif ($dateRange === 'yesterday') {
+                    $collectionQuery->whereDate('repay_date', now()->yesterday());
+                } elseif ($dateRange === 'last_3_days') {
+                    $collectionQuery->whereBetween('repay_date', [now()->subDays(3), now()]);
+                } elseif ($dateRange === 'last_7_days') {
+                    $collectionQuery->whereBetween('repay_date', [now()->subDays(7), now()]);
+                } elseif ($dateRange === 'last_15_days') {
+                    $collectionQuery->whereBetween('repay_date', [now()->subDays(15), now()]);
+                } elseif ($dateRange === 'current_month') {
+                    $collectionQuery->whereBetween('repay_date', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+                } elseif ($dateRange === 'previous_month') {
+                    $collectionQuery->whereBetween('repay_date', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
+                } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                    $collectionQuery->whereBetween('repay_date', [$fromDate, $toDate]);
+                }
+            });
         }
 
         if ($searchTerm) {
@@ -584,8 +601,11 @@ class CollectionController extends Controller
                         'Repayment Amount'   => number_format($loans->repayment_amount ?? 0, 0),
                         'Disbursement date'  => $disbursal_date,
                         'Repayment date'     => $repayDate,
+                        'Principal Coll.'    => $loans->total_principal_paid ?? 0,
+                        'Interest Coll.'     => $loans->total_interest_paid ?? 0,
+                        'Penal Coll.'        => $loans->total_penal_paid ?? 0,
                         'Collection Date'    => $loans->last_collection_date ?? '',
-                        'Collection Amount'    => number_format($loans->total_paid ?? 0, 0),
+                        'Collection Amount'  => number_format($loans->total_paid ?? 0, 0),
                         'DPD'                => $daysAfterDue,
                         'Email'              => $lead->user->email,
                         'Loan Tenure'        => $loans->loan_tenure_days ?? 0,

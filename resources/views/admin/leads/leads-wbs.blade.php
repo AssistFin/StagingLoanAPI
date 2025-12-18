@@ -110,6 +110,7 @@
                             <thead>
                             <tr>
                                 <th></th>
+                                <th>@lang('Last Activity')</th>
                                 <th>@lang('Loan Application No.')</th>
                                 <th>@lang('Customer Name')</th>
                                 <th>@lang('Mobile No')</th>
@@ -129,6 +130,14 @@
                                         <td style="cursor: pointer">
                                             <a href="{{route('admin.leads.verify', $lead->id)}}"><i class="fas fa-eye"></i></a>
                                         </td>
+                                        <td> @if($lead->last_activity_at)
+                                                {{ showDateTime($lead->last_activity_at) }} <br>
+                                                <small class="text-muted">
+                                                    {{ $lead->last_activity_at->diffForHumans() }}
+                                                </small>
+                                            @else
+                                                <span class="text-muted">No Activity</span>
+                                            @endif</td>
                                         <td>{{ $lead->loan_no }}</td>
                                         <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>
                                         <td>{{ $lead->user ? $lead->user->mobile : '' }}</td>
