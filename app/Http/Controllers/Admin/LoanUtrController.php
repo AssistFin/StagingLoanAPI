@@ -16,6 +16,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use DB;
+use Illuminate\Support\Facades\Http;
 
 class LoanUtrController extends Controller
 {
@@ -102,6 +103,44 @@ Customer Support | LoanOne";
                 $loan->loan_closed_status = "closed";
                 $loan->loan_closed_date = now();
                 $loan->save();
+            }
+
+            $loanApplicationId = $request->loan_application_id;
+
+            $payments = DB::table('subscription_payment_requests')
+                ->where('subscription_id', 'LIKE', $loanApplicationId . '%')
+                ->get();
+
+            foreach ($payments as $sub) {
+
+                $response = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                    'x-api-version' => config('services.cashfree.api_version'),
+                    'x-client-id' => config('services.cashfree.app_id'),
+                    'x-client-secret' => config('services.cashfree.secret_key'),
+                ])->post(config('services.cashfree.base_url') . '/pg/subscriptions/'.$sub->subscription_id.'/payments/CF-'.$sub->subscription_id.'/manage', [
+                    'subscription_id' => $sub->subscription_id,
+                    'action' => 'CANCEL',
+                ]);
+
+                if ($response->successful()) {
+                    // Prepare update data
+                    $updateData = [
+                        'status' => 'Cancelled',
+                    ];
+
+                    // Update the existing record (based on subscription_id & payment_id)
+                    DB::table('subscription_payment_requests')
+                        ->where('subscription_id', $sub->subscription_id)
+                        ->update($updateData);
+
+                    Log::info("Payment request cancelled successfully.");
+                } else {
+                    Log::error('Subscription cancel failed : ', [
+                        'subscription_id' => $sub->subscription_id,
+                        'response' => $response->json()
+                    ]);
+                }
             }
         }
         $adminData = auth('admin')->user();

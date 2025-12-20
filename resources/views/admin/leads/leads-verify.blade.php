@@ -366,7 +366,7 @@
                                 <div class="accordion-body">
                                     <div class="row">
                                         <div class="col-md-3"><strong>User Photo:</strong> 
-                                            <img src="{{ isset($lead->loanDocument) ? url('/admin/secure-file/'.$lead->loanDocument->selfie_image) : "" }}" alt="" height="100px" width="100px">
+                                            <img src="{{ $selfiePath }}" alt="" height="100px" width="100px">
                                         </div>
                                     </div>
                                 </div>
@@ -723,9 +723,9 @@
                                         <option value="Maharashtra" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Maharashtra" ? "selected" : "" }}>Bank of Maharashtra</option>
                                         <option value="Canara" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Canara" ? "selected" : "" }}>Canara Bank</option>
                                         <option value="Federal" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Federal" ? "selected" : "" }}>Federal Bank</option>
-                                        <option value="HDFC" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "HDFC" ? "selected" : "" }}>HDFC Bank</option>
+                                        <option value="HDFC" {{ isset($bankDetailsData->bank_name) && ($bankDetailsData->bank_name  == "HDFC" || $bankDetailsData->bank_name  == "HDFC BANK") ? "selected" : "" }}>HDFC Bank</option>
                                         <option value="Induslnd" {{ isset($bankDetailsData->bank_name) &&  $bankDetailsData->bank_name  == "Induslnd" ? "selected" : "" }}>Induslnd Bank</option>
-                                        <option value="ICICI" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "ICICI" ? "selected" : "" }}>ICICI Bank</option>
+                                        <option value="ICICI" {{ isset($bankDetailsData->bank_name) && ($bankDetailsData->bank_name  == "ICICI" || $bankDetailsData->bank_name  == "ICICI BANK") ? "selected" : "" }}>ICICI Bank</option>
                                         <option value="IDBI" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "IDBI" ? "selected" : "" }}>IDBI Bank</option>
                                         <option value="IDFC" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "IDFC" ? "selected" : "" }}>IDFC First Bank</option>
                                         <option value="South" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "South" ? "selected" : "" }}>South Indian Bank</option>
@@ -734,7 +734,7 @@
                                         <option value="Overseas" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Overseas" ? "selected" : "" }}>Indian Overseas Bank</option>
                                         <option value="Kotak" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Kotak" ? "selected" : "" }}>Kotak Mahindra Bank</option>
                                         <option value="PNB" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "PNB" ? "selected" : "" }}>Punjab National Bank (PNB)</option>
-                                        <option value="SBI" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "SBI" ? "selected" : "" }}>State Bank of India (SBI)</option>
+                                        <option value="SBI" {{ isset($bankDetailsData->bank_name) && ($bankDetailsData->bank_name  == "SBI" || $bankDetailsData->bank_name  == "STATE BANK OF INDIA") ? "selected" : "" }}>State Bank of India (SBI)</option>
                                         <option value="Syndicate" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Syndicate" ? "selected" : "" }}>Syndicate Bank</option>
                                         <option value="UCO" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "UCO" ? "selected" : "" }}>UCO Bank</option>
                                         <option value="Union" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Union" ? "selected" : "" }}>Union Bank of India</option>
@@ -891,9 +891,9 @@
                                         <option value="Maharashtra" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Maharashtra" ? "selected" : "" }}>Bank of Maharashtra</option>
                                         <option value="Canara" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Canara" ? "selected" : "" }}>Canara Bank</option>
                                         <option value="Federal" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Federal" ? "selected" : "" }}>Federal Bank</option>
-                                        <option value="HDFC" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "HDFC" ? "selected" : "" }}>HDFC Bank</option>
+                                        <option value="HDFC" {{ isset($bankDetailsData->bank_name) && ($bankDetailsData->bank_name  == "HDFC" || $bankDetailsData->bank_name  == "HDFC BANK") ? "selected" : "" }}>HDFC Bank</option>
                                         <option value="Induslnd" {{ isset($bankDetailsData->bank_name) &&  $bankDetailsData->bank_name  == "Induslnd" ? "selected" : "" }}>Induslnd Bank</option>
-                                        <option value="ICICI" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "ICICI" ? "selected" : "" }}>ICICI Bank</option>
+                                        <option value="ICICI" {{ isset($bankDetailsData->bank_name) && ($bankDetailsData->bank_name  == "ICICI" || $bankDetailsData->bank_name  == "ICICI BANK") ? "selected" : "" }}>ICICI Bank</option>
                                         <option value="IDBI" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "IDBI" ? "selected" : "" }}>IDBI Bank</option>
                                         <option value="IDFC" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "IDFC" ? "selected" : "" }}>IDFC First Bank</option>
                                         <option value="South" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "South" ? "selected" : "" }}>South Indian Bank</option>
@@ -902,7 +902,7 @@
                                         <option value="Overseas" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Overseas" ? "selected" : "" }}>Indian Overseas Bank</option>
                                         <option value="Kotak" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Kotak" ? "selected" : "" }}>Kotak Mahindra Bank</option>
                                         <option value="PNB" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "PNB" ? "selected" : "" }}>Punjab National Bank (PNB)</option>
-                                        <option value="SBI" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "SBI" ? "selected" : "" }}>State Bank of India (SBI)</option>
+                                        <option value="SBI" {{ isset($bankDetailsData->bank_name) && ($bankDetailsData->bank_name  == "SBI" || $bankDetailsData->bank_name  == "STATE BANK OF INDIA") ? "selected" : "" }}>State Bank of India (SBI)</option>
                                         <option value="Syndicate" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Syndicate" ? "selected" : "" }}>Syndicate Bank</option>
                                         <option value="UCO" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "UCO" ? "selected" : "" }}>UCO Bank</option>
                                         <option value="Union" {{ isset($bankDetailsData->bank_name) && $bankDetailsData->bank_name  == "Union" ? "selected" : "" }}>Union Bank of India</option>

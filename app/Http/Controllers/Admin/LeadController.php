@@ -723,6 +723,9 @@ class LeadController extends Controller
             'addressDetails',
             'bankDetails'
         ])->where('admin_approval_status', 'pending')
+        ->whereDoesntHave('bankDetails', function ($q) {
+            $q->whereNotNull('account_number');
+        })
         ->orderByRaw('created_at DESC');
 
         $searchTerm = $request->get('search');
@@ -1061,7 +1064,7 @@ class LeadController extends Controller
         $cashfreeData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
         $cfreeSubsData = $allcfreeSubData = $allcfreeSubPayReqData = [];
         if(!empty($cashfreeData)){
-            $allcfreeSubData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->get();
+            $allcfreeSubData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->whereNotIn('status', ['FAILED', 'failed'])->get();
 
             $allcfreeSubPayReqData = DB::table('subscription_payment_requests')->where('subscription_id', 'like', "%{$lead->loan_no}%")->get();
 
@@ -1468,6 +1471,17 @@ class LeadController extends Controller
         ]);
 
         try {
+
+            $cashfreeData = DB::table('cashfree_enach_request_response_data')
+                ->where('subscription_id', $request->subscription_id)
+                ->get();
+
+            if(!empty($cashfreeData)){
+                $cashfreeDataCount = $cashfreeData->count();
+            }else{
+                $cashfreeDataCount = 0;
+            }
+
             // Example Cashfree API endpoint
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
@@ -1476,7 +1490,7 @@ class LeadController extends Controller
                 'x-client-secret' => config('services.cashfree.secret_key'),
             ])->post(config('services.cashfree.base_url') . '/pg/subscriptions/pay', [
                 'subscription_id' => $request->subscription_id,
-                "payment_id" => "CF-".$request->subscription_id,
+                "payment_id" => "CF-".$request->subscription_id.'-'.$cashfreeDataCount+1,
                 'payment_amount' => floatval(preg_replace('/[^\d.]/', '', $request->payment_amount)),
                 'payment_schedule_date' => Carbon::parse($request->schedule_on)->toIso8601String(),
                 'payment_remarks' => $request->remarks,
@@ -1537,7 +1551,6 @@ class LeadController extends Controller
                 // Update the existing record (based on subscription_id & payment_id)
                 DB::table('subscription_payment_requests')
                     ->where('subscription_id', $request->subscription_id)
-                    ->where('payment_id', 'CF-'.$request->subscription_id)
                     ->update($updateData);
 
                 return response()->json(['status' => true, 'message' => 'Payment request cancelled successfully.']);

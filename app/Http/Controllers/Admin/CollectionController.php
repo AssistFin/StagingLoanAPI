@@ -77,7 +77,7 @@ class CollectionController extends Controller
                     })
 
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.repayment_amount',
+                        'lap.repay_date','lap.approval_amount','lap.repayment_amount','lap.salary_date',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                             (IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount)) +
@@ -139,6 +139,9 @@ class CollectionController extends Controller
                     'Loan Application No' => $lead->loan_no,
                     'Loan Amount' => number_format($loans->approval_amount ?? 0, 0),
                     'Total Due' => number_format($totalDues, 0),
+                    'Salary Date' => $loans->salary_date ?? '',
+                    'City' => $lead->addressDetails->city ?? '',
+                    'State' => $lead->addressDetails->state ?? '',
                     'Cashfree Reference No' => $loans->reference_id ?? '',
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
@@ -316,7 +319,7 @@ class CollectionController extends Controller
                             ->where('cerd.status', '=', 'ACTIVE');
                     })
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','lap.cibil_score','ld.loan_disbursal_number','ld.disbursal_date','a.name as credited_by_name',
+                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','lap.cibil_score','lap.salary_date','ld.loan_disbursal_number','ld.disbursal_date','a.name as credited_by_name',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
@@ -387,6 +390,9 @@ class CollectionController extends Controller
                     'Repayment date' => $repayDate,
                     'Loan Disbursal Date' => $loans->disbursal_date ?? '',
                     'Intrest Rate (%)' => $loans->roi ?? 0,
+                    'Salary Date' => $loans->salary_date ?? '',
+                    'City' => $lead->addressDetails->city ?? '',
+                    'State' => $lead->addressDetails->state ?? '',
                     'Cibil Score' => $loans->cibil_score ?? 0,
                     'Customer Type' => $customerType,
                     'Intrest Calculated upto' => $today,

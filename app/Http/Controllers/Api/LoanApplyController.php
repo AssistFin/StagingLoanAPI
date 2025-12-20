@@ -33,6 +33,31 @@ class LoanApplyController extends Controller
         try {
             Log::info('Fetching loan application data for user', ['user_id' => auth()->id()]);
 
+            $userId = auth()->id();
+
+            /*
+            |--------------------------------------------------------------------------
+            | STEP 1: Check 45-day cooling period for rejected loans
+            |--------------------------------------------------------------------------
+            */
+            $lastRejectedLoan = LoanApplication::where('user_id', $userId)
+                ->orderBy('updated_at', 'desc')
+                ->first();
+
+            $preLoanData = '';
+
+            if ($lastRejectedLoan && $lastRejectedLoan->admin_approval_status == 'rejected') {
+                $rejectedDate = Carbon::parse($lastRejectedLoan->updated_at);
+                $daysPassed = $rejectedDate->diffInDays(Carbon::now());
+
+                if ($daysPassed < 45) {
+                    $preLoanData = 'noteligible';
+                } else {
+                    $preLoanData = 'applyforaloan';
+                }
+                
+            }
+
             $loans = LoanApplication::with([
                 'personalDetails', 
                 'employmentDetails', 
@@ -45,6 +70,7 @@ class LoanApplyController extends Controller
                 ['user_id', auth()->id()],
                 ['loan_closed_status', 'pending']
             ])
+            ->orderBy('updated_at', 'desc')
             ->first();
 
             $aadharAddress = DB::table('aadhaar_data')
@@ -78,23 +104,21 @@ class LoanApplyController extends Controller
                 }
                 $loans["aadharAddress"] = $aadharAddress;
 
-            $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
-            if(!empty($loanApprovalData->kfs_path)){
-                $loanNo = $loans['id'];
-                $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
-                if (!file_exists($outputPath)) {
-                    $arrayData["loan_application_id"] = $loans['id'];
-                    $arrayData["current_step"] = 'loanstatus';
-                    $arrayData["next_step"] = 'viewloan';
-                    $requestObj = Request::create('', 'POST', $arrayData);
-                    $this->updateLoanStep($requestObj);
+                $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
+                if(!empty($loanApprovalData->kfs_path)){
+                    $loanNo = $loans['id'];
+                    $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
+                    if (!file_exists($outputPath)) {
+                        $arrayData["loan_application_id"] = $loans['id'];
+                        $arrayData["current_step"] = 'loanstatus';
+                        $arrayData["next_step"] = 'viewloan';
+                        $requestObj = Request::create('', 'POST', $arrayData);
+                        $this->updateLoanStep($requestObj);
+                    }
                 }
             }
-            }
 
-
-
-            return response()->json(['status' => true, 'data' => $loans]);
+            return response()->json(['status' => true, 'data' => $loans, 'data2' => $preLoanData]);
         } catch (\Exception $e) {
             Log::error('Error fetching loan application data', [
                 'user_id' => auth()->id(),

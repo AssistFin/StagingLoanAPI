@@ -105,7 +105,7 @@
                                 <th>@lang('Repayment Date')</th>
                                 <th>@lang('DPD')</th>
                                 <th>@lang('Payment Link')</th>
-                                <th>@lang('Action')</th>
+                                <!--th>@lang('Action')</th-->
                             </tr>
                             </thead>
                             <tbody id="cOverdueTable">
@@ -122,7 +122,7 @@
                                     <td>{{ $lead->loanApproval->repay_date }}</td>
                                     <td>{{ $lead->dpd }}</td>
                                     <td>{{ $lead->paymentLink}}</td>
-                                    <td><button type="button" class="btn btn-success">Send SMS</button><button type="button" class="btn btn-danger">Send Email</button></td>
+                                    <!--td><button type="button" class="btn btn-success">Send SMS</button><button type="button" class="btn btn-danger">Send Email</button></td-->
                                 </tr>
                             @empty
                                 <tr>
