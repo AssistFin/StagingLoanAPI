@@ -111,37 +111,40 @@ Customer Support | LoanOne";
                 ->where('subscription_id', 'LIKE', $loanApplicationId . '%')
                 ->get();
 
-            foreach ($payments as $sub) {
+                if(!empty($payments)){
+                    foreach ($payments as $sub) {
 
-                $response = Http::withHeaders([
-                    'Content-Type' => 'application/json',
-                    'x-api-version' => config('services.cashfree.api_version'),
-                    'x-client-id' => config('services.cashfree.app_id'),
-                    'x-client-secret' => config('services.cashfree.secret_key'),
-                ])->post(config('services.cashfree.base_url') . '/pg/subscriptions/'.$sub->subscription_id.'/payments/CF-'.$sub->subscription_id.'/manage', [
-                    'subscription_id' => $sub->subscription_id,
-                    'action' => 'CANCEL',
-                ]);
+                        $response = Http::withHeaders([
+                            'Content-Type' => 'application/json',
+                            'x-api-version' => config('services.cashfree.api_version'),
+                            'x-client-id' => config('services.cashfree.app_id'),
+                            'x-client-secret' => config('services.cashfree.secret_key'),
+                        ])->post(config('services.cashfree.base_url') . '/pg/subscriptions/'.$sub->subscription_id.'/payments/CF-'.$sub->subscription_id.'/manage', [
+                            'subscription_id' => $sub->subscription_id,
+                            'action' => 'CANCEL',
+                        ]);
 
-                if ($response->successful()) {
-                    // Prepare update data
-                    $updateData = [
-                        'status' => 'Cancelled',
-                    ];
+                        if ($response->successful()) {
+                            // Prepare update data
+                            $updateData = [
+                                'status' => 'Cancelled',
+                            ];
 
-                    // Update the existing record (based on subscription_id & payment_id)
-                    DB::table('subscription_payment_requests')
-                        ->where('subscription_id', $sub->subscription_id)
-                        ->update($updateData);
+                            // Update the existing record (based on subscription_id & payment_id)
+                            DB::table('subscription_payment_requests')
+                                ->where('subscription_id', $sub->subscription_id)
+                                ->update($updateData);
 
-                    Log::info("Payment request cancelled successfully.");
-                } else {
-                    Log::error('Subscription cancel failed : ', [
-                        'subscription_id' => $sub->subscription_id,
-                        'response' => $response->json()
-                    ]);
+                            Log::info("Payment request cancelled successfully.");
+                        } else {
+                            Log::error('Subscription cancel failed : ', [
+                                'subscription_id' => $sub->subscription_id,
+                                'response' => $response->json()
+                            ]);
+                        }
+                    }
                 }
-            }
+                
         }
         $adminData = auth('admin')->user();
         
