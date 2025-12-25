@@ -75,27 +75,37 @@ class LeadController extends Controller
                 switch ($dateRange) {
                     case 'today':
                         $query->whereHas('bankDetails', function ($q) {
-                            $q->whereDate('created_at', Carbon::today());
+                            $q->whereDate('created_at', Carbon::today())
+							->whereNotNull('account_number')
+							->where('account_number', '!=', '');
                         });
                         break;
                     case 'yesterday':
                         $query->whereHas('bankDetails', function ($q) {
-                            $q->whereDate('created_at', Carbon::yesterday());
+                            $q->whereDate('created_at', Carbon::yesterday())
+							->whereNotNull('account_number')
+							->where('account_number', '!=', '');
                         });
                         break;
                     case 'last_3_days':
                         $query->whereHas('bankDetails', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(3), now()]);
+                            $q->whereBetween('created_at', [now()->subDays(3), now()])
+							->whereNotNull('account_number')
+							->where('account_number', '!=', '');
                         });
                         break;
                     case 'last_7_days':
                         $query->whereHas('bankDetails', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(7), now()]);
+                            $q->whereBetween('created_at', [now()->subDays(7), now()])
+							->whereNotNull('account_number')
+							->where('account_number', '!=', '');
                         });
                         break;
                     case 'last_15_days':
                         $query->whereHas('bankDetails', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(15), now()]);
+                            $q->whereBetween('created_at', [now()->subDays(15), now()])
+							->whereNotNull('account_number')
+							->where('account_number', '!=', '');
                         });
                         break;
                     case 'current_month':
@@ -103,7 +113,9 @@ class LeadController extends Controller
                             $q->whereBetween('created_at', [
                                 Carbon::now()->startOfMonth(),
                                 Carbon::now()->endOfMonth()
-                            ]);
+                            ])
+							->whereNotNull('account_number')
+							->where('account_number', '!=', '');
                         });
                         break;
                     case 'previous_month':
@@ -111,13 +123,17 @@ class LeadController extends Controller
                             $q->whereBetween('created_at', [
                                 Carbon::now()->subMonth()->startOfMonth(),
                                 Carbon::now()->subMonth()->endOfMonth()
-                            ]);
+                            ])
+							->whereNotNull('account_number')
+							->where('account_number', '!=', '');
                         });
                         break;
                     case 'custom':
                         if ($request->get('from_date') && $request->get('to_date')) {
                             $query->whereHas('bankDetails', function ($q) use ($request) {
-                                $q->whereBetween('created_at', [$request->get('from_date'), $request->get('to_date')]);
+                                $q->whereBetween('created_at', [$request->get('from_date'), $request->get('to_date')])
+								->whereNotNull('account_number')
+								->where('account_number', '!=', '');
                             });
                         }
                         break;
@@ -528,9 +544,12 @@ class LeadController extends Controller
                             $purpose_head => $purpose,
                             'Cibil Score' => optional($lead->loanApproval)->cibil_score ?? 0,
                             'source' => $lead->user->utmTracking->utm_source ?? '',
+                            'Employment Type' => $lead->personalDetails->employment_type ?? '',
                             'Monthly Income' => $lead->personalDetails->monthly_income ?? '',
+                            'Monthly Received In' => $lead->personalDetails->income_received_in ?? '',
                             'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
                             'Approved By' => optional(optional($lead->loanApproval)->creditedBy)->name ?? 'N/A',
+							//'Status' = $lead->loanApproval->status ?? NULL,
                         ];
                     }
 
@@ -715,7 +734,8 @@ class LeadController extends Controller
         ini_set('memory_limit', '2048M');
 
        $query = LoanApplication::with([
-            'user',
+            'user:id,firstname,lastname,mobile,email',
+			'user.utmTracking:id,user_id,utm_source',
             'personalDetails', 
             'employmentDetails', 
             'kycDetails', 
@@ -723,9 +743,9 @@ class LeadController extends Controller
             'addressDetails',
             'bankDetails'
         ])->where('admin_approval_status', 'pending')
-        ->whereDoesntHave('bankDetails', function ($q) {
-            $q->whereNotNull('account_number');
-        })
+		->whereDoesntHave('digitapRequest', function ($q) {
+			$q->where('status', 'xlsx_report_saved');
+		})
         ->orderByRaw('created_at DESC');
 
         $searchTerm = $request->get('search');
@@ -755,7 +775,9 @@ class LeadController extends Controller
                 $query->whereHas('loanDocument');
                 $query->whereHas('addressDetails');
                 $query->whereHas('employmentDetails');
-                $query->whereDoesntHave('bankDetails');
+                $query->whereDoesntHave('bankDetails', function ($q) {
+					$q->whereNull('account_number');
+				});
             }
         }
 
@@ -822,6 +844,7 @@ class LeadController extends Controller
                     'Apply Date' => $loandate,
                     'Last Activity' => $lead->last_activity_at ? $lead->last_activity_at->format('Y-m-d H:i:s') : 'No Activity',
                     'Purpose Of Loan' => $lead->purpose_of_loan,
+					'Source' => $lead->user->utmTracking->utm_source ?? '',
                 ];
             }
 
@@ -904,7 +927,14 @@ class LeadController extends Controller
                         ->whereRaw('la2.user_id = loan_applications.user_id')
                         ->whereRaw('la2.id != loan_applications.id')
                         ->where('la2.admin_approval_status', 'approved');
-                });
+                })
+				->orWhereExists(function ($sub) {
+					$sub->select(DB::raw(1))
+						->from('loan_applications as la2')
+						->whereColumn('la2.user_id', 'loan_applications.user_id')
+						->whereColumn('la2.id', '!=', 'loan_applications.id')
+						->where('la2.admin_approval_status', 'rejected');
+				});
             });
 
         if ($searchTerm) {
@@ -1090,13 +1120,27 @@ class LeadController extends Controller
                 }
             }
         }
+		
+		$hasPreviousRejectedLoan = LoanApplication::where('user_id', $lead->user->id)
+        ->where('id', '!=', $lead->id) // Exclude current loan
+        ->where('admin_approval_status', 'rejected')
+        ->exists();
+        
+        $selfieDoc = '';
+        if($hasPreviousRejectedLoan){
+            $preloanData = LoanApplication::where('user_id', $lead->user->id)
+            ->where('id', '!=', $lead->id) // Exclude current loan
+            ->where('admin_approval_status', 'rejected')
+            ->first();
+
+            $selfieDoc = LoanDocument::where('loan_application_id', $preloanData->id)->first();
+        }
         
         $hasPreviousClosedLoan = LoanApplication::where('user_id', $lead->user->id)
         ->where('id', '!=', $lead->id) // Exclude current loan
         ->where('admin_approval_status', 'approved')
         ->exists();
         
-        $selfieDoc = '';
         if($hasPreviousClosedLoan){
             $preloanData = LoanApplication::where('user_id', $lead->user->id)
             ->where('id', '!=', $lead->id) // Exclude current loan
@@ -1249,7 +1293,7 @@ class LeadController extends Controller
         }
         //EOC for check current dues of customer
         
-        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData','cfreeSubsData', 'allcfreeSubData', 'allcfreeSubPayReqData', 'bankDetailsData'));
+        return view('admin.leads.leads-verify', compact('lead', 'loanApproval', 'loanDisbursal', 'loanUtrCollections', 'aadharData', 'panData', 'hasPreviousClosedLoan', 'hasPreviousRejectedLoan', 'loans', 'paymentLink', 'experianCreditBureau','cashfreeData', 'selfieDoc','digitapBankRequestData','cfreeSubsData', 'allcfreeSubData', 'allcfreeSubPayReqData', 'bankDetailsData'));
     }
 
     public function deleteLead($id)

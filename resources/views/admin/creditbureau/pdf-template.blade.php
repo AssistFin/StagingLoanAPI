@@ -266,6 +266,10 @@
                     @php
                         $accountDetails = $data['CAIS_Account']['CAIS_Account_DETAILS'] ?? [];
 
+                        if (!is_array($accountDetails) || isset($accountDetails['Account_Type'])) {
+                            $accountDetails = [$accountDetails];
+                        }
+
                         usort($accountDetails, function($a, $b) {
                             $dateA = isset($a['Open_Date']) ? (int)$a['Open_Date'] : 0;
                             $dateB = isset($b['Open_Date']) ? (int)$b['Open_Date'] : 0;
@@ -345,78 +349,81 @@
                             }
 
                             $accountStatus = '';
-                            if((string)($summary['Account_Status']) == '11' || (string)($summary['Account_Status']) == '71' || (string)($summary['Account_Status']) == '78' || (string)($summary['Account_Status']) == '80' || (string)($summary['Account_Status']) == '82' || (string)($summary['Account_Status']) == '83' || (string)($summary['Account_Status']) == '84' || (string)($summary['Account_Status']) == '21' || (string)($summary['Account_Status']) == '22' || (string)($summary['Account_Status']) == '23' || (string)($summary['Account_Status']) == '24' || (string)($summary['Account_Status']) == '25'){ $accountStatus = 'ACTIVE';}
-                            if((string)($summary['Account_Status']) == '12' || (string)($summary['Account_Status']) == '13' || (string)($summary['Account_Status']) == '14' || (string)($summary['Account_Status']) == '15' || (string)($summary['Account_Status']) == '16' || (string)($summary['Account_Status']) == '17'){ $accountStatus = 'CLOSED';}
-                            if((string)($summary['Account_Status']) == '00'){ $accountStatus = ' No Suit Filed';}
-                            if((string)($summary['Account_Status']) == '89'){ $accountStatus = 'Wilful default';}
-                            if((string)($summary['Account_Status']) == '93'){ $accountStatus = 'Suit Filed(Wilful default)';} 
-                            if((string)($summary['Account_Status']) == '97'){ $accountStatus = 'Suit Filed(Wilful Default) and Written-off';} 
-                            if((string)($summary['Account_Status']) == '30'){ $accountStatus = 'Restructured';} 
-                            if((string)($summary['Account_Status']) == '32'){ $accountStatus = 'Settled';} 
-                            if((string)($summary['Account_Status']) == '31'){ $accountStatus = 'Restructured Loan (Govt. Mandated)';} 
-                            if((string)($summary['Account_Status']) == '33'){ $accountStatus = 'Post (WO) Settled';} 
-                            if((string)($summary['Account_Status']) == '34'){ $accountStatus = 'Account Sold';} 
-                            if((string)($summary['Account_Status']) == '35'){ $accountStatus = 'Written Off and Account Sold';} 
-                            if((string)($summary['Account_Status']) == '36'){ $accountStatus = 'Account Purchased';} 
-                            if((string)($summary['Account_Status']) == '37'){ $accountStatus = 'Account Purchased and Written Off';} 
-                            if((string)($summary['Account_Status']) == '38'){ $accountStatus = 'Account Purchased and Settled';} 
-                            if((string)($summary['Account_Status']) == '39'){ $accountStatus = 'Account Purchased and Restructured';} 
-                            if((string)($summary['Account_Status']) == '40'){ $accountStatus = 'Status Cleared';} 
-                            if((string)($summary['Account_Status']) == '41'){ $accountStatus = 'Restructured Loan';} 
-                            if((string)($summary['Account_Status']) == '42'){ $accountStatus = 'Restructured Loan (Govt. Mandated)';} 
-                            if((string)($summary['Account_Status']) == '43'){ $accountStatus = 'Written-off';} 
-                            if((string)($summary['Account_Status']) == '44'){ $accountStatus = 'Settled';} 
-                            if((string)($summary['Account_Status']) == '45'){ $accountStatus = 'Post (WO) Settled';} 
-                            if((string)($summary['Account_Status']) == '46'){ $accountStatus = 'Account Sold';} 
-                            if((string)($summary['Account_Status']) == '47'){ $accountStatus = 'Written Off and Account Sold';} 
-                            if((string)($summary['Account_Status']) == '48'){ $accountStatus = 'Account Purchased';} 
-                            if((string)($summary['Account_Status']) == '49'){ $accountStatus = 'Account Purchased and Written Off';} 
-                            if((string)($summary['Account_Status']) == '50'){ $accountStatus = 'Account Purchased and Settled';} 
-                            if((string)($summary['Account_Status']) == '51'){ $accountStatus = 'Account Purchased and Restructured';} 
-                            if((string)($summary['Account_Status']) == '52'){ $accountStatus = 'Status Cleared';} 
-                            if((string)($summary['Account_Status']) == '53'){ $accountStatus = 'Suit Filed';} 
-                            if((string)($summary['Account_Status']) == '54'){ $accountStatus = 'Suit Filed and Written-off';} 
-                            if((string)($summary['Account_Status']) == '55'){ $accountStatus = 'Suit Filed and Settled';} 
-                            if((string)($summary['Account_Status']) == '56'){ $accountStatus = 'Suit Filed and Post (WO) Settled';} 
-                            if((string)($summary['Account_Status']) == '57'){ $accountStatus = 'Suit Filed and Account Sold';} 
-                            if((string)($summary['Account_Status']) == '58'){ $accountStatus = 'Suit Filed and Written Off and Account Sold';} 
-                            if((string)($summary['Account_Status']) == '59'){ $accountStatus = 'Suit Filed and Account Purchased';}
-                            if((string)($summary['Account_Status']) == '60'){ $accountStatus = 'Suit Filed and Account Purchased and Written Off';}
-                            if((string)($summary['Account_Status']) == '61'){ $accountStatus = 'Suit Filed and Account Purchased and Settled';}
-                            if((string)($summary['Account_Status']) == '62'){ $accountStatus = 'Suit Filed and Account Purchased and Restructured';}
-                            if((string)($summary['Account_Status']) == '63'){ $accountStatus = 'Suit Filed and Status Cleared';}
-                            if((string)($summary['Account_Status']) == '64'){ $accountStatus = 'Wilful Default and Restructured Loan';}
-                            if((string)($summary['Account_Status']) == '65'){ $accountStatus = 'Wilful Default and Restructured Loan (Govt. Mandated)';}
-                            if((string)($summary['Account_Status']) == '66'){ $accountStatus = 'Wilful Default and Settled';}
-                            if((string)($summary['Account_Status']) == '67'){ $accountStatus = 'Wilful Default and Post (WO) Settled';}
-                            if((string)($summary['Account_Status']) == '68'){ $accountStatus = 'Wilful Default and Account Sold';}
-                            if((string)($summary['Account_Status']) == '69'){ $accountStatus = 'Wilful Default and Written Off and Account Sold';}
-                            if((string)($summary['Account_Status']) == '70'){ $accountStatus = 'Wilful Default and Account Purchased';}
-                            if((string)($summary['Account_Status']) == '72'){ $accountStatus = 'Wilful Default and Account Purchased and Written Off';}
-                            if((string)($summary['Account_Status']) == '73'){ $accountStatus = 'Wilful Default and Account Purchased and Settled';}
-                            if((string)($summary['Account_Status']) == '74'){ $accountStatus = 'Wilful Default and Account Purchased and Restructured';}
-                            if((string)($summary['Account_Status']) == '75'){ $accountStatus = 'Wilful Default and Status Cleared';}
-                            if((string)($summary['Account_Status']) == '76'){ $accountStatus = 'Suit filed (Wilful default) and Restructured';}
-                            if((string)($summary['Account_Status']) == '77'){ $accountStatus = 'Suit filed (Wilful default) and Restructured Loan (Govt. Mandated)';}
-                            if((string)($summary['Account_Status']) == '79'){ $accountStatus = 'Suit filed (Wilful default) and Settled';}
-                            if((string)($summary['Account_Status']) == '81'){ $accountStatus = 'Suit filed (Wilful default) and Post (WO) Settled';}
-                            if((string)($summary['Account_Status']) == '85'){ $accountStatus = 'Suit filed (Wilful default) and Account Sold';}
-                            if((string)($summary['Account_Status']) == '86'){ $accountStatus = 'Suit filed (Wilful default) and Written Off and Account Sold';}
-                            if((string)($summary['Account_Status']) == '87'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased';}
-                            if((string)($summary['Account_Status']) == '88'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased and Written Off';}
-                            if((string)($summary['Account_Status']) == '90'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased and Restructured';}
-                            if((string)($summary['Account_Status']) == '91'){ $accountStatus = 'Suit filed (Wilful default) and Status Cleared';}
-                            if((string)($summary['Account_Status']) == '94'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased and Settled';}
-                            if((string)($summary['Account_Status']) == '130'){ $accountStatus = 'Restructured due to COVID-19';}
-                            if((string)($summary['Account_Status']) == '131'){ $accountStatus = 'Restructured due to natural calamity';}
-                            if((string)($summary['Account_Status']) == '132'){ $accountStatus = 'Post Write Off Closed';}
-                            if((string)($summary['Account_Status']) == '133'){ $accountStatus = 'Restructured & Closed';}
-                            if((string)($summary['Account_Status']) == '134'){ $accountStatus = 'Auctioned & Settled';}
-                            if((string)($summary['Account_Status']) == '135'){ $accountStatus = 'Repossessed & Settled';}
-                            if((string)($summary['Account_Status']) == '136'){ $accountStatus = 'Guarantee Invoked';}
-                            if((string)($summary['Account_Status']) == '137'){ $accountStatus = 'Entity ceased while account was open';}
-                            if((string)($summary['Account_Status']) == '138'){ $accountStatus = 'Entity ceased while account was closed';}
-                            
+							
+							if(!empty($summary['Account_Status']))
+							{
+								if((string)($summary['Account_Status']) == '11' || (string)($summary['Account_Status']) == '71' || (string)($summary['Account_Status']) == '78' || (string)($summary['Account_Status']) == '80' || (string)($summary['Account_Status']) == '82' || (string)($summary['Account_Status']) == '83' || (string)($summary['Account_Status']) == '84' || (string)($summary['Account_Status']) == '21' || (string)($summary['Account_Status']) == '22' || (string)($summary['Account_Status']) == '23' || (string)($summary['Account_Status']) == '24' || (string)($summary['Account_Status']) == '25'){ $accountStatus = 'ACTIVE';}
+								if((string)($summary['Account_Status']) == '12' || (string)($summary['Account_Status']) == '13' || (string)($summary['Account_Status']) == '14' || (string)($summary['Account_Status']) == '15' || (string)($summary['Account_Status']) == '16' || (string)($summary['Account_Status']) == '17'){ $accountStatus = 'CLOSED';}
+								if((string)($summary['Account_Status']) == '00'){ $accountStatus = ' No Suit Filed';}
+								if((string)($summary['Account_Status']) == '89'){ $accountStatus = 'Wilful default';}
+								if((string)($summary['Account_Status']) == '93'){ $accountStatus = 'Suit Filed(Wilful default)';} 
+								if((string)($summary['Account_Status']) == '97'){ $accountStatus = 'Suit Filed(Wilful Default) and Written-off';} 
+								if((string)($summary['Account_Status']) == '30'){ $accountStatus = 'Restructured';} 
+								if((string)($summary['Account_Status']) == '32'){ $accountStatus = 'Settled';} 
+								if((string)($summary['Account_Status']) == '31'){ $accountStatus = 'Restructured Loan (Govt. Mandated)';} 
+								if((string)($summary['Account_Status']) == '33'){ $accountStatus = 'Post (WO) Settled';} 
+								if((string)($summary['Account_Status']) == '34'){ $accountStatus = 'Account Sold';} 
+								if((string)($summary['Account_Status']) == '35'){ $accountStatus = 'Written Off and Account Sold';} 
+								if((string)($summary['Account_Status']) == '36'){ $accountStatus = 'Account Purchased';} 
+								if((string)($summary['Account_Status']) == '37'){ $accountStatus = 'Account Purchased and Written Off';} 
+								if((string)($summary['Account_Status']) == '38'){ $accountStatus = 'Account Purchased and Settled';} 
+								if((string)($summary['Account_Status']) == '39'){ $accountStatus = 'Account Purchased and Restructured';} 
+								if((string)($summary['Account_Status']) == '40'){ $accountStatus = 'Status Cleared';} 
+								if((string)($summary['Account_Status']) == '41'){ $accountStatus = 'Restructured Loan';} 
+								if((string)($summary['Account_Status']) == '42'){ $accountStatus = 'Restructured Loan (Govt. Mandated)';} 
+								if((string)($summary['Account_Status']) == '43'){ $accountStatus = 'Written-off';} 
+								if((string)($summary['Account_Status']) == '44'){ $accountStatus = 'Settled';} 
+								if((string)($summary['Account_Status']) == '45'){ $accountStatus = 'Post (WO) Settled';} 
+								if((string)($summary['Account_Status']) == '46'){ $accountStatus = 'Account Sold';} 
+								if((string)($summary['Account_Status']) == '47'){ $accountStatus = 'Written Off and Account Sold';} 
+								if((string)($summary['Account_Status']) == '48'){ $accountStatus = 'Account Purchased';} 
+								if((string)($summary['Account_Status']) == '49'){ $accountStatus = 'Account Purchased and Written Off';} 
+								if((string)($summary['Account_Status']) == '50'){ $accountStatus = 'Account Purchased and Settled';} 
+								if((string)($summary['Account_Status']) == '51'){ $accountStatus = 'Account Purchased and Restructured';} 
+								if((string)($summary['Account_Status']) == '52'){ $accountStatus = 'Status Cleared';} 
+								if((string)($summary['Account_Status']) == '53'){ $accountStatus = 'Suit Filed';} 
+								if((string)($summary['Account_Status']) == '54'){ $accountStatus = 'Suit Filed and Written-off';} 
+								if((string)($summary['Account_Status']) == '55'){ $accountStatus = 'Suit Filed and Settled';} 
+								if((string)($summary['Account_Status']) == '56'){ $accountStatus = 'Suit Filed and Post (WO) Settled';} 
+								if((string)($summary['Account_Status']) == '57'){ $accountStatus = 'Suit Filed and Account Sold';} 
+								if((string)($summary['Account_Status']) == '58'){ $accountStatus = 'Suit Filed and Written Off and Account Sold';} 
+								if((string)($summary['Account_Status']) == '59'){ $accountStatus = 'Suit Filed and Account Purchased';}
+								if((string)($summary['Account_Status']) == '60'){ $accountStatus = 'Suit Filed and Account Purchased and Written Off';}
+								if((string)($summary['Account_Status']) == '61'){ $accountStatus = 'Suit Filed and Account Purchased and Settled';}
+								if((string)($summary['Account_Status']) == '62'){ $accountStatus = 'Suit Filed and Account Purchased and Restructured';}
+								if((string)($summary['Account_Status']) == '63'){ $accountStatus = 'Suit Filed and Status Cleared';}
+								if((string)($summary['Account_Status']) == '64'){ $accountStatus = 'Wilful Default and Restructured Loan';}
+								if((string)($summary['Account_Status']) == '65'){ $accountStatus = 'Wilful Default and Restructured Loan (Govt. Mandated)';}
+								if((string)($summary['Account_Status']) == '66'){ $accountStatus = 'Wilful Default and Settled';}
+								if((string)($summary['Account_Status']) == '67'){ $accountStatus = 'Wilful Default and Post (WO) Settled';}
+								if((string)($summary['Account_Status']) == '68'){ $accountStatus = 'Wilful Default and Account Sold';}
+								if((string)($summary['Account_Status']) == '69'){ $accountStatus = 'Wilful Default and Written Off and Account Sold';}
+								if((string)($summary['Account_Status']) == '70'){ $accountStatus = 'Wilful Default and Account Purchased';}
+								if((string)($summary['Account_Status']) == '72'){ $accountStatus = 'Wilful Default and Account Purchased and Written Off';}
+								if((string)($summary['Account_Status']) == '73'){ $accountStatus = 'Wilful Default and Account Purchased and Settled';}
+								if((string)($summary['Account_Status']) == '74'){ $accountStatus = 'Wilful Default and Account Purchased and Restructured';}
+								if((string)($summary['Account_Status']) == '75'){ $accountStatus = 'Wilful Default and Status Cleared';}
+								if((string)($summary['Account_Status']) == '76'){ $accountStatus = 'Suit filed (Wilful default) and Restructured';}
+								if((string)($summary['Account_Status']) == '77'){ $accountStatus = 'Suit filed (Wilful default) and Restructured Loan (Govt. Mandated)';}
+								if((string)($summary['Account_Status']) == '79'){ $accountStatus = 'Suit filed (Wilful default) and Settled';}
+								if((string)($summary['Account_Status']) == '81'){ $accountStatus = 'Suit filed (Wilful default) and Post (WO) Settled';}
+								if((string)($summary['Account_Status']) == '85'){ $accountStatus = 'Suit filed (Wilful default) and Account Sold';}
+								if((string)($summary['Account_Status']) == '86'){ $accountStatus = 'Suit filed (Wilful default) and Written Off and Account Sold';}
+								if((string)($summary['Account_Status']) == '87'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased';}
+								if((string)($summary['Account_Status']) == '88'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased and Written Off';}
+								if((string)($summary['Account_Status']) == '90'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased and Restructured';}
+								if((string)($summary['Account_Status']) == '91'){ $accountStatus = 'Suit filed (Wilful default) and Status Cleared';}
+								if((string)($summary['Account_Status']) == '94'){ $accountStatus = 'Suit filed (Wilful default) and Account Purchased and Settled';}
+								if((string)($summary['Account_Status']) == '130'){ $accountStatus = 'Restructured due to COVID-19';}
+								if((string)($summary['Account_Status']) == '131'){ $accountStatus = 'Restructured due to natural calamity';}
+								if((string)($summary['Account_Status']) == '132'){ $accountStatus = 'Post Write Off Closed';}
+								if((string)($summary['Account_Status']) == '133'){ $accountStatus = 'Restructured & Closed';}
+								if((string)($summary['Account_Status']) == '134'){ $accountStatus = 'Auctioned & Settled';}
+								if((string)($summary['Account_Status']) == '135'){ $accountStatus = 'Repossessed & Settled';}
+								if((string)($summary['Account_Status']) == '136'){ $accountStatus = 'Guarantee Invoked';}
+								if((string)($summary['Account_Status']) == '137'){ $accountStatus = 'Entity ceased while account was open';}
+								if((string)($summary['Account_Status']) == '138'){ $accountStatus = 'Entity ceased while account was closed';}
+							}
 
                             if(!is_array($summary['Open_Date'])){
                                 $opendateString = (string)($summary['Open_Date']);

@@ -86,11 +86,11 @@
                 <div class="card-header">
                     <div class="card-title d-flex justify-content-center gap-3">
                         <h6>
-                            <i class="la @if ((isset($lead->kycDetails) && !empty($lead->kycDetails->pan_number)) || ($hasPreviousClosedLoan) ) la-check-circle text--success @else la-times-circle text--danger @endif"></i>
+                            <i class="la @if ((isset($lead->kycDetails) && !empty($lead->kycDetails->pan_number)) || ($hasPreviousClosedLoan) || $hasPreviousRejectedLoan ) la-check-circle text--success @else la-times-circle text--danger @endif"></i>
                             @lang('Pan')
                         </h6>
                         <h6>
-                            <i class="la @if ((isset($lead->kycDetails) && $lead->kycDetails->aadhar_otp_verified == 1) || ($hasPreviousClosedLoan) ) la-check-circle text--success @else la-times-circle text--danger @endif"></i>
+                            <i class="la @if ((isset($lead->kycDetails) && $lead->kycDetails->aadhar_otp_verified == 1) || ($hasPreviousClosedLoan) || $hasPreviousRejectedLoan ) la-check-circle text--success @else la-times-circle text--danger @endif"></i>
                             @lang('Aadhar')
                         </h6>
                         <h6>
@@ -103,6 +103,11 @@
                     @if ($hasPreviousClosedLoan)
                             <button type="button" class="btn btn-danger">Existing Customer</button>
                     @endif
+					
+					@if ($hasPreviousRejectedLoan)
+                            <button type="button" class="btn btn-danger">Existing Customer (Rejected)</button>
+                    @endif
+					
                 </div>
                 <div class="card-body text-center">
                     @php
@@ -321,7 +326,7 @@
                                             <table class="table table-bordered">
                                                 <tr>
                                                     <th>Aadhar Number</th>
-                                                    <td>{{ isset($lead->kycDetails->aadhar_number) ? $lead->kycDetails->aadhar_number : '' }}</td>
+                                                    <td>{{ isset($aadharData->aadhaar_number) ? $aadharData->aadhaar_number : '' }}</td>
                                                 </tr>
                                                 <tr>
                                                     <th>Full Name</th>

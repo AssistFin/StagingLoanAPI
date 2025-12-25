@@ -302,14 +302,32 @@ class LoanApplyController extends Controller
                     ->where('loan_closed_date', '>=', now()->subMonths(6))
                     ->orderBy('loan_closed_date', 'desc')
                     ->first();
-        
-                if ($recentClosedLoan) {
-                    $loan->current_step = 'proofofaddress';
-                    $loan->next_step = 'addressconfirmation'; 
-                } else {
-                    $loan->current_step = 'proofofaddress';
-                    $loan->next_step = 'completekyc';
-                }
+					
+				$recentRejectedLoan = LoanApplication::where('user_id', auth()->id())
+					->where('id', '!=', $loan->id)
+					->where('admin_approval_status', 'rejected')
+					->where('updated_at', '<=', now()->subDays(45))
+					->orderBy('id', 'desc')
+					->first();
+						
+				if ($recentClosedLoan) {
+					$loan->current_step = 'proofofaddress';
+					$loan->next_step = 'addressconfirmation'; 
+				}  else if($recentRejectedLoan){
+					$existingRecord = LoanKYCDetails::where('loan_application_id', $recentRejectedLoan->id)->first();
+
+					if($existingRecord){
+						$loan->current_step = 'proofofaddress';
+						$loan->next_step = 'addressconfirmation';
+					}else{
+						$loan->current_step = 'proofofaddress';
+						$loan->next_step = 'completekyc';
+					}
+					
+				} else {
+					$loan->current_step = 'proofofaddress';
+					$loan->next_step = 'completekyc';
+				}
         
                 $loan->save();
             }
@@ -625,12 +643,10 @@ class LoanApplyController extends Controller
                 $data = json_decode($experianData->response_data, true);
                 if($data['UserMessage']['UserMessageText'] == 'Normal Response'){
                     $bscore = $data['SCORE']['BureauScore'];
-                }else{
-                    $bscore = 0;
                 }
             }
 
-            if($bscore < 550){
+            if(!empty($experianData) && $bscore < 550){
                 $data = [
                     'loan_application_id' => $request->loan_application_id,
                     'user_id' => auth()->id(),
@@ -687,10 +703,10 @@ class LoanApplyController extends Controller
                 ]);
 
                 return response()->json([
-                    'status' => true,
+                    'status' => false,
                     'message' => 'Sorry, you are not eligible for this loan, bureau score is low !!',
                     'data' => $employmentDetails
-                ], 200);
+                ], 500);
             }else{
                 $loan = LoanApplication::where([
                 ['user_id', auth()->id()],

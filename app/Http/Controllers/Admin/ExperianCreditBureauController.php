@@ -203,7 +203,7 @@ class ExperianCreditBureauController extends Controller
                     'Written- off Principal Amount' => '',
                     'Settlement Amt' => !empty($loans->total_paid) ? $loans->total_paid : 0,
                     'Payment Frequency' => 'Monthly',
-                    'Actual Payment Amt' => $totalDues,
+                    'Actual Payment Amt' => number_format($totalDues ?? 0, 2),
                     'Occupation Code' => !empty($lead->personalDetails->employment_type) ? $lead->personalDetails->employment_type : 0,
                     'Income' => !empty($lead->loanApproval->monthly_income) ? number_format($lead->loanApproval->monthly_income, 0) : 0,
                     'Net/Gross Income Indicator' => !empty($lead->loanApproval->monthly_income) ? number_format($lead->loanApproval->monthly_income, 0) : 0,

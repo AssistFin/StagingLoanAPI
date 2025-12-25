@@ -870,10 +870,9 @@ class OSReportController extends Controller
         ) AS loan_docs_counts ON dates.creation_date = loan_docs_counts.creation_date
         LEFT JOIN
         (
-            SELECT DATE(lbd.created_at) AS creation_date, COUNT(*) AS loan_bank_details_count
-            FROM finovel.loan_bank_details lbd
+            SELECT DATE(lbd.created_at) AS creation_date, COUNT(DISTINCT lbd.account_number) AS loan_bank_details_count FROM finovel.loan_bank_details lbd
             WHERE lbd.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
-            $userFilter )
+            $userFilter ) AND TRIM(account_number) <> ''
             GROUP BY creation_date
         ) AS loan_bank_details_counts ON dates.creation_date = loan_bank_details_counts.creation_date
         LEFT JOIN
