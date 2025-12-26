@@ -542,7 +542,7 @@ class LoanApplyController extends Controller
             $arr['lastname']  = $userData->lastname ?? null;
             $arr['mobile']    = $userData->mobile ?? null;
             $arr['dob']       = $panData->date_of_birth ?? null;
-            $arr['house_no']  = !empty($request->house_no) ? str_replace('&', '', $request->house_no) : '01';
+            $arr['house_no']  = !empty($aadhaarData->house) ? str_replace('&', '', $aadhaarData->house) : '01';
             $arr['pan']       = $panData->pan ?? null;
             $arr['gender']    = isset($aadhaarData->gender) && $aadhaarData->gender == 'M' ? '1' : '2';
             $arr['city']      = $aadhaarData->city ?? null;
@@ -1457,6 +1457,7 @@ class LoanApplyController extends Controller
             ])->withBody($xmlRequestBody, 'text/xml')
             ->post(config('services.experiancreditbureau.ecb_url'));
 
+        $jsonData = [];
         try {
             $soapXml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NOCDATA);
             $body = $soapXml->children('http://schemas.xmlsoap.org/soap/envelope/')->Body;
@@ -1482,7 +1483,7 @@ class LoanApplyController extends Controller
             'user_id' => $user_id,
             'lead_id' => $loan_no,
             'request_data' => $xmlRequestBody,
-            'response_data' => json_encode($jsonData),
+            'response_data' => !empty($jsonData) ? json_encode($jsonData) : '',
             'pdf_url' => $pdfPath,
             'created_at' => now(),
         ]);
