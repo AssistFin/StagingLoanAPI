@@ -83,6 +83,7 @@ return [
         'client_id'     => env('DIGITAP_CLIENT_ID'),
         'client_secret' => env('DIGITAP_CLIENT_SECRET'),
         'dbsa_url' => env('DIGITAP_BSA_UPLOAD_DOC'),
+        'db_url' => env('DIGITAP_URL'),
     ],
 
 

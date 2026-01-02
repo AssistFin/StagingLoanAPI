@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Controller;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
 
 class OSReportController extends Controller
 {
@@ -824,7 +825,7 @@ class OSReportController extends Controller
             UNION
             SELECT DATE(b.created_at) AS creation_date FROM finovel.loan_bank_details b
             UNION
-            SELECT DATE(ap.updated_at) AS creation_date FROM finovel.loan_approvals ap
+            SELECT DATE(ap.approval_date) AS creation_date FROM finovel.loan_approvals ap
             UNION
             SELECT DATE(ds.created_at) AS creation_date FROM finovel.loan_disbursals ds
         ) AS dates
@@ -877,11 +878,10 @@ class OSReportController extends Controller
         ) AS loan_bank_details_counts ON dates.creation_date = loan_bank_details_counts.creation_date
         LEFT JOIN
         (
-            SELECT DATE(lap.updated_at) AS creation_date, COUNT(*) AS loan_approvals_count
+            SELECT DATE(lap.approval_date) AS creation_date, COUNT(*) AS loan_approvals_count
             FROM finovel.loan_approvals lap
-            WHERE lap.final_remark = 'Approved'
-            AND lap.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
-            $userFilter )
+            WHERE lap.loan_application_id IN (SELECT id FROM finovel.loan_applications WHERE user_id NOT IN (" . implode(',', $excludedUserIds) . ")
+            $userFilter AND admin_approval_status = 'approved') 
             GROUP BY creation_date
         ) AS loan_approvals_counts ON dates.creation_date = loan_approvals_counts.creation_date
         LEFT JOIN
@@ -896,6 +896,12 @@ class OSReportController extends Controller
             dates.creation_date BETWEEN ? AND ?
         ORDER BY
             dates.creation_date";
+
+        // 🔍 Build final SQL with parameters for debugging
+        $debugSql = Str::replaceArray('?', [$from, $to], $sql);
+
+        // Log it to storage/logs/laravel.log
+        Log::info('OS Report Final SQL', ['sql' => $debugSql]);
 
         $data = collect(DB::select($sql, [$from, $to]));
 

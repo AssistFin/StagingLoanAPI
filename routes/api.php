@@ -17,9 +17,12 @@ use App\Http\Controllers\Admin\DigitapController;
 Route::post('/scoreme/webhook', [ScoreMeWebhookController::class, 'handle']);
 Route::post('/digitap/bsu/webhook', [DigitapController::class, 'callback']);
 Route::post('/digitap/bsaa/webhook', [DigitapController::class, 'aacallback']);
+Route::post('/digitap/selfie/webhook', [DigitapController::class, 'selfiecallback']);
 Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
 Route::get('/pay/{id}', [LoanPaymentController::class, 'generatePaymentLink']);
 Route::get('/get-city/{pincode}', [LoanApplyController::class, 'getcity']);
+Route::post('/selfie-callback', [DigitapController::class, 'handleCallback']);
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -187,6 +190,7 @@ Route::namespace('Api')->name('api.')->group(function () {
         Route::prefix('kyc')->group(function () {
             Route::post('/aadhaar/otp', [KycController::class, 'requestAadharOtp']);
             Route::post('/aadhaar/otp/verify', [KycController::class, 'verifyAadharOtp']);
+            Route::post('/selfie/url', [KycController::class, 'generateSelfieUrl']);
             Route::post('/pan/verify', [KycController::class, 'verifyPan']);
         });
 

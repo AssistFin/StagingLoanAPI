@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Log;
 use App\Models\DigitapBankRequest;
 use App\Services\DigitapBankStatementService;
 use App\Models\LoanApplication;
+use App\Models\LoanDocument;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class DigitapController extends Controller
 {
@@ -291,4 +293,196 @@ class DigitapController extends Controller
             return response()->json(['message' => 'Webhook Failed'], 301);
         }
     }
+
+    public function handleCallback(Request $request)
+    {
+        // Example fields from query string
+        $event = $request->event;
+        $success = $request->success;
+        $transactionId = $request->transactionId;
+
+        // 🔹 Save or process the callback
+        Log::info('Selfie callback', $request->all());
+
+        $selfieData = DB::table('selfie_data')->where('txn_id', $transactionId)->orderBy('id','desc')->first();
+        //Log::info('Selfie Data', $selfieData ? (array) $selfieData : []);
+        if(!empty($selfieData) && $success == true){
+            return response()->json([
+                'success' => true,
+                'message' => 'Callback received successfully'
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Callback not updated'
+            ]);
+        }
+    }
+
+
+    public function selfiecallback(Request $request, DigitapBankStatementService $digitap)
+    {
+        Log::info('Digitap AA Callback Received', $request->all());
+
+        Log::channel('webhook')->info(
+            "========== Digitap Selefie API Callback Response ==========\n\n" .
+            json_encode($request->all(), JSON_PRETTY_PRINT) .
+            "\n\n===================================================="
+        );
+
+        $uniqueId = $request->input('uniqueId');
+        $transactionId = !empty($request->input('transactionId')) ? $request->input('transactionId') : 0;
+        $status = !empty($request->input('status')) ? $request->input('status') : 'FAILED';
+
+        DB::table('selfie_data')->updateOrInsert(
+            ['txn_id' => $transactionId],  
+            [
+                'status' => $status
+            ]
+        );
+
+        $selfieData = DB::table('selfie_data')->where('txn_id', $transactionId)->orderBy('id','desc')->first();
+
+        $loan = LoanApplication::where([
+                    ['user_id', $selfieData->user_id],
+                    ['id', $selfieData->lead_id]
+                ])->first();
+
+        if($selfieData && $status == 'SUCCESS'){
+            if ($loan) {
+                $loan->current_step = 'submitselfie';
+                $loan->next_step = 'addressconfirmation';
+                $loan->save();
+            }
+
+            $resData = $this->getSelfieData($uniqueId, $transactionId);
+
+            if(!empty($resData) && !empty($resData['model']['base64Image'])){
+                $this->uploadSelfie($resData['model'], $transactionId);
+            }
+        } else {
+            if ($loan) {
+                $loan->current_step = 'verifyotp';
+                $loan->next_step = 'submitselfie';
+                $loan->save();
+            }
+        }
+
+        if($uniqueId && $transactionId){
+            return response()->json(['message' => 'Webhook handled OK'], 200);
+        }else{
+            return response()->json(['message' => 'Webhook Failed'], 301);
+        }
+    }
+
+    public function getSelfieData($uniqueId , $transactionId)
+    {
+        $payload = [
+            'uniqueId'            => $uniqueId,
+            'transactionId'       => $transactionId,
+        ];
+
+        $response = $this->httpPost('/selfie/v1/get-selfie-data', $payload);
+
+        \Log::info('Digitap generateurl Payload', ['payload' => $payload]);
+        \Log::info('Digitap generateurl Response', ['response' => $response]);
+
+        DB::table('selfie_data')->updateOrInsert(
+            ['txn_id' => $transactionId],  
+            [
+                'selfie_response' => $response
+            ]
+        );
+
+        return $response ?? null;
+    }
+
+    protected function httpPost($endpoint, $payload)
+    {
+        $res = Http::withHeaders([
+            'ent_authorization' => base64_encode(config('services.digitap.client_id'). ':' . config('services.digitap.client_secret')),
+            'content-type'  => 'application/json',
+        ])->post(rtrim(config('services.digitap.db_url'), '/') . $endpoint, $payload);
+
+        // Try to decode JSON
+        $json = $res->json();
+        return $json ?? [
+            'status_code' => $res->status(),
+            'raw'         => $res->body()
+        ];
+    }
+
+    protected function uploadSelfie($data, $txn_id)
+    {
+        Log::info('Received selfie upload request', $data);
+
+        try {
+            
+            $selfieLoanAppData = DB::table('selfie_data')->where('txn_id', $txn_id)->orderBy('id','desc')->first();
+
+            $base64 = $data['base64Image'] ?? null;
+
+            if (!$base64) {
+                Log::error('Missing base64 image in selfie response');
+                return;
+            }
+
+            // Remove prefix if present
+            if (str_contains($base64, 'base64,')) {
+                $base64 = explode('base64,', $base64)[1];
+            }
+
+            $imageData = base64_decode($base64);
+
+            if ($imageData === false) {
+                Log::error('Invalid base64 image received');
+                return;
+            }
+
+            // Directory
+            $securePath = config('services.docs.upload_kfs_doc');
+
+            if (!file_exists($securePath)) {
+                mkdir($securePath, 0777, true);
+            }
+
+            // File name
+            $fileName = 'selfie_' . time() . '.png';
+            $filePath = $securePath . '/' . $fileName;
+
+            // Save file
+            file_put_contents($filePath, $imageData);
+
+            Log::info('Selfie saved locally', ['path' => $filePath]);
+
+            // Save to DB
+            LoanDocument::updateOrCreate(
+                ['loan_application_id' => $selfieLoanAppData->lead_id],
+                ['selfie_image' => $fileName]
+            );
+
+            // Update loan step
+            $loan = LoanApplication::where([
+                ['user_id', auth()->id()],
+                ['id', $selfieLoanAppData->lead_id]
+            ])->first();
+
+            if ($loan) {
+                $loan->current_step = 'submitselfie';
+                $loan->next_step   = 'addressconfirmation';
+                $loan->save();
+            }
+
+            Log::info('Selfie updated in loan workflow', [
+                'loan_application_id' => $selfieLoanAppData->lead_id
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Selfie processing failed', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
 }

@@ -1520,12 +1520,6 @@ class LeadController extends Controller
                 ->where('subscription_id', $request->subscription_id)
                 ->get();
 
-            if(!empty($cashfreeData)){
-                $cashfreeDataCount = $cashfreeData->count();
-            }else{
-                $cashfreeDataCount = 0;
-            }
-
             // Example Cashfree API endpoint
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
@@ -1534,7 +1528,7 @@ class LeadController extends Controller
                 'x-client-secret' => config('services.cashfree.secret_key'),
             ])->post(config('services.cashfree.base_url') . '/pg/subscriptions/pay', [
                 'subscription_id' => $request->subscription_id,
-                "payment_id" => "CF-".$request->subscription_id.'-'.$cashfreeDataCount+1,
+                "payment_id" => "CF-".$request->subscription_id,
                 'payment_amount' => floatval(preg_replace('/[^\d.]/', '', $request->payment_amount)),
                 'payment_schedule_date' => Carbon::parse($request->schedule_on)->toIso8601String(),
                 'payment_remarks' => $request->remarks,
