@@ -183,7 +183,6 @@
                 date_range: dateRange,
                 from_date: fromDate,
                 to_date: toDate,
-                missing_info: missingInfo,
                 search: searchTerm
             },
             success: function(response) {
