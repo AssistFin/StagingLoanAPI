@@ -283,6 +283,10 @@ Route::middleware('admin')->group(function () {
         Route::get('leads-all', 'leadsAll')->name('all');
         Route::get('leads-wbs', 'leadsWBS')->name('wbs');
         Route::get('leads-bsa', 'leadsBSA')->name('bsa');
+        Route::get('leads-pendingkyc', 'leadsPendingKYC')->name('pendingkyc');
+        Route::get('leads-pendingselfie', 'leadsPendingSelfie')->name('pendingselfie');
+        Route::get('leads-selfiecompleted', 'leadsSelfieCompleted')->name('selfiecompleted');
+        Route::get('leads-pendingempdetails', 'leadsPendingEmpDetails')->name('pendingempdetails');
         Route::get('leads-notinterested', 'leadsNotInterested')->name('notinterested');
         Route::get('verify/{id}', 'leadsVerify')->name('verify');
         Route::delete('delete/{id}', 'deleteLead')->name('delete');
@@ -315,6 +319,14 @@ Route::middleware('admin')->group(function () {
         Route::get('collection-overdue', 'collectionOverdue')->name('overdue');
         Route::get('collection-all', 'collectionAll')->name('all');
         Route::post('send-predue-sms', 'sendPredueSms')->name('sendPredueSms');
+		
+		Route::get('config', 'config')->name('config');
+		Route::get('createconfig', 'createconfig')->name('createconfig');
+		Route::post('/ccstore', 'store')->name('ccstore');
+
+        Route::get('/editconfig/{id}','editconfig')->name('editconfig');
+        Route::post('/updateconfig/{id}','updateconfig')->name('updateconfig');
+        Route::post('/activate/{id}', 'activate')->name('activate');
 
     });
 

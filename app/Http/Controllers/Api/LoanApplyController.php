@@ -1282,7 +1282,7 @@ class LoanApplyController extends Controller
 
         $digitAAData = DigitapBankRequest::where('customer_id', $loan_application_id)->orderBy('id','desc')->first();
 
-        if(!empty($digitAAData) && ($digitAAData->status == 'xlsx_report_saved' || $digitAAData->status == 'json_report_saved')){
+        if(!empty($digitAAData) && ($digitAAData->status == 'xlsx_report_saved' || $digitAAData->status == 'ReportGenerated')){
             return response()->json([
                 'status' => true,
                 'aaData' => 'success',

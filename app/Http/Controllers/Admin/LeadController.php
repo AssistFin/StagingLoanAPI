@@ -730,7 +730,8 @@ class LeadController extends Controller
         return view('admin.leads.leads-all', compact('leads', 'usersWithKyc', 'userIdsWithKyc','totalAmount', 'totalRecords'));
     }
 
-    public function leadsWBS(Request $request){
+    public function leadsWBS(Request $request)
+    {
         ini_set('memory_limit', '2048M');
 
        $query = LoanApplication::with([
@@ -1747,5 +1748,440 @@ class LeadController extends Controller
                 'data' => ''
             ]);
         }
+    }
+
+    public function leadsPendingKYC(Request $request)
+    {
+       $query = LoanApplication::with([
+            'user:id,firstname,lastname,mobile,email',
+			'user.utmTracking:id,user_id,utm_source',
+            'personalDetails',
+            'kycDetails',
+            'loanDocument',
+            'addressDetails',
+            'employmentDetails',
+            'bankDetails'
+        ])->where('admin_approval_status', 'pending')
+		->whereDoesntHave('kycDetails')
+        ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+        $dateRange = $request->get('date_range');
+        $missingInfo = $request->get('missing_info');
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+
+        // Filter by Date Range
+        if ($dateRange) {
+            if ($dateRange === 'today') {
+                $query->whereDate('loan_applications.created_at', now()->today());
+            } elseif ($dateRange === 'yesterday') {
+                $query->whereDate('loan_applications.created_at', now()->yesterday());
+            } elseif ($dateRange === 'last_3_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(3), now()]);
+            } elseif ($dateRange === 'last_7_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(7), now()]);
+            } elseif ($dateRange === 'last_15_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(15), now()]);
+            } elseif ($dateRange === 'current_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+            } elseif ($dateRange === 'previous_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
+            } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                $query->whereBetween('loan_applications.created_at', [$fromDate, $toDate]);
+            }
+        }
+
+        // Search functionality
+        if ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                    $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                })
+                ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Clone the query to get the total count before pagination
+        $totalRecordsQuery = clone $query;
+        $totalRecords = $totalRecordsQuery->count();
+
+        if ($request->has('export') && $request->export === 'csv') {
+            $leads = $query->get();
+
+            $csvData = [];
+
+            foreach ($leads as $lead) {
+                // Default amount value
+                $loanAmount = $lead->loan_amount;
+                $loandate = $lead->created_at;
+
+                $csvData[] = [
+                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                    'Customer Mobile' => "'" . $lead->user->mobile,
+                    'Loan Application No' => $lead->loan_no,
+                    'Loan Amount' => number_format($loanAmount, 0),
+                    'Apply Date' => $loandate,
+                    'Last Activity' => $lead->last_activity_at ? $lead->last_activity_at->format('Y-m-d H:i:s') : 'No Activity',
+                    'Purpose Of Loan' => $lead->purpose_of_loan,
+					'Source' => $lead->user->utmTracking->utm_source ?? '',
+                ];
+            }
+
+            $missingInfoText = $missingInfo ?? 'all';
+            $dateRangeText = $dateRange ?? 'alltime';
+            $timestamp = now()->format('Ymd_His');
+
+            $filename = "{$dateRangeText}_{$missingInfoText}_leads_export_{$timestamp}.csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
+        $leads = $query->paginate(25);
+
+        return view('admin.leads.leads-pendingkyc', compact('leads', 'totalRecords'));
+    }
+
+    public function leadsPendingSelfie(Request $request)
+    {
+       $query = LoanApplication::with([
+            'user:id,firstname,lastname,mobile,email',
+			'user.utmTracking:id,user_id,utm_source',
+            'personalDetails',
+            'kycDetails',
+            'loanDocument',
+            'addressDetails',
+            'employmentDetails',
+            'bankDetails'
+        ])->where('admin_approval_status', 'pending')
+		->whereHas('kycDetails')
+        ->whereDoesntHave('loanDocument')
+        ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+        $dateRange = $request->get('date_range');
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+
+        // Filter by Date Range
+        if ($dateRange) {
+            if ($dateRange === 'today') {
+                $query->whereDate('loan_applications.created_at', now()->today());
+            } elseif ($dateRange === 'yesterday') {
+                $query->whereDate('loan_applications.created_at', now()->yesterday());
+            } elseif ($dateRange === 'last_3_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(3), now()]);
+            } elseif ($dateRange === 'last_7_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(7), now()]);
+            } elseif ($dateRange === 'last_15_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(15), now()]);
+            } elseif ($dateRange === 'current_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+            } elseif ($dateRange === 'previous_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
+            } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                $query->whereBetween('loan_applications.created_at', [$fromDate, $toDate]);
+            }
+        }
+
+        // Search functionality
+        if ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                    $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                })
+                ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Clone the query to get the total count before pagination
+        $totalRecordsQuery = clone $query;
+        $totalRecords = $totalRecordsQuery->count();
+
+        if ($request->has('export') && $request->export === 'csv') {
+            $leads = $query->get();
+
+            $csvData = [];
+
+            foreach ($leads as $lead) {
+                // Default amount value
+                $loanAmount = $lead->loan_amount;
+                $loandate = $lead->created_at;
+
+                $csvData[] = [
+                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                    'Customer Mobile' => "'" . $lead->user->mobile,
+                    'Loan Application No' => $lead->loan_no,
+                    'Loan Amount' => number_format($loanAmount, 0),
+                    'Apply Date' => $loandate,
+                    'Last Activity' => $lead->last_activity_at ? $lead->last_activity_at->format('Y-m-d H:i:s') : 'No Activity',
+                    'Purpose Of Loan' => $lead->purpose_of_loan,
+					'Source' => $lead->user->utmTracking->utm_source ?? '',
+                ];
+            }
+
+            $missingInfoText = $missingInfo ?? 'all';
+            $dateRangeText = $dateRange ?? 'alltime';
+            $timestamp = now()->format('Ymd_His');
+
+            $filename = "{$dateRangeText}_{$missingInfoText}_leads_export_{$timestamp}.csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
+        $leads = $query->paginate(25);
+
+        return view('admin.leads.leads-pendingselfie', compact('leads', 'totalRecords'));
+    }
+
+    public function leadsSelfieCompleted(Request $request)
+    {
+       $query = LoanApplication::with([
+            'user:id,firstname,lastname,mobile,email',
+			'user.utmTracking:id,user_id,utm_source',
+            'personalDetails',
+            'kycDetails',
+            'loanDocument',
+            'addressDetails',
+            'employmentDetails',
+            'bankDetails'
+        ])->where('admin_approval_status', 'pending')
+		->whereHas('kycDetails')
+        ->whereHas('loanDocument')
+        ->whereDoesntHave('addressDetails')
+        ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+        $dateRange = $request->get('date_range');
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+
+        // Filter by Date Range
+        if ($dateRange) {
+            if ($dateRange === 'today') {
+                $query->whereDate('loan_applications.created_at', now()->today());
+            } elseif ($dateRange === 'yesterday') {
+                $query->whereDate('loan_applications.created_at', now()->yesterday());
+            } elseif ($dateRange === 'last_3_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(3), now()]);
+            } elseif ($dateRange === 'last_7_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(7), now()]);
+            } elseif ($dateRange === 'last_15_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(15), now()]);
+            } elseif ($dateRange === 'current_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+            } elseif ($dateRange === 'previous_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
+            } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                $query->whereBetween('loan_applications.created_at', [$fromDate, $toDate]);
+            }
+        }
+
+        // Search functionality
+        if ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                    $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                })
+                ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Clone the query to get the total count before pagination
+        $totalRecordsQuery = clone $query;
+        $totalRecords = $totalRecordsQuery->count();
+
+        if ($request->has('export') && $request->export === 'csv') {
+            $leads = $query->get();
+
+            $csvData = [];
+
+            foreach ($leads as $lead) {
+                // Default amount value
+                $loanAmount = $lead->loan_amount;
+                $loandate = $lead->created_at;
+
+                $csvData[] = [
+                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                    'Customer Mobile' => "'" . $lead->user->mobile,
+                    'Loan Application No' => $lead->loan_no,
+                    'Loan Amount' => number_format($loanAmount, 0),
+                    'Apply Date' => $loandate,
+                    'Last Activity' => $lead->last_activity_at ? $lead->last_activity_at->format('Y-m-d H:i:s') : 'No Activity',
+                    'Purpose Of Loan' => $lead->purpose_of_loan,
+					'Source' => $lead->user->utmTracking->utm_source ?? '',
+                ];
+            }
+
+            $missingInfoText = $missingInfo ?? 'all';
+            $dateRangeText = $dateRange ?? 'alltime';
+            $timestamp = now()->format('Ymd_His');
+
+            $filename = "{$dateRangeText}_{$missingInfoText}_leads_export_{$timestamp}.csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
+        $leads = $query->paginate(25);
+
+        return view('admin.leads.leads-selfiecompleted', compact('leads', 'totalRecords'));
+    }
+
+    public function leadsPendingEmpDetails(Request $request)
+    {
+       $query = LoanApplication::with([
+            'user:id,firstname,lastname,mobile,email',
+			'user.utmTracking:id,user_id,utm_source',
+            'personalDetails',
+            'kycDetails',
+            'loanDocument',
+            'addressDetails',
+            'employmentDetails',
+            'bankDetails'
+        ])->where('admin_approval_status', 'pending')
+		->whereHas('kycDetails')
+        ->whereHas('loanDocument')
+        ->whereHas('addressDetails')
+        ->whereDoesntHave('employmentDetails')
+        ->orderByRaw('created_at DESC');
+
+        $searchTerm = $request->get('search');
+        $dateRange = $request->get('date_range');
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+
+        // Filter by Date Range
+        if ($dateRange) {
+            if ($dateRange === 'today') {
+                $query->whereDate('loan_applications.created_at', now()->today());
+            } elseif ($dateRange === 'yesterday') {
+                $query->whereDate('loan_applications.created_at', now()->yesterday());
+            } elseif ($dateRange === 'last_3_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(3), now()]);
+            } elseif ($dateRange === 'last_7_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(7), now()]);
+            } elseif ($dateRange === 'last_15_days') {
+                $query->whereBetween('loan_applications.created_at', [now()->subDays(15), now()]);
+            } elseif ($dateRange === 'current_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+            } elseif ($dateRange === 'previous_month') {
+                $query->whereBetween('loan_applications.created_at', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
+            } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                $query->whereBetween('loan_applications.created_at', [$fromDate, $toDate]);
+            }
+        }
+
+        // Search functionality
+        if ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereHas('user', function ($userQuery) use ($searchTerm) {
+                    $userQuery->where('firstname', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('mobile', 'like', "%{$searchTerm}%");
+                })
+                ->orWhere('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Clone the query to get the total count before pagination
+        $totalRecordsQuery = clone $query;
+        $totalRecords = $totalRecordsQuery->count();
+
+        if ($request->has('export') && $request->export === 'csv') {
+            $leads = $query->get();
+
+            $csvData = [];
+
+            foreach ($leads as $lead) {
+                // Default amount value
+                $loanAmount = $lead->loan_amount;
+                $loandate = $lead->created_at;
+
+                $csvData[] = [
+                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
+                    'Customer Mobile' => "'" . $lead->user->mobile,
+                    'Loan Application No' => $lead->loan_no,
+                    'Loan Amount' => number_format($loanAmount, 0),
+                    'Apply Date' => $loandate,
+                    'Last Activity' => $lead->last_activity_at ? $lead->last_activity_at->format('Y-m-d H:i:s') : 'No Activity',
+                    'Purpose Of Loan' => $lead->purpose_of_loan,
+					'Source' => $lead->user->utmTracking->utm_source ?? '',
+                ];
+            }
+
+            $missingInfoText = $missingInfo ?? 'all';
+            $dateRangeText = $dateRange ?? 'alltime';
+            $timestamp = now()->format('Ymd_His');
+
+            $filename = "{$dateRangeText}_{$missingInfoText}_leads_export_{$timestamp}.csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
+        $leads = $query->paginate(25);
+
+        return view('admin.leads.leads-pendingempdetails', compact('leads', 'totalRecords'));
     }
 }

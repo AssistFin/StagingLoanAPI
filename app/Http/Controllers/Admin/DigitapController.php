@@ -385,7 +385,7 @@ class DigitapController extends Controller
         $response = $this->httpPost('/selfie/v1/get-selfie-data', $payload);
 
         \Log::info('Digitap generateurl Payload', ['payload' => $payload]);
-        \Log::info('Digitap generateurl Response', ['response' => $response]);
+        //\Log::info('Digitap generateurl Response', ['response' => $response]);
 
         DB::table('selfie_data')->updateOrInsert(
             ['txn_id' => $transactionId],  
@@ -414,7 +414,7 @@ class DigitapController extends Controller
 
     protected function uploadSelfie($data, $txn_id)
     {
-        Log::info('Received selfie upload request', $data);
+        //Log::info('Received selfie upload request', $data);
 
         try {
             
@@ -483,6 +483,5 @@ class DigitapController extends Controller
             ]);
         }
     }
-
-
+    
 }
