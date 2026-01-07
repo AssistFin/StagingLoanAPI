@@ -112,7 +112,7 @@
                             @forelse($leads as $lead)
                                 <tr>
                                     <td style="cursor: pointer">
-                                        <a href="{{route('admin.leads.verify', $lead->id)}}"><i class="fas fa-eye"></i></a>
+                                        <a href="{{route('admin.leads.verify', base64_encode($lead->id))}}"><i class="fas fa-eye"></i></a>
                                     </td>
                                     <td>{{ $lead->loan_no }}</td>
                                     <td>{{ $lead->user ? $lead->user->firstname . " " . $lead->user->lastname : '' }}</td>

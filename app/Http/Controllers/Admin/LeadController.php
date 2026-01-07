@@ -1067,9 +1067,17 @@ class LeadController extends Controller
         return view('admin.leads.leads-rejectfileupload', compact('leads'));
     }
 
-    public function leadsVerify($id = null)
+    public function leadsVerify($encodedId = null)
     {
         ini_set('memory_limit', '2048M');
+
+        $id = base64_decode($encodedId, true);
+
+        // validate decoded value
+        if ($id === false || !ctype_digit($id)) {
+            abort(404); // invalid / tampered URL
+        }
+
         $lead = LoanApplication::with([
             'user',
             'personalDetails', 

@@ -128,15 +128,6 @@
                                     <th>@lang('View')</th>
                                     <th>@lang('Loan Application No.')</th>
                                     <th>@lang('Loan Amount')</th>
-                                    <th>@lang('Action')</th>
-                                    <!--th>@lang('Purpose Of Loan')</th>
-                                    <th>@lang('Personal Details')</th>
-                                    <th>@lang('KYC Details')</th>
-                                    <th>@lang('Selfie Document')</th>
-                                    <th>@lang('Address Details')</th>
-                                    <th>@lang('Employement Details')</th>
-                                    <th>@lang('Bank Details')</th-->
-                                    <!--th>@lang('Action')</th-->
                                 </tr>
                             </thead>
                             <tbody id="leadsTable">
@@ -160,70 +151,23 @@
                                             @endif
 
                                             <td>
-                                                <a href="{{ route('admin.leads.verify', $lead->id) }}" title="View Details">
+                                                <a href="{{ route('admin.leads.verify', base64_encode($lead->id)) }}" title="View Details">
                                                     <i class="fas fa-eye text-primary"></i>
                                                 </a>
                                             </td>
                         
                                             <td>
-                                                <a href="{{ route('admin.leads.verify', $lead->id) }}">
+                                                <a href="{{ route('admin.leads.verify', base64_encode($lead->id)) }}">
                                                     {{ $lead->loan_no }}
                                                 </a>
                                             </td>
                                             <td>{{ isset($lead->loanApproval->approval_amount) ? number_format(($lead->loanApproval->approval_amount), 0) : 0 }}</td>
-                                            <td>
+                                            <!--td>
                                                 @if($lead->bredata_exists)
                                                     <button class="btn btn-primary btn-check-status" data-lead-id="{{ $lead->id }}">BRE Status</button>
                                                 @else
                                                     <span class="badge bg-danger">No BRE Data</span>
                                                 @endif
-                                            </td>
-
-                                            <!--td>{{ $lead->purpose_of_loan }}</td>
-                        
-                                            {{-- Personal Details --}}
-                                            <td>
-                                                {!! $lead->personal_details_exists 
-                                                    ? '<i class="fas fa-check" style="color: green;"></i>' 
-                                                    : '<i class="fas fa-times" style="color: red;"></i>' !!}
-                                            </td>
-                        
-                                            {{-- Shared KYC Details for user --}}
-                                            <td>
-                                                {!! in_array($lead->user_id, $userIdsWithKyc) 
-                                                    ? '<i class="fas fa-check" style="color: green;"></i>' 
-                                                    : '<i class="fas fa-times" style="color: red;"></i>' !!}
-                                            </td>
-                        
-                                            {{-- Loan Document --}}
-                                            <td>
-                                                @php
-                                                    $hasKyc = in_array($lead->user_id, $userIdsWithKyc);
-                                                @endphp
-                                                {!! $hasKyc
-                                                    ? '<i class="fas fa-check" style="color: green;"></i>'
-                                                    : '<i class="fas fa-times" style="color: red;"></i>' !!}
-                                            </td>
-                        
-                                            {{-- Address --}}
-                                            <td>
-                                                {!! $lead->address_details_exists 
-                                                    ? '<i class="fas fa-check" style="color: green;"></i>' 
-                                                    : '<i class="fas fa-times" style="color: red;"></i>' !!}
-                                            </td>
-                        
-                                            {{-- Employment --}}
-                                            <td>
-                                                {!! $lead->employment_details_exists 
-                                                    ? '<i class="fas fa-check" style="color: green;"></i>' 
-                                                    : '<i class="fas fa-times" style="color: red;"></i>' !!}
-                                            </td>
-                        
-                                            {{-- Bank --}}
-                                            <td>
-                                                {!! $lead->bank_details_exists 
-                                                    ? '<i class="fas fa-check" style="color: green;"></i>' 
-                                                    : '<i class="fas fa-times" style="color: red;"></i>' !!}
                                             </td-->
                         
                                             {{-- Action --}}

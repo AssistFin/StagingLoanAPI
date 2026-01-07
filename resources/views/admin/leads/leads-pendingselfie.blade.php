@@ -116,7 +116,7 @@
                             @forelse($leads as $lead)
                                     <tr>
                                         <td style="cursor: pointer">
-                                            <a href="{{route('admin.leads.verify', $lead->id)}}"><i class="fas fa-eye"></i></a>
+                                            <a href="{{route('admin.leads.verify', base64_encode($lead->id))}}"><i class="fas fa-eye"></i></a>
                                         </td>
                                         <td> @if($lead->last_activity_at)
                                                 {{ showDateTime($lead->last_activity_at) }} <br>
