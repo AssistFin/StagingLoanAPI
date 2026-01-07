@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Response;
 use Carbon\Carbon;
+use App\Models\CollectionConfiguration;
 
 class CollectionController extends Controller
 {
@@ -312,8 +313,18 @@ class CollectionController extends Controller
                     ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
                     ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
                     ->leftJoin('admins as a', 'a.id', '=', 'lap.credited_by')
-                    ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
-                    SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
+                    ->leftJoin(DB::raw('(
+                        SELECT 
+                            loan_application_id,
+                            SUM(principal) AS total_principal_paid,
+                            SUM(interest) AS total_interest_paid,
+                            SUM(penal) AS total_penal_paid,
+                            SUM(discount_interest) AS total_interest_discount,
+                            SUM(discount_penal) AS total_penal_discount,
+                            MAX(created_at) AS last_payment_date
+                        FROM utr_collections
+                        GROUP BY loan_application_id
+                    ) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->leftJoin('cashfree_enach_request_response_data as cerd', function($join) {
                         $join->on('cerd.subscription_id', '=', 'la.loan_no')
                             ->where('cerd.status', '=', 'ACTIVE');
@@ -321,10 +332,69 @@ class CollectionController extends Controller
                     ->select([
                         'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount','lap.roi','lap.cibil_score','lap.salary_date','ld.loan_disbursal_number','ld.disbursal_date','a.name as credited_by_name',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
-                        DB::raw('
-                        (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
-                        + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", ld.created_at) - IFNULL(uc.total_interest_paid, 0))
-                        + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0, (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date), 0 ) as total_dues'),
+                        DB::raw('(
+                            ((lap.approval_amount * lap.roi / 100)
+                                * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), ld.created_at)
+                            )
+                            +
+                            (
+                                 ((lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * lap.roi / 100)
+                                * GREATEST(DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, "' . $today . '")), 0)
+                            )
+                            - IFNULL(uc.total_interest_paid, 0)
+                            - IFNULL(uc.total_interest_discount, 0)
+                        ) as interest'),
+
+                        // ---------------- PENAL CALCULATION ----------------
+                        DB::raw('(
+                            (
+                                IF(
+                                    DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date) > 0,
+                                    lap.approval_amount * 0.0025 * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date),
+                                    0
+                                )
+                            )
+                            +
+                            (
+                                IF(
+                                    uc.last_payment_date IS NOT NULL AND DATEDIFF("' . $today . '", uc.last_payment_date) > 0 AND DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                                    (lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * 0.0025 * DATEDIFF("' . $today . '", uc.last_payment_date),
+                                    0
+                                )
+                            ) - IFNULL(uc.total_penal_paid, 0) - IFNULL(uc.total_penal_discount, 0)
+                        ) as penal_interest'),
+
+                        // ---------------- TOTAL DUES ----------------
+                        DB::raw('(
+                            (lap.approval_amount - IFNULL(uc.total_principal_paid, 0))
+                            + (
+                                (
+                                    (lap.approval_amount * lap.roi / 100)
+                                    * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), ld.created_at)
+                                )
+                                +
+                                (
+                                    ((lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * lap.roi / 100)
+                                    * GREATEST(DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, "' . $today . '")), 0)
+                                )
+                                - IFNULL(uc.total_interest_paid, 0)
+                                - IFNULL(uc.total_interest_discount, 0)
+                            ) + (
+                                IF(
+                                    DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date) > 0,
+                                    lap.approval_amount * 0.0025 * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date),
+                                    0
+                                )
+                                +
+                                IF(
+                                    uc.last_payment_date IS NOT NULL AND DATEDIFF("' . $today . '", uc.last_payment_date) > 0 AND DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                                    (lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * 0.0025 * DATEDIFF("' . $today . '", uc.last_payment_date),
+                                    0
+                                )
+                                - IFNULL(uc.total_penal_paid, 0)
+                                - IFNULL(uc.total_penal_discount, 0)
+                            )
+                        ) as total_dues'),
                         'cerd.reference_id'
                     ])
                     ->where('la.id', $lead->id)
@@ -337,6 +407,8 @@ class CollectionController extends Controller
                 
                 $userAddress = DB::table('aadhaar_data')->where('user_id', $lead->user->id)->first();
                 $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
+                $settlementpaymentLink = config('services.docs.app_url') . '/api/settlementpay/'.base64_encode($lead->id);
+                $partpaymentLink = config('services.docs.app_url') . '/api/partpay/'.base64_encode($lead->id);
 
                 $experian = null;
 
@@ -397,6 +469,8 @@ class CollectionController extends Controller
                     'Customer Type' => $customerType,
                     'Intrest Calculated upto' => $today,
                     'Payment Link' => $paymentLink,
+                    'Settlement Payment Link' => $settlementpaymentLink,
+                    'Part Payment Link' => $partpaymentLink,
                     'DPD' => $daysAfterDue,
                     'Email' => $lead->user->email,
                     'Relative Name' => $lead->addressDetails->relative_name,
@@ -467,32 +541,102 @@ class CollectionController extends Controller
 
             // Your specific raw query
             $loans = DB::table('loan_applications as la')
-                ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
-                ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
-                ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
-                    SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
-                ->select([
-                    'la.id',
-                    'la.loan_no',
-                    'ld.loan_disbursal_number',
-                    'lap.approval_amount',
-                    DB::raw("DATEDIFF('$today', ld.created_at) as days_since_disbursal"),
-                    DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
-                    DB::raw('IFNULL(lap.approval_amount - uc.total_paid, lap.approval_amount) as remaining_principal'),
-                    DB::raw('((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", ld.created_at) - IFNULL(uc.total_interest_paid, 0)) as interest'),
-                    DB::raw('
-                    IF(DATEDIFF("' . $today . '", lap.repay_date) > 0,
-                        (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date),
-                        0
-                    ) as penal_interest'),
-                    DB::raw('
-                    (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
-                    + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", ld.created_at) - IFNULL(uc.total_interest_paid, 0))
-                    + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0, (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date), 0 ) as total_dues')
-                ])
-                ->where('la.id', $lead->id)
-                ->where('la.loan_closed_status', 'pending')
-                ->first();
+                    ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
+                    ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
+                    ->leftJoin(DB::raw('(
+                        SELECT 
+                            loan_application_id,
+                            SUM(principal) AS total_principal_paid,
+                            SUM(interest) AS total_interest_paid,
+                            SUM(penal) AS total_penal_paid,
+                            SUM(discount_interest) AS total_interest_discount,
+                            SUM(discount_penal) AS total_penal_discount,
+                            MAX(created_at) AS last_payment_date
+                        FROM utr_collections
+                        GROUP BY loan_application_id
+                    ) as uc'), 'uc.loan_application_id', '=', 'la.id')
+                    ->select([
+                        'la.loan_no',
+                        'la.id',
+                        'ld.loan_disbursal_number',
+                        'lap.approval_amount',
+
+                        // Remaining principal
+                        DB::raw('(lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) as remaining_principal'),
+
+                        // Days since disbursal
+                        DB::raw("DATEDIFF('$today', ld.created_at) as days_since_disbursal"),
+
+                        DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
+
+                        // ---------------- INTEREST CALCULATION ----------------
+                        DB::raw('(
+                            ((lap.approval_amount * lap.roi / 100)
+                                * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), ld.created_at)
+                            )
+                            +
+                            (
+                                 ((lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * lap.roi / 100)
+                                * GREATEST(DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, "' . $today . '")), 0)
+                            )
+                            - IFNULL(uc.total_interest_paid, 0)
+                            - IFNULL(uc.total_interest_discount, 0)
+                        ) as interest'),
+
+                        // ---------------- PENAL CALCULATION ----------------
+                        DB::raw('(
+                            (
+                                IF(
+                                    DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date) > 0,
+                                    lap.approval_amount * 0.0025 * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date),
+                                    0
+                                )
+                            )
+                            +
+                            (
+                                IF(
+                                    uc.last_payment_date IS NOT NULL AND DATEDIFF("' . $today . '", uc.last_payment_date) > 0 AND DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                                    (lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * 0.0025 * DATEDIFF("' . $today . '", uc.last_payment_date),
+                                    0
+                                )
+                            ) - IFNULL(uc.total_penal_paid, 0) - IFNULL(uc.total_penal_discount, 0)
+                        ) as penal_interest'),
+
+                        // ---------------- TOTAL DUES ----------------
+                        DB::raw('(
+                            (lap.approval_amount - IFNULL(uc.total_principal_paid, 0))
+                            + (
+                                (
+                                    (lap.approval_amount * lap.roi / 100)
+                                    * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), ld.created_at)
+                                )
+                                +
+                                (
+                                    ((lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * lap.roi / 100)
+                                    * GREATEST(DATEDIFF("' . $today . '", IFNULL(uc.last_payment_date, "' . $today . '")), 0)
+                                )
+                                - IFNULL(uc.total_interest_paid, 0)
+                                - IFNULL(uc.total_interest_discount, 0)
+                            ) + (
+                                IF(
+                                    DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date) > 0,
+                                    lap.approval_amount * 0.0025 * DATEDIFF(LEAST(IFNULL(uc.last_payment_date, "' . $today . '"), "' . $today . '"), lap.repay_date),
+                                    0
+                                )
+                                +
+                                IF(
+                                    uc.last_payment_date IS NOT NULL AND DATEDIFF("' . $today . '", uc.last_payment_date) > 0 AND DATEDIFF("' . $today . '", lap.repay_date) > 0,
+                                    (lap.approval_amount - IFNULL(uc.total_principal_paid, 0)) * 0.0025 * DATEDIFF("' . $today . '", uc.last_payment_date),
+                                    0
+                                )
+                                - IFNULL(uc.total_penal_paid, 0)
+                                - IFNULL(uc.total_penal_discount, 0)
+                            )
+                        ) as total_dues')
+                    ])
+                    ->where('la.id', $lead->id)
+                    ->where('la.loan_closed_status', 'pending')
+                    ->first();
 
             $totalDues = !empty($loans->total_dues) ? (int)$loans->total_dues : 0;
             $days_after_due = !empty($loans->days_after_due) ? (int)$loans->days_after_due : 0;
@@ -714,4 +858,98 @@ class CollectionController extends Controller
 
         return view('admin.collection.collection-all', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
+
+	public function config(Request $request)
+	{
+		$uwclogs = CollectionConfiguration::get();
+        return view('admin.collection.config', compact('uwclogs'));
+	}
+	
+	public function createconfig(Request $request)
+	{
+		$existingData = CollectionConfiguration::first();
+        return view('admin.collection.createconfig', compact('existingData') );
+	}
+	
+	public function store(Request $request)
+	{
+		$request->validate([
+            'pr_off' => 'required',
+            'in_off' => 'required',
+            'pe_off' => 'required',
+        ]);
+
+        $data = ([
+            'pr_off' => $request->pr_off,
+            'in_off' => $request->in_off,
+            'pe_off' => $request->pe_off,
+        ]);
+
+        $existing = CollectionConfiguration::where($data)->first();
+
+        if ($existing) {
+            // Store old data for log
+            $oldData = $existing->toArray();
+			return redirect()
+            ->route('admin.collection.config')
+            ->with('Error', 'Alreay Exists!');
+            
+        } else {
+            // If no record exists, create one
+            $created = CollectionConfiguration::create($data);
+        }
+
+        return redirect()
+            ->route('admin.collection.config')
+            ->with('success', 'Collection configuration saved successfully!');
+	}
+
+    public function editconfig(Request $request)
+	{
+		$existingData = CollectionConfiguration::where('id', $request->id)->first();
+        return view('admin.collection.editconfig', compact('existingData') );
+	}
+
+    public function updateconfig(Request $request)
+	{
+		$request->validate([
+            'pr_off' => 'required',
+            'in_off' => 'required',
+            'pe_off' => 'required',
+        ]);
+
+        $data = ([
+            'pr_off' => $request->pr_off,
+            'in_off' => $request->in_off,
+            'pe_off' => $request->pe_off
+        ]);
+
+        $existing = CollectionConfiguration::where('id', $request->id)->first();
+
+        if ($existing) {
+            $existing->update($data);
+        }
+
+        return redirect()
+            ->route('admin.collection.config')
+            ->with('success', 'Collection configuration updated successfully!');
+	}
+
+    public function activate(Request $request, $id)
+    {
+        // Deactivate all
+        CollectionConfiguration::query()->update(['status' => 0]);
+
+        // Activate selected
+        $collConfig = CollectionConfiguration::findOrFail($id);
+        $collConfig->status = 1;
+        $collConfig->save();
+
+        return response()->json([
+            'success' => true,
+            'active_id' => $collConfig->id,
+            'message' => 'Template activated successfully!',
+        ]);
+    }
+
 }

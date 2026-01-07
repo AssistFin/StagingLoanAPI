@@ -20,6 +20,8 @@ Route::post('/digitap/bsaa/webhook', [DigitapController::class, 'aacallback']);
 Route::post('/digitap/selfie/webhook', [DigitapController::class, 'selfiecallback']);
 Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
 Route::get('/pay/{id}', [LoanPaymentController::class, 'generatePaymentLink']);
+Route::get('/settlementpay/{id}', [LoanPaymentController::class, 'generateSettlementPaymentLink']);
+Route::get('/partpay/{id}', [LoanPaymentController::class, 'generatePartPaymentLink']);
 Route::get('/get-city/{pincode}', [LoanApplyController::class, 'getcity']);
 Route::post('/selfie-callback', [DigitapController::class, 'handleCallback']);
 
