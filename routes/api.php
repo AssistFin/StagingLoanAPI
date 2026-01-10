@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\ScoreMeWebhookController;
 use App\Http\Controllers\Admin\DigitapController;
+use App\Http\Controllers\Admin\CollectionController;
 
 Route::post('/scoreme/webhook', [ScoreMeWebhookController::class, 'handle']);
 Route::post('/digitap/bsu/webhook', [DigitapController::class, 'callback']);
@@ -21,9 +22,10 @@ Route::post('/digitap/selfie/webhook', [DigitapController::class, 'selfiecallbac
 Route::post('/cashfree/webhook', [LoanApplyController::class, 'handleWebhook']);
 Route::get('/pay/{id}', [LoanPaymentController::class, 'generatePaymentLink']);
 Route::get('/settlementpay/{id}', [LoanPaymentController::class, 'generateSettlementPaymentLink']);
-Route::get('/partpay/{id}', [LoanPaymentController::class, 'generatePartPaymentLink']);
 Route::get('/get-city/{pincode}', [LoanApplyController::class, 'getcity']);
 Route::post('/selfie-callback', [DigitapController::class, 'handleCallback']);
+Route::get('/partpay/{token}', [CollectionController::class, 'showPartPaymentPage']);
+Route::post('/partpay/initiate', [CollectionController::class, 'initiatePartPayment'])->name('partpay.initiate');
 
 /*
 |--------------------------------------------------------------------------

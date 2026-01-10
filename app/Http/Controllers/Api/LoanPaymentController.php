@@ -674,10 +674,11 @@ Customer Support | LoanOne";
         }
     }
 
-    public function generatePartPaymentLink($id)
+    public function generatePartPaymentLink($id, $amount)
     {
-        $lead = LoanApplication::with(['user'])->where('id', base64_decode($id))->first();
-
+        //echo $id;
+        $lead = LoanApplication::with(['user'])->where('id', $id)->first();
+        //dd($lead);
         if(empty($lead->loan_no)){
             return response()->json([
                 'status' => false,
@@ -788,32 +789,19 @@ Customer Support | LoanOne";
             ->where('la.loan_closed_status', 'pending')
             ->first();
 
-        $loan = LoanApplication::where('id', base64_decode($id))
+        $loan = LoanApplication::where('id', $id)
                     ->with(['loanDisbursal']) 
                     ->firstOrFail();
 
         $disbursal = $loan->loanDisbursal;
         $user = $loan->user;
 
-        $existing = CollectionConfiguration::where('status', 1)->first();
-        if(!empty($existing)){
-           $pr_off = (isset($existing->pr_off) && $existing->pr_off > 0)
-                ? $loans->remaining_principal * (1 - ($existing->pr_off / 100))
-                : $loans->remaining_principal;
-
-            $in_off = (isset($existing->in_off) && $existing->in_off > 0)
-                ? $loans->interest * (1 - ($existing->in_off / 100))
-                : $loans->interest;
-
-            $pe_off = (isset($existing->pe_off) && $existing->pe_off > 0)
-                ? $loans->penal_interest * (1 - ($existing->pe_off / 100))
-                : $loans->penal_interest;
-
-            $total_dues = max(0, $pr_off + $in_off + $pe_off);
+        if(!empty($loans->total_dues)){
+            $total_dues = $amount;
         }else{
             $total_dues = $loans->approval_amount;
         }
-
+        //dd($total_dues);
         $payment_reference = 'LNPAY-' . time() . Str::random(4);
 
         // Create payment record
