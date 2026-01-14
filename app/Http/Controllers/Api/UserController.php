@@ -84,112 +84,156 @@ class UserController extends Controller {
         $user = auth()->user();
         $userId = auth()->id();
 
+        /**
+         * -------------------------------------------------------
+         * USER BASIC INFO
+         * -------------------------------------------------------
+         */
         $user = DB::table('users')
-        ->leftJoin('pan_data', 'users.id', '=', 'pan_data.user_id')
-        ->leftJoin('aadhaar_data', 'users.id', '=', 'aadhaar_data.user_id')
-        ->where('users.id', $userId)
-        ->select(
-            'users.id',
-            'users.firstname',
-            'users.lastname',
-            'users.email',
-            'users.mobile',
-            'pan_data.pan',
-            'pan_data.date_of_birth',
-            'aadhaar_data.aadhaar_number'
-        )
-        ->first();
+            ->leftJoin('pan_data', 'users.id', '=', 'pan_data.user_id')
+            ->leftJoin('aadhaar_data', 'users.id', '=', 'aadhaar_data.user_id')
+            ->where('users.id', $userId)
+            ->select(
+                'users.id',
+                'users.firstname',
+                'users.lastname',
+                'users.email',
+                'users.mobile',
+                'pan_data.pan',
+                'pan_data.date_of_birth',
+                'aadhaar_data.aadhaar_number'
+            )
+            ->first();
 
-        // Get all loans for the user with their repayment history
+        /**
+         * -------------------------------------------------------
+         * USER LOANS WITH CALCULATIONS
+         * -------------------------------------------------------
+         */
         $loans = LoanApplication::where('user_id', $userId)
-        ->with([
-            'collections' => function ($query) {
-                $query->orderBy('collection_date', 'asc');
-            },
-            'loanApproval',
-            'loanDisbursal'
-        ])
-        ->get()
-        ->map(function ($loan, $userId) {
-            $approvalAmount = optional($loan->loanApproval)->approval_amount;
-            $repaymentDate = optional($loan->loanApproval)->repay_date;
-            $disbursalDate = optional($loan->loanDisbursal)->disbursal_date;
-            $roi = optional($loan->loanApproval)->roi; 
-            $dailyRate = ($roi ?? 0) / 100; 
-            $daysSinceDisbursal = 0;
-            $currentRepaymentAmount = 0;
-            $penalAmount = 0;
-            $interestAmount = 0;
-            $overdueAmount = 0;
+            ->with([
+                'collections' => function ($query) {
+                    $query->orderBy('collection_date', 'asc');
+                },
+                'loanApproval',
+                'loanDisbursal'
+            ])
+            ->get()
+            ->map(function ($loan) use ($userId) {
 
-            if ($approvalAmount && $disbursalDate && $dailyRate) {
-                $daysSinceDisbursal = \Carbon\Carbon::parse($disbursalDate)->diffInDays(\Carbon\Carbon::today());
-                $today = Carbon::today();
-                $repaymentDate = \Carbon\Carbon::parse($loan->loanApproval->repay_date);
+                /** -------------------------------
+                 * BASIC LOAN DATA
+                 * --------------------------------
+                 */
+                $approvalAmount = optional($loan->loanApproval)->approval_amount ?? 0;
+                $roi = optional($loan->loanApproval)->roi ?? 0;
+                $repaymentDate = optional($loan->loanApproval)->repay_date;
+                $disbursalDate = optional($loan->loanDisbursal)->disbursal_date;
+
+                $dailyRate = $roi / 100;
                 $today = \Carbon\Carbon::today();
-                if ($repaymentDate->lt($today)) {
-                    $overDueDate = $repaymentDate->diffInDays($today); 
-                } else {
-                    $overDueDate = 0;
-                }
-                $totalInterestTillNow = $approvalAmount * $dailyRate * $daysSinceDisbursal;
-                $penalAmount = ($approvalAmount * 0.0025) * $overDueDate;
-                $interestAmount = $totalInterestTillNow;
-                $currentRepaymentAmount = $approvalAmount + $totalInterestTillNow + $penalAmount;
-                if($overDueDate > 0) {
-                    $overdueAmount = round($currentRepaymentAmount, 2) - round(optional($loan->loanApproval)->repayment_amount, 2);
-                }
-            }
 
-             $utr = DB::table('utr_collections')
-                ->where('loan_application_id', $loan->id)
-                ->where('user_id', $userId)
-                ->where('status', 'closed')
-                ->latest('collection_date')
-                ->first();
+                /** -------------------------------
+                 * DAYS & OVERDUE CALCULATION
+                 * --------------------------------
+                 */
+                $daysSinceDisbursal = ($disbursalDate)
+                    ? \Carbon\Carbon::parse($disbursalDate)->diffInDays($today)
+                    : 0;
 
-            if ($utr) {
-                $penalAmount = $utr->penal ?? 0;
-                $interestAmount = $utr->interest ?? 0;
-                $currentRepaymentAmount = $utr->collection_amt ?? 0;
-                $overdueAmount = $utr->overdue_intrest ?? 0;
-            }
+                $overDueDays = ($repaymentDate && \Carbon\Carbon::parse($repaymentDate)->lt($today))
+                    ? \Carbon\Carbon::parse($repaymentDate)->diffInDays($today)
+                    : 0;
 
-            return [
-                'id' => $loan->id,
-                'loan_no' => $loan->loan_no,
-                'loan_account_no' => $loan->loan_account_no,
-                'loan_amount' => optional($loan->loanApproval)->approval_amount,
-                'loan_disbursal_date' => optional($loan->loanDisbursal)->disbursal_date,
-                'repayment_amount' => isset($loan->loanApproval->repayment_amount) && ($loan->loanApproval->repayment_amount != "0.00") ? optional($loan->loanApproval)->repayment_amount : round($currentRepaymentAmount, 2),
-                'penalAmount' => $penalAmount,
-                'interestAmount' => $interestAmount,
-                'current_repayment_amount' => round($currentRepaymentAmount, 2),
-                'repayment_due_date' => optional($loan->loanApproval)->repay_date,
-                'overdue_amount' => $overdueAmount,
-                'purpose_of_loan' => $loan->purpose_of_loan,
-                'loan_disbursal_status' => $loan->loan_disbursal_status,
-                'admin_approval_status' => $loan->admin_approval_status,
-                'loan_closed_status' => $loan->loan_closed_status,
-                'loan_closed_date' => $loan->loan_closed_date,
-                'application_date' => $loan->created_at->format('Y-m-d'),
-                'kfs_filename' => optional($loan->loanApproval)->kfs_path,
-                'loan_disbursal_number' => optional($loan->loanDisbursal)->loan_disbursal_number,
-                'repaymentHistory' => $loan->collections->map(function ($collection, $index) {
-                    return [
-                        'id' => $collection->id,
-                        'sl_no' => $index + 1,
-                        'loan_account_no' => $collection->loanApplication->loan_account_no,
-                        'payment_date' => $collection->collection_date,
-                        'payment_amount' => $collection->collection_amt,
-                        'principal_payment' => $collection->principal,
-                        'interest_payment' => $collection->interest,
-                        'penal' => $collection->penal,
-                    ];
-                }),
-            ];
-        });
+                /** -------------------------------
+                 * INTEREST & PENAL CALCULATION
+                 * --------------------------------
+                 */
+                $interestAmount = round($approvalAmount * $dailyRate * $daysSinceDisbursal, 2);
+                $penalAmount = round(($approvalAmount * 0.0025) * $overDueDays, 2);
 
+                /** -------------------------------
+                 * TOTAL PAYABLE TILL TODAY
+                 * --------------------------------
+                 */
+                $totalPayableTillToday = $approvalAmount + $interestAmount + $penalAmount;
+
+                /** -------------------------------
+                 * TOTAL PAID (PART + FULL)
+                 * --------------------------------
+                 */
+                $totalPaid = DB::table('utr_collections')
+                    ->where('loan_application_id', $loan->id)
+                    ->where('user_id', $userId)
+                    ->whereIn('status', ['Closed', 'Part Payment'])
+                    ->sum('collection_amt');
+
+                /** -------------------------------
+                 * OUTSTANDING AMOUNT
+                 * --------------------------------
+                 */
+                $currentRepaymentAmount = max(
+                    round($totalPayableTillToday - $totalPaid, 2),
+                    0
+                );
+
+                /** -------------------------------
+                 * OVERDUE AMOUNT
+                 * --------------------------------
+                 */
+                $overdueAmount = ($overDueDays > 0)
+                    ? $currentRepaymentAmount
+                    : 0;
+
+                /** -------------------------------
+                 * RESPONSE STRUCTURE
+                 * --------------------------------
+                 */
+                return [
+                    'id' => $loan->id,
+                    'loan_no' => $loan->loan_no,
+                    'loan_account_no' => $loan->loan_account_no,
+                    'loan_amount' => $approvalAmount,
+                    'loan_disbursal_date' => $disbursalDate,
+                    'repayment_amount' => $currentRepaymentAmount,
+                    'penalAmount' => $penalAmount,
+                    'interestAmount' => $interestAmount,
+                    'current_repayment_amount' => $currentRepaymentAmount,
+                    'repayment_due_date' => $repaymentDate,
+                    'overdue_amount' => $overdueAmount,
+                    'purpose_of_loan' => $loan->purpose_of_loan,
+                    'loan_disbursal_status' => $loan->loan_disbursal_status,
+                    'admin_approval_status' => $loan->admin_approval_status,
+                    'loan_closed_status' => $loan->loan_closed_status,
+                    'loan_closed_date' => $loan->loan_closed_date,
+                    'application_date' => $loan->created_at->format('Y-m-d'),
+                    'kfs_filename' => optional($loan->loanApproval)->kfs_path,
+                    'loan_disbursal_number' => optional($loan->loanDisbursal)->loan_disbursal_number,
+
+                    /** -------------------------------
+                     * REPAYMENT HISTORY
+                     * --------------------------------
+                     */
+                    'repaymentHistory' => $loan->collections->map(function ($collection, $index) {
+                        return [
+                            'id' => $collection->id,
+                            'sl_no' => $index + 1,
+                            'loan_account_no' => optional($collection->loanApplication)->loan_account_no,
+                            'payment_date' => $collection->collection_date,
+                            'payment_amount' => $collection->collection_amt,
+                            'principal_payment' => $collection->principal,
+                            'interest_payment' => $collection->interest,
+                            'penal' => $collection->penal,
+                        ];
+                    }),
+                ];
+            });
+
+        /**
+         * -------------------------------------------------------
+         * FINAL RESPONSE
+         * -------------------------------------------------------
+         */
         return response()->json([
             'remark'  => 'user_info',
             'status'  => 'success',
@@ -200,7 +244,6 @@ class UserController extends Controller {
             ],
         ]);
     }
-
 
     public function userDataSubmit(Request $request) {
         $user = auth()->user();
