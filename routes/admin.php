@@ -306,6 +306,7 @@ Route::middleware('admin')->group(function () {
             Route::get('decision-disbursed', 'decisionDisbursed')->name('disbursed');
             Route::get('decision-rejected', 'decisionRejected')->name('rejected');
             Route::get('decision-closed', 'decisionClosed')->name('closed');
+            Route::get('decision-paid', 'decisionPaid')->name('paid');
             Route::get('decision-pendingHold', 'decisionPendingHold')->name('pendingHold');
             Route::get('decision-approvedNotInterested', 'decisionApprovedNotInterested')->name('approvedNotInterested');
     });

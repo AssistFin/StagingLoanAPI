@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\LoanApplication;
+use App\Models\UtrCollection;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Response;
 
@@ -314,5 +315,125 @@ class DecisionController extends Controller
         $leads = $query->paginate(25);
 
         return view('admin.decision.decision-closed', compact('leads'));
+    }
+
+    public function decisionPaid(Request $request)
+    {
+        $query = UtrCollection::with([
+            'user:id,firstname,lastname,mobile',
+            'loanApplication.user',
+            'loanApplication.loanApproval',
+            'loanApplication.loanDisbursal',
+        ])
+        ->whereHas('loanApplication', function ($q) {
+            $q->whereIn('loan_closed_status', ['closed', 'pending']);
+        })
+        ->orderBy('collection_date', 'desc');
+
+        /* ---------------- SEARCH FILTER ---------------- */
+        $searchTerm = $request->get('search');
+
+        if ($searchTerm) {
+            $query->whereHas('loanApplication.user', function ($q) use ($searchTerm) {
+                $q->where('firstname', 'like', "%{$searchTerm}%")
+                ->orWhere('lastname', 'like', "%{$searchTerm}%")
+                ->orWhere('email', 'like', "%{$searchTerm}%")
+                ->orWhere('mobile', 'like', "%{$searchTerm}%");
+            })
+            ->orWhereHas('loanApplication', function ($q) use ($searchTerm) {
+                $q->where('loan_no', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        /* ---------------- DATE FILTER ---------------- */
+        $dateRange = $request->get('date_range');
+        $fromDate  = $request->get('from_date');
+        $toDate    = $request->get('to_date');
+
+        if ($dateRange) {
+            if ($dateRange === 'today') {
+                $query->whereDate('collection_date', today());
+            } elseif ($dateRange === 'yesterday') {
+                $query->whereDate('collection_date', today()->subDay());
+            } elseif ($dateRange === 'last_3_days') {
+                $query->whereBetween('collection_date', [now()->subDays(3), now()]);
+            } elseif ($dateRange === 'last_7_days') {
+                $query->whereBetween('collection_date', [now()->subDays(7), now()]);
+            } elseif ($dateRange === 'last_15_days') {
+                $query->whereBetween('collection_date', [now()->subDays(15), now()]);
+            } elseif ($dateRange === 'current_month') {
+                $query->whereBetween(
+                    'collection_date',
+                    [now()->startOfMonth(), now()->endOfMonth()]
+                );
+            } elseif ($dateRange === 'previous_month') {
+                $query->whereBetween(
+                    'collection_date',
+                    [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()]
+                );
+            } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                $query->whereBetween('collection_date', [$fromDate, $toDate]);
+            }
+        }
+
+        /* ---------------- CSV EXPORT ---------------- */
+        if ($request->get('export') === 'csv') {
+
+            $collections = $query->get();
+            $csvData = [];
+
+            foreach ($collections as $collection) {
+
+                $loan = $collection->loanApplication;
+
+                $dpd = 0;
+                if ($loan->loanApproval && $loan->loanApproval->repay_date) {
+                    $repayDate = Carbon::parse($loan->loanApproval->repay_date);
+                    $dpd = $repayDate->isPast()
+                        ? $repayDate->diffInDays(now())
+                        : 0;
+                }
+
+                $csvData[] = [
+                    'Collection Date'      => Carbon::parse($collection->collection_date)->format('d-m-Y'),
+                    'Customer Name'        => $loan->user->firstname . ' ' . $loan->user->lastname,
+                    'Customer Mobile'      => "'" . $loan->user->mobile,
+                    'Loan Application No'  => $loan->loan_no,
+
+                    'Loan Amount'          => optional($loan->loanApproval)->approval_amount ?? 0,
+                    'Repayment Amount'     => optional($loan->loanApproval)->repayment_amount ?? 0,
+
+                    'Paid Amount'          => $collection->collection_amt,
+                    'Payment Status'       => $collection->status,
+                    'Payment ID'           => $collection->payment_id,
+
+                    'Disbursement Date'    => optional($loan->loanDisbursal)->disbursal_date ?? '',
+                    'Repayment Date'       => optional($loan->loanApproval)->repay_date ?? '',
+
+                    'DPD'                  => $dpd,
+                ];
+            }
+
+            $filename = 'paid_collections_' . now()->format('Ymd_His') . '.csv';
+
+            $headers = [
+                'Content-Type'        => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            return Response::stream(function () use ($csvData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, array_keys($csvData[0]));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            }, 200, $headers);
+        }
+
+        /* ---------------- PAGINATION ---------------- */
+        $leads = $query->paginate(25);
+
+        return view('admin.decision.decision-paid', compact('leads'));
     }
 }
