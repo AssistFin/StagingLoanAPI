@@ -80,6 +80,8 @@
                             <input type="text" id="total_ds_records" placeholder="Total Records"  class="form-control" value="{{ number_format($totalDuesSum,0) }}" readonly >
 
                             <button type="button" id="cpd_export" class="btn btn-primary form-control">Export CSV</button>
+
+                            <button type="button" id="cpd_user_export" class="btn btn-success form-control">Export User Contacts</button>
                         </div>
 
                         {{-- Custom Date Row --}}
@@ -254,6 +256,21 @@
                 export: 'csv'
             };
             const query = $.param(params);
+            window.location.href = "{{ route('admin.collection.predue') }}?" + query;
+        });
+
+        $('#cpd_user_export').on('click', function () {
+
+            const params = {
+                date_range: $('#date_range').val(),
+                from_date: $('#from_date').val(),
+                to_date: $('#to_date').val(),
+                search: $('#c-pd-search-input').val(),
+                export: 'user_contacts'
+            };
+
+            const query = $.param(params);
+
             window.location.href = "{{ route('admin.collection.predue') }}?" + query;
         });
     });

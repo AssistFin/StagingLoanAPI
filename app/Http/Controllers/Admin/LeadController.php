@@ -24,6 +24,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class LeadController extends Controller
 {
@@ -879,128 +880,163 @@ class LeadController extends Controller
 
     public function leadsBSA(Request $request)
     {
-        ini_set('memory_limit', '2048M');
-        $usersWithKyc = DB::table('loan_kyc_details')
-                ->pluck('loan_application_id');
-
-        $userIdsWithKyc = LoanApplication::whereIn('id', $usersWithKyc)
-                ->pluck('user_id')
-                ->unique()
-                ->toArray();
-                
         $searchTerm = $request->get('search');
 
-        $query = LoanApplication::with([
-                'user:id,firstname,lastname,mobile,email',
-                'user.utmTracking:id,user_id,utm_source',
-                'personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in',
-                'kycDetails',
-                'loanDocument',
-                'addressDetails',
-                'employmentDetails',
-                'bankDetails',
-                'digitapRequest:id,customer_id,status,report_json_data',
-            ])
-            ->where('admin_approval_status', 'pending')
-            ->whereHas('digitapRequest', function ($q) {
-                $q->where('status', 'xlsx_report_saved');
-            })
-            ->where(function ($q) {
-                $q->where(function ($q1) {
-                    // New user with all details filled in current (pending) loan
-                    $q1->whereHas('personalDetails')
-                        ->whereHas('kycDetails')
-                        ->whereHas('loanDocument')
-                        ->whereHas('addressDetails')
-                        ->whereHas('employmentDetails')
-                        ->whereHas('bankDetails');
+
+        // ================================
+        // CACHE KYC USERS (5 minutes)
+        // ================================
+
+        $userIdsWithKyc = Cache::remember('bsa_kyc_users', 300, function () {
+
+            return DB::table('loan_kyc_details as kyc')
+                ->join('loan_applications as la','la.id','=','kyc.loan_application_id')
+                ->distinct()
+                ->pluck('la.user_id')
+                ->toArray();
+        });
+
+
+        // ================================
+        // BASE QUERY
+        // ================================
+
+        $query = LoanApplication::query()
+
+                ->select('loan_applications.*')
+
+                ->where('loan_applications.admin_approval_status','pending')
+
+                ->whereExists(function ($q) {
+                    $q->select(DB::raw(1))
+                    ->from('digitap_bank_requests as dr')
+                    ->whereColumn('dr.customer_id','loan_applications.id')
+                    ->where('dr.status','xlsx_report_saved');
                 })
-                ->orWhereExists(function ($sub) {
-                    // Existing user with older closed loan with all details filled
-                    $sub->select(DB::raw(1))
-                        ->from('loan_applications as la2')
-                        ->join('loan_kyc_details as kyc', 'kyc.loan_application_id', '=', 'la2.id')
-                        ->join('loan_personal_details as pd', 'pd.loan_application_id', '=', 'la2.id')
-                        ->join('loan_documents as doc', 'doc.loan_application_id', '=', 'la2.id')
-                        ->join('loan_address_details as addr', 'addr.loan_application_id', '=', 'la2.id')
-                        ->join('loan_employment_details as emp', 'emp.loan_application_id', '=', 'la2.id')
-                        ->join('loan_bank_details as bank', 'bank.loan_application_id', '=', 'loan_applications.id')
-                        ->whereRaw('la2.user_id = loan_applications.user_id')
-                        ->whereRaw('la2.id != loan_applications.id')
-                        ->where('la2.admin_approval_status', 'approved');
-                })
-				->orWhereExists(function ($sub) {
-					$sub->select(DB::raw(1))
-						->from('loan_applications as la2')
-						->whereColumn('la2.user_id', 'loan_applications.user_id')
-						->whereColumn('la2.id', '!=', 'loan_applications.id')
-						->where('la2.admin_approval_status', 'rejected');
-				});
-            });
+
+                ->with([
+                    'user:id,firstname,lastname,mobile,email',
+                    'user.utmTracking:id,user_id,utm_source',
+                    'personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in',
+                    'digitapRequest:id,customer_id,status'
+                ])
+
+                ->where(function ($q) {
+
+                    $tables = [
+                        'loan_personal_details',
+                        'loan_kyc_details',
+                        'loan_documents',
+                        'loan_address_details',
+                        'loan_employment_details',
+                        'loan_bank_details'
+                    ];
+
+                    foreach ($tables as $table) {
+
+                        $q->whereExists(function ($sub) use ($table) {
+
+                            $sub->select(DB::raw(1))
+                                ->from($table)
+                                ->whereColumn("$table.loan_application_id",'loan_applications.id');
+                        });
+                    }
+
+                    $q->orWhereExists(function ($sub) {
+
+                        $sub->select(DB::raw(1))
+                            ->from('loan_applications as la2')
+                            ->whereColumn('la2.user_id','loan_applications.user_id')
+                            ->whereColumn('la2.id','!=','loan_applications.id')
+                            ->whereIn('la2.admin_approval_status',['approved','rejected']);
+                    });
+
+                });
+
+
+        // ================================
+        // SEARCH
+        // ================================
 
         if ($searchTerm) {
+
             $query->where(function ($q) use ($searchTerm) {
-                $q->whereHas('user', function ($userQuery) use ($searchTerm) {
-                    $userQuery->where('firstname', 'like', "%{$searchTerm}%")
-                        ->orWhere('lastname', 'like', "%{$searchTerm}%")
-                        ->orWhere('email', 'like', "%{$searchTerm}%")
-                        ->orWhere('mobile', 'like', "%{$searchTerm}%");
-                })->orWhere('loan_no', 'like', "%{$searchTerm}%");
+
+                $q->where('loan_applications.loan_no','like',"%$searchTerm%")
+
+                ->orWhereHas('user', function ($u) use ($searchTerm) {
+
+                    $u->where('firstname','like',"%$searchTerm%")
+                    ->orWhere('lastname','like',"%$searchTerm%")
+                    ->orWhere('email','like',"%$searchTerm%")
+                    ->orWhere('mobile','like',"%$searchTerm%");
+                });
             });
         }
-        
-        // If you want to inspect SQL:
-        // dd($query->toSql(), $query->getBindings());
 
-        $totalRecordsQuery = clone $query;
-        $totalRecords = $totalRecordsQuery->count();
 
-        if ($request->has('export') && $request->export === 'csv') {
-            $leads = $query->get();
-            
-            $csvData = [];
+        // ================================
+        // CSV EXPORT (SAFE)
+        // ================================
 
-            foreach ($leads as $lead) {
-                // Default amount value
-                $loanAmount = $lead->loan_amount;
-                $loandate = $lead->created_at;
+        if ($request->export === 'csv') {
 
-                $csvData[] = [
-                    'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
-                    'Customer Mobile' => "'" . $lead->user->mobile,
-                    'Loan Application No' => $lead->loan_no,
-                    'Loan Amount' => number_format($loanAmount, 0),
-                    'Apply Date' => $loandate,
-                    'Employment Type' => !empty($lead->personalDetails->employment_type) ? $lead->personalDetails->employment_type : '',
-                    'Montly Income' => !empty($lead->personalDetails->monthly_income) ? $lead->personalDetails->monthly_income : '',
-                    'Income Received In' => !empty($lead->personalDetails->income_received_in) ? $lead->personalDetails->income_received_in : '',
-                    'Purpose Of Loan' => $lead->purpose_of_loan,
-                    'Source' => $lead->user->utmTracking->utm_source ?? '',
-                ];
-            }
-            $timestamp = now()->format('Ymd_His');
+            return Response::stream(function () use ($query) {
 
-            $filename = "bsa_leads_export_{$timestamp}.csv";
-
-            $headers = [
-                'Content-Type' => 'text/csv',
-                'Content-Disposition' => "attachment; filename=\"$filename\"",
-            ];
-
-            $callback = function () use ($csvData) {
                 $file = fopen('php://output', 'w');
-                fputcsv($file, array_keys($csvData[0]));
-                foreach ($csvData as $row) {
-                    fputcsv($file, $row);
-                }
-                fclose($file);
-            };
 
-            return Response::stream($callback, 200, $headers);
+                fputcsv($file, [
+                    'Customer Name','Mobile','Loan No','Loan Amount',
+                    'Apply Date','Employment Type','Monthly Income',
+                    'Income Received In','Purpose Of Loan','Source'
+                ]);
+
+                $query->orderBy('loan_applications.id')
+                    ->chunkById(500, function ($rows) use ($file) {
+
+                    foreach ($rows as $lead) {
+
+                        fputcsv($file, [
+                            $lead->user->firstname.' '.$lead->user->lastname,
+                            "'".$lead->user->mobile,
+                            $lead->loan_no,
+                            $lead->loan_amount,
+                            $lead->created_at,
+                            optional($lead->personalDetails)->employment_type,
+                            optional($lead->personalDetails)->monthly_income,
+                            optional($lead->personalDetails)->income_received_in,
+                            $lead->purpose_of_loan,
+                            optional($lead->user->utmTracking)->utm_source,
+                        ]);
+                    }
+
+                });
+
+                fclose($file);
+
+            },200,[
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename=bsa_export.csv'
+            ]);
         }
 
-        $leads = $query->orderBy('created_at','asc')->paginate(25);
-        return view('admin.leads.leads-bsa', compact('leads', 'userIdsWithKyc','totalRecords'));
+
+        // ================================
+        // PAGINATION (FAST)
+        // ================================
+
+        $totalRecords = Cache::remember('bsa_total_count', 60, function () use ($query) {
+            return (clone $query)->count('loan_applications.id');
+        });
+
+        $leads = $query->orderByDesc('loan_applications.id')
+                    ->paginate(25);
+
+        // approximate count only (fast)
+        //$totalRecords = $leads->count();
+
+
+        return view('admin.leads.leads-bsa', compact('leads','userIdsWithKyc','totalRecords'));
     }
 
     public function leadsNotInterested(Request $request)

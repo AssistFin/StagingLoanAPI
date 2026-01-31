@@ -395,6 +395,7 @@ class DecisionController extends Controller
                 }
 
                 $csvData[] = [
+                    'Collection Id'        => $collection->id,
                     'Collection Date'      => Carbon::parse($collection->collection_date)->format('d-m-Y'),
                     'Customer Name'        => $loan->user->firstname . ' ' . $loan->user->lastname,
                     'Customer Mobile'      => "'" . $loan->user->mobile,

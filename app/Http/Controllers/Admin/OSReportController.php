@@ -38,6 +38,13 @@ class OSReportController extends Controller
 
         // Step 3: Start building the loan applications query
         $query = LoanApplication::with(['user:id,firstname,lastname,mobile','loanApproval','loanDisbursal'])
+            ->addSelect([
+                'user_loan_count' => LoanApplication::from('loan_applications as la2')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('la2.user_id', 'loan_applications.user_id')
+                    ->whereColumn('la2.loan_disbursal_date', '<=', 'loan_applications.loan_disbursal_date')
+                    ->where('la2.loan_disbursal_status', 'disbursed')
+            ])
             ->withExists([
                 'personalDetails',
                 'employmentDetails',
@@ -46,7 +53,7 @@ class OSReportController extends Controller
                 'bankDetails'
             ])->whereNotIn('user_id', $excludedUserIds)
             ->where('loan_disbursal_status', 'disbursed')
-            ->orderByDesc('user_id');
+            ->orderByDesc('loan_disbursal_date');
 
         // Step 4: Apply search filter (search by name, email, mobile, loan_no)
         $searchTerm = $request->get('search');
@@ -265,6 +272,9 @@ class OSReportController extends Controller
                     'Rate of Interest' => !empty($lead->loanApproval->roi) ? $lead->loanApproval->roi : '',
                     'Tenure' => !empty($lead->loanApproval->loan_tenure_days) ? $lead->loanApproval->loan_tenure_days : '',
                     'Repayment Due Date' => !empty($lead->loanApproval->repay_date) ? $lead->loanApproval->repay_date : '',
+                    'Salary Date' => !empty($lead->loanApproval->salary_date) ? $lead->loanApproval->salary_date : '',
+                    'Account Type' => !empty($lead->user_loan_count) && $lead->user_loan_count == 1 ? 'New' : 'Existing',
+                    'Account Type Count' => !empty($lead->user_loan_count) ? $lead->user_loan_count : '',
                     'Total Due Amount' => (!empty($loans->total_dues)) ? number_format($loans->total_dues, 2) : 0,
                     'Principal Due' => (!empty($loans->remaining_principal)) ? number_format($loans->remaining_principal, 2) : 0,
                     'Interest Due' => (!empty($loans->interest)) ? number_format($loans->interest, 2) : 0,
@@ -445,7 +455,7 @@ class OSReportController extends Controller
                     DB::raw('SUM(principal) as total_principal_paid'),
                     DB::raw('SUM(interest) as total_interest_paid'),
                     DB::raw('SUM(penal) as total_penal_paid'),
-                    DB::raw('MAX(created_at) as last_payment_date')
+                    DB::raw('MAX(collection_date) as last_payment_date')
                 )->groupBy('loan_application_id');
             }])
             ->withExists([
@@ -481,7 +491,7 @@ class OSReportController extends Controller
             switch ($dateRange) {
                 case 'today':
                     $query->whereHas('collections', function ($q) {
-                        $q->whereDate('created_at', Carbon::today());
+                        $q->whereDate('collection_date', Carbon::today());
                     });
                     break;
                 case 'yesterday':
@@ -551,7 +561,7 @@ class OSReportController extends Controller
                             SUM(principal) as total_principal_paid,
                             SUM(interest) as total_interest_paid,
                             SUM(penal) as total_penal_paid,
-                            MAX(created_at) as last_payment_date,
+                            MAX(collection_date) as last_payment_date,
                             MAX(status) as ucstatus,
                             discount_principal as dspr,
                             discount_interest as dsit,

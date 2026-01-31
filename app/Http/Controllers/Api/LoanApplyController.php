@@ -614,10 +614,10 @@ class LoanApplyController extends Controller
             }
 
             // Step 4: validate final difference
-            if ($diffInDays < 15 || $diffInDays > 45) {
+            if ($diffInDays < 15 || $diffInDays > 47) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Salary date must be between 15 and 45 days from today.'
+                    'message' => 'Salary date must be between 15 and 47 days from today.'
                 ], 422);
             }
 
@@ -641,7 +641,7 @@ class LoanApplyController extends Controller
             $bscore = 0;
             if(!empty($experianData)){
                 $data = json_decode($experianData->response_data, true);
-                if($data['UserMessage']['UserMessageText'] == 'Normal Response'){
+                if(!empty($data['UserMessage']['UserMessageText']) && $data['UserMessage']['UserMessageText'] == 'Normal Response'){
                     $bscore = $data['SCORE']['BureauScore'];
                 }
             }
@@ -668,7 +668,7 @@ class LoanApplyController extends Controller
                     'loan_tenure_date' => "",
                     'roi' => 0,
                     'salary_date' => $salaryDate->format('Y-m-d'),
-                    'repay_date' =>  $repayDate->format('Y-m-d'), // store full date
+                    'repay_date' =>  $salaryDate->format('Y-m-d'), // store full date
                     'processing_fee' => 0,
                     'processing_fee_amount' => 0,
                     'gst' => 0,

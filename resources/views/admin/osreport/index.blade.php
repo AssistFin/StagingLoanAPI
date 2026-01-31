@@ -116,6 +116,9 @@
                                 <th>@lang('Loan Amount')</th>
                                 <th>@lang('Disbursement Amount')</th>
                                 <th>@lang('Disbursement Date')</th>
+                                <th>@lang('Account Type')</th>
+                                <th>@lang('Account Type Count')</th>
+                                <th>@lang('Salary Date')</th>
                             </tr>
                             </thead>
                             <tbody id="reportsTable">
@@ -130,6 +133,9 @@
                                             <td>{{ isset($lead->loanApproval->approval_amount) ? number_format(($lead->loanApproval->approval_amount), 0) : 0 }}</td>
                                             <td>{{ !empty($lead->loanDisbursal->disbursal_amount) ? number_format(($lead->loanDisbursal->disbursal_amount), 0) : '' }}</td>
                                             <td>{{ !empty($lead->loanDisbursal->disbursal_date) ? date('d-M-Y',strtotime($lead->loanDisbursal->disbursal_date)) : '' }}</td>
+                                            <td>{{ !empty($lead->user_loan_count) && $lead->user_loan_count == 1 ? 'New' : 'Existing' }}</td>
+                                            <td>{{ !empty($lead->user_loan_count) ? $lead->user_loan_count : '' }}</td>
+                                            <td>{{ !empty($lead->loanApproval->salary_date) ? date('d-M-Y',strtotime($lead->loanApproval->salary_date)) : '' }}</td>
                                         </tr>
                                     @endforeach
                                 @empty
@@ -254,7 +260,7 @@
             try {
                 const url = new URL(href, window.location.origin);
                 const page = url.searchParams.get("page") || 1;
-                fetchLeads(page);
+                fetchReports(page);
             } catch (error) {
                 console.error("Invalid pagination URL", error);
             }

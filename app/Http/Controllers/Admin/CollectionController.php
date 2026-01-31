@@ -176,6 +176,101 @@ class CollectionController extends Controller
             return Response::stream($callback, 200, $headers);
         }
 
+        if ($request->has('export') && $request->export === 'user_contacts') {
+
+            $leads = $query->get();
+
+            $csvData = [];
+            $usedNumbers = []; // prevent duplicates
+
+            foreach ($leads as $lead) {
+
+                $customerName = $lead->user->firstname . ' ' . $lead->user->lastname;
+                $loan_no = $lead->loan_no;
+
+                // ---------- PRIMARY MOBILE ----------
+
+                if (!empty($lead->user->mobile)) {
+
+                    $mobile = $this->cleanIndianMobile($lead->user->mobile);
+
+                    if ($mobile && !in_array($mobile, $usedNumbers)) {
+
+                        $csvData[] = [
+                            'Customer Name' => $customerName,
+                            'Loan App Id'   => $loan_no,
+                            'Phone Number' => $mobile
+                        ];
+
+                        $usedNumbers[] = $mobile;
+                    }
+                }
+
+                // ---------- EXPERIAN NUMBERS ----------
+
+                if (!empty($lead->experianCreditReport->response_data)) {
+
+                    $experian = json_decode($lead->experianCreditReport->response_data, true);
+
+                    if (!empty($experian['CAIS_Account']['CAIS_Account_DETAILS'])) {
+
+                        foreach ($experian['CAIS_Account']['CAIS_Account_DETAILS'] as $account) {
+
+                            $phones = $account['CAIS_Holder_Phone_Details'] ?? [];
+
+                            foreach ($phones as $ph) {
+
+                                $numbers = array_merge(
+                                    (array)($ph['Mobile_Telephone_Number'] ?? []),
+                                    (array)($ph['Telephone_Number'] ?? [])
+                                );
+
+                                foreach ($numbers as $raw) {
+
+                                    $mobile = $this->cleanIndianMobile($raw);
+
+                                    if ($mobile && !in_array($mobile, $usedNumbers)) {
+
+                                        $csvData[] = [
+                                            'Customer Name' => $customerName,
+                                            'Loan App Id'   => $loan_no,
+                                            'Phone Number' => $mobile
+                                        ];
+
+                                        $usedNumbers[] = $mobile;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---------- CSV DOWNLOAD ----------
+
+            $filename = "COD_User_Contacts_RowWise_" . now()->format('Ymd_His') . ".csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+
+                $file = fopen('php://output', 'w');
+
+                fputcsv($file, ['Customer Name', 'Loan App Id', 'Phone Number']);
+
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
         $totalRecordsQuery = clone $query;
         $totalRecords = $totalRecordsQuery->count();
 
@@ -508,6 +603,101 @@ class CollectionController extends Controller
             return Response::stream($callback, 200, $headers);
         }
 
+        if ($request->has('export') && $request->export === 'user_contacts') {
+
+            $leads = $query->get();
+
+            $csvData = [];
+            $usedNumbers = []; // prevent duplicates
+
+            foreach ($leads as $lead) {
+
+                $customerName = $lead->user->firstname . ' ' . $lead->user->lastname;
+                $loan_no = $lead->loan_no;
+
+                // ---------- PRIMARY MOBILE ----------
+
+                if (!empty($lead->user->mobile)) {
+
+                    $mobile = $this->cleanIndianMobile($lead->user->mobile);
+
+                    if ($mobile && !in_array($mobile, $usedNumbers)) {
+
+                        $csvData[] = [
+                            'Customer Name' => $customerName,
+                            'Loan App Id'   => $loan_no,
+                            'Phone Number' => $mobile
+                        ];
+
+                        $usedNumbers[] = $mobile;
+                    }
+                }
+
+                // ---------- EXPERIAN NUMBERS ----------
+
+                if (!empty($lead->experianCreditReport->response_data)) {
+
+                    $experian = json_decode($lead->experianCreditReport->response_data, true);
+
+                    if (!empty($experian['CAIS_Account']['CAIS_Account_DETAILS'])) {
+
+                        foreach ($experian['CAIS_Account']['CAIS_Account_DETAILS'] as $account) {
+
+                            $phones = $account['CAIS_Holder_Phone_Details'] ?? [];
+
+                            foreach ($phones as $ph) {
+
+                                $numbers = array_merge(
+                                    (array)($ph['Mobile_Telephone_Number'] ?? []),
+                                    (array)($ph['Telephone_Number'] ?? [])
+                                );
+
+                                foreach ($numbers as $raw) {
+
+                                    $mobile = $this->cleanIndianMobile($raw);
+
+                                    if ($mobile && !in_array($mobile, $usedNumbers)) {
+
+                                        $csvData[] = [
+                                            'Customer Name' => $customerName,
+                                            'Loan App Id'   => $loan_no,
+                                            'Phone Number' => $mobile
+                                        ];
+
+                                        $usedNumbers[] = $mobile;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---------- CSV DOWNLOAD ----------
+
+            $filename = "COD_User_Contacts_RowWise_" . now()->format('Ymd_His') . ".csv";
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$filename\"",
+            ];
+
+            $callback = function () use ($csvData) {
+
+                $file = fopen('php://output', 'w');
+
+                fputcsv($file, ['Customer Name', 'Loan App Id', 'Phone Number']);
+
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+
+                fclose($file);
+            };
+
+            return Response::stream($callback, 200, $headers);
+        }
+
         $totalRecordsQuery = clone $query;
         $totalRecords = $totalRecordsQuery->count();
 
@@ -656,12 +846,36 @@ class CollectionController extends Controller
 
     public function collectionAll(Request $request)
     {
+        set_time_limit(0);
         ini_set('memory_limit', '2048M');
         $today = now()->toDateString();
 
-        // 1️⃣ Base query
         $query = LoanApplication::whereHas('loanDisbursal')
+
+            // JOIN FIRST (so aliases exist)
             ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'loan_applications.id')
+            ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'loan_applications.id')
+
+            // SELECT base + calculated column
+            ->select([
+                'loan_applications.*'
+            ])
+
+            // NOW ADD account type count
+            ->addSelect([
+                'account_type_count' => LoanApplication::from('loan_applications as la2')
+                    ->selectRaw('COUNT(*)')
+                    ->join('loan_disbursals as ld2', 'ld2.loan_application_id', '=', 'la2.id')
+                    ->whereColumn('la2.user_id', 'loan_applications.user_id')
+                    ->where(function ($q) {
+                        $q->whereColumn('ld2.disbursal_date', '<', 'ld.disbursal_date')
+                        ->orWhere(function ($q2) {
+                            $q2->whereColumn('ld2.disbursal_date', '=', 'ld.disbursal_date')
+                                ->whereColumn('la2.id', '<=', 'loan_applications.id');
+                        });
+                    })
+            ])
+
             ->with([
                 'user',
                 'personalDetails',
@@ -673,7 +887,7 @@ class CollectionController extends Controller
                 'loanDisbursal',
                 'loanApproval',
             ])
-            ->select('loan_applications.*')
+
             ->orderBy('lap.repay_date', 'DESC');
 
         $searchTerm = $request->get('search');
@@ -727,7 +941,7 @@ class CollectionController extends Controller
                     SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid, SUM(penal) as total_penal_paid,
                     MAX(collection_date) as last_collection_date, MAX(created_at) as last_payment_date FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
-                        'lap.repay_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount', 'uc.total_principal_paid', 'uc.total_interest_paid', 'uc.total_penal_paid', 'uc.last_collection_date', 'uc.last_payment_date', 'uc.total_paid','ld.disbursal_date',
+                        'lap.repay_date','lap.salary_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount', 'uc.total_principal_paid', 'uc.total_interest_paid', 'uc.total_penal_paid', 'uc.last_collection_date', 'uc.last_payment_date', 'uc.total_paid','ld.disbursal_date',
                         DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
                         DB::raw('
                         (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
@@ -742,6 +956,9 @@ class CollectionController extends Controller
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
                 $disbursal_date = !empty($loans->disbursal_date) ? $loans->disbursal_date : '';
                 $loanStatus = $totalDues == 0 ? 'Paid' : 'Unpaid';
+
+                $userAddress = DB::table('aadhaar_data')->where('user_id', $lead->user->id)->first();
+
 
                 $csvData[] = [
                         'Customer Name'      => $lead->user->firstname . ' ' . $lead->user->lastname,
@@ -758,9 +975,21 @@ class CollectionController extends Controller
                         'Collection Date'    => $loans->last_collection_date ?? '',
                         'Collection Amount'  => number_format($loans->total_paid ?? 0, 0),
                         'DPD'                => $daysAfterDue,
+                        'Bucket'             => '="'.$this->getDpDBucket($daysAfterDue).'"',
                         'Email'              => $lead->user->email,
                         'Loan Tenure'        => $loans->loan_tenure_days ?? 0,
                         'Status'             => $loanStatus,
+                        'Salary Date'        => !empty($loans->salary_date) ? $loans->salary_date : '',
+                        'Account Type'       => $lead->account_type_count == 1 ? 'New' : 'Existing',
+                        'Account Type Count' => $lead->account_type_count,
+                        'CIBIL Score'        => !empty($lead->loanApproval->cibil_score) ? $lead->loanApproval->cibil_score : '',
+                        'Monthly Income'     => !empty($lead->loanApproval->monthly_income) ? number_format($lead->loanApproval->monthly_income,2) : '',
+                        'Employment Type'    => !empty($lead->personalDetails->employment_type) ? $lead->personalDetails->employment_type : '',
+                        'Organisation Name'  => !empty($lead->employmentDetails->company_name) ? $lead->employmentDetails->company_name : '',
+                        'Designation'        => !empty($lead->employmentDetails->designation) ? $lead->employmentDetails->designation : '',
+                        'City'               => !empty($lead->addressDetails->city) ? $lead->addressDetails->city : '',
+                        'PIN Code'           => !empty( $lead->addressDetails->pincode) ? $lead->addressDetails->pincode : '',
+                        'Full Address'       => isset($userAddress) ? $userAddress->full_address : '',
                 ];
             }
 
@@ -1071,5 +1300,53 @@ class CollectionController extends Controller
         
         return app(LoanPaymentController::class)
         ->generatePartPaymentLink($request->lead_id, (int)$request->amount);
+    }
+
+    public function cleanIndianMobile($number)
+    {
+        $num = preg_replace('/[^0-9]/', '', $number);
+
+        // Remove +91
+        if (strlen($num) == 12 && substr($num, 0, 2) == '91') {
+            $num = substr($num, 2);
+        }
+
+        // Remove leading 0
+        if (strlen($num) == 11 && substr($num, 0, 1) == '0') {
+            $num = substr($num, 1);
+        }
+
+        // Reject PBX / gateway junk
+        if (preg_match('/^(0000|0001|0002)/', $num)) {
+            return null;
+        }
+
+        // Accept ONLY real Indian mobile
+        if (preg_match('/^[6-9][0-9]{9}$/', $num)) {
+            return $num;
+        }
+
+        return null;
+    }
+
+    public function getDpDBucket($dpd)
+    {
+        if ($dpd == 0) {
+            return '0';
+        } elseif ($dpd >= 1 && $dpd <= 30) {
+            return '1-30';
+        } elseif ($dpd >= 31 && $dpd <= 60) {
+            return '31-60';
+        } elseif ($dpd >= 61 && $dpd <= 90) {
+            return '61-90';
+        } elseif ($dpd >= 91 && $dpd <= 120) {
+            return '91-120';
+        } elseif ($dpd >= 121 && $dpd <= 150) {
+            return '121-150';
+        } elseif ($dpd >= 151 && $dpd <= 180) {
+            return '151-180';
+        } else {
+            return '>180';
+        }
     }
 }

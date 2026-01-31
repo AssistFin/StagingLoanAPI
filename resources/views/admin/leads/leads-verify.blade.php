@@ -2061,6 +2061,7 @@
                     if (tenureDays >= 0) {
                         $("#loan_tenure_days").val(tenureDays);
                         $("#loan_tenure_date").val(disbursalDateStr);
+                        calculateRepaymentAmount();
                     } else {
                         alert("Repay Date cannot be before the Tentative Disbursal Date.");
                         $("#repay_date").val("");
