@@ -20,19 +20,80 @@ use App\Models\Role;
 use App\Models\Menu;
 use App\Models\Submenu;
 use App\Models\Admin;
+use App\Models\LoanApplication;
 
 class AdminController extends Controller
 {
 
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $pageTitle = 'Dashboard';
 
+        $fromDate = null;
+        $toDate   = null;
+
+        if ($request->filter) {
+
+            switch ($request->filter) {
+
+                case 'today':
+                    $fromDate = Carbon::today();
+                    $toDate   = Carbon::today()->endOfDay();
+                    break;
+
+                case 'yesterday':
+                    $fromDate = Carbon::yesterday();
+                    $toDate   = Carbon::yesterday()->endOfDay();
+                    break;
+
+                case 'last3days':
+                    $fromDate = Carbon::now()->subDays(2)->startOfDay();
+                    $toDate   = Carbon::now();
+                    break;
+
+                case 'last7days':
+                    $fromDate = Carbon::now()->subDays(6)->startOfDay();
+                    $toDate   = Carbon::now();
+                    break;
+
+                case 'current_month':
+                    $fromDate = Carbon::now()->startOfMonth();
+                    $toDate   = Carbon::now()->endOfMonth();
+                    break;
+
+                case 'previous_month':
+                    $fromDate = Carbon::now()->subMonth()->startOfMonth();
+                    $toDate   = Carbon::now()->subMonth()->endOfMonth();
+                    break;
+            }
+
+        }
+
+        // Custom Range Override
+        if ($request->from_date && $request->to_date) {
+            $fromDate = Carbon::parse($request->from_date)->startOfDay();
+            $toDate   = Carbon::parse($request->to_date)->endOfDay();
+        }
+
         // User Info
-        $widget['total_users']             = User::count();
-        $widget['verified_users']          = User::active()->count();
-        $widget['email_unverified_users']  = User::emailUnverified()->count();
-        $widget['mobile_unverified_users'] = User::mobileUnverified()->count();
+        $widget['total_users'] = LoanApplication::whereHas('bankDetails', function ($q) use ($fromDate,$toDate) {
+                                        $q->whereBetween('created_at', [$fromDate,$toDate])
+                                        ->whereNotNull('account_number')
+                                        ->where('account_number', '!=', '');
+                                    })->count();
+
+        $widget['active_users'] = LoanApplication::where('loan_disbursal_status', 'disbursed')
+                                    ->whereHas('loanDisbursal', function ($q) use ($fromDate,$toDate) {
+                                        $q->whereBetween('created_at', [$fromDate,$toDate]);
+                                    })->count();
+
+        $widget['active_loans'] = LoanApplication::where('loan_closed_status', 'pending')
+                                    ->whereHas('loanDisbursal', function ($q) use ($fromDate,$toDate) {
+                                        $q->whereBetween('created_at', [$fromDate,$toDate]);
+                                    })->count();
+
+        $widget['closed_loans'] = LoanApplication::where('loan_closed_status', 'closed')
+                                    ->whereBetween('loan_closed_date', [$fromDate,$toDate])->count();
 
         $widget['total_pending_loan'] = Loan::pending()->count();
         $widget['total_due_loan']     = Loan::due()->count();

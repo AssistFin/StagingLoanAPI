@@ -37,21 +37,56 @@
     @endif
 
     <div class="row gy-4">
+
+        <div class="card mb-3">
+            <div class="card-body">
+
+                <div class="row g-2 align-items-end">
+
+                    <div class="col-md-3">
+                        <label>@lang('Quick Filter')</label>
+                        <select id="quickFilter" class="form-control">
+                            <option value="today" {{ request('filter')=='today'?'selected':'' }}>Today</option>
+                            <option value="yesterday" {{ request('filter')=='yesterday'?'selected':'' }}>Yesterday</option>
+                            <option value="last3days" {{ request('filter')=='last3days'?'selected':'' }}>Last 3 Days</option>
+                            <option value="last7days" {{ request('filter')=='last7days'?'selected':'' }}>Last 7 Days</option>
+                            <option value="current_month" {{ request('filter')=='current_month'?'selected':'' }}>Current Month</option>
+                            <option value="previous_month" {{ request('filter')=='previous_month'?'selected':'' }}>Previous Month</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label>From Date</label>
+                        <input type="date" id="fromDate" class="form-control"
+                            value="{{ request('from_date') }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label>To Date</label>
+                        <input type="date" id="toDate" class="form-control"
+                            value="{{ request('to_date') }}">
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+        
         <div class="col-xxl-3 col-sm-6">
-            <x-widget link="{{ route('admin.users.all') }}" icon="las la-users f-size--56" title="Total Users"
+            <x-widget link="{{ route('admin.leads.all') }}" icon="las la-users f-size--56" title="Total Users"
                 value="{{ $widget['total_users'] }}" bg="primary" />
         </div><!-- dashboard-w1 end -->
         <div class="col-xxl-3 col-sm-6">
-            <x-widget link="{{ route('admin.users.active') }}" icon="las la-user-check f-size--56" title="Active Users"
-                value="{{ $widget['verified_users'] }}" bg="success" />
+            <x-widget link="{{ route('admin.leads.all') }}" icon="las la-user-check f-size--56" title="Active Users"
+                value="{{ $widget['active_users'] }}" bg="success" />
         </div><!-- dashboard-w1 end -->
         <div class="col-xxl-3 col-sm-6">
-            <x-widget link="{{ route('admin.users.email.unverified') }}" icon="lar la-envelope f-size--56"
-                title="Email Unverified Users" value="{{ $widget['email_unverified_users'] }}" bg="danger" />
+            <x-widget link="{{ route('admin.leads.all') }}" icon="lar la-envelope f-size--56"
+                title="Active Loans" value="{{ $widget['active_loans'] }}" bg="danger" />
         </div><!-- dashboard-w1 end -->
         <div class="col-xxl-3 col-sm-6">
-            <x-widget link="{{ route('admin.users.mobile.unverified') }}" icon="las la-comment-slash f-size--56"
-                title="Mobile Unverified Users" value="{{ $widget['mobile_unverified_users'] }}" bg="red" />
+            <x-widget link="{{ route('admin.leads.all') }}" icon="las la-comment-slash f-size--56"
+                title="Closed Loans" value="{{ $widget['closed_loans'] }}" bg="red" />
         </div><!-- dashboard-w1 end -->
     </div><!-- row end-->
     <div class="row gy-4 mt-2">
@@ -526,4 +561,47 @@
 
         chart.render();
     </script>
+
+    <script>
+        document.getElementById('quickFilter').addEventListener('change', function () {
+
+            let filter = this.value;
+
+            let url = new URL(window.location.href);
+
+            if(filter){
+                url.searchParams.set('filter', filter);
+                url.searchParams.delete('from_date');
+                url.searchParams.delete('to_date');
+            }else{
+                url.searchParams.delete('filter');
+            }
+
+            window.location.href = url.toString();
+        });
+
+
+        document.getElementById('fromDate').addEventListener('change', applyCustomDate);
+        document.getElementById('toDate').addEventListener('change', applyCustomDate);
+
+
+        function applyCustomDate() {
+
+            let fromDate = document.getElementById('fromDate').value;
+            let toDate   = document.getElementById('toDate').value;
+
+            if(fromDate && toDate){
+
+                let url = new URL(window.location.href);
+
+                url.searchParams.set('from_date', fromDate);
+                url.searchParams.set('to_date', toDate);
+
+                url.searchParams.delete('filter');
+
+                window.location.href = url.toString();
+            }
+        }
+    </script>
+
 @endpush

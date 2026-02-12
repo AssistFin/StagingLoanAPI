@@ -98,6 +98,9 @@ class CollectionController extends Controller
                 $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
                 $paymentLink = config('services.docs.app_url') . '/api/pay/'.base64_encode($lead->id);
 
+                $loanCount = $lead->user->loanApplications()->count();
+                $customerType = $loanCount > 1 ? 'Existing' : 'New';
+
                 $experian = null;
 
                 if (!empty($lead->experianCreditReport) && !empty($lead->experianCreditReport->response_data)) {
@@ -144,6 +147,7 @@ class CollectionController extends Controller
                     'Salary Date' => $loans->salary_date ?? '',
                     'City' => $lead->addressDetails->city ?? '',
                     'State' => $lead->addressDetails->state ?? '',
+                    'Customer Type' => $customerType,
                     'Cashfree Reference No' => $loans->reference_id ?? '',
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),
                     'Repayment date' => $repayDate,
@@ -401,6 +405,15 @@ class CollectionController extends Controller
         if ($request->has('export') && $request->export === 'csv') {
             $leads = $query->get();
 
+            $collections = DB::table('utr_collections')
+            ->select(
+                'loan_application_id',
+                'collection_amt',
+                'payment_id'
+            )
+            ->get()
+            ->groupBy('loan_application_id');
+
             $csvData = [];
 
             foreach ($leads as $lead) {
@@ -546,6 +559,29 @@ class CollectionController extends Controller
                 $loanCount = $lead->user->loanApplications()->count();
                 $customerType = $loanCount > 1 ? 'Existing' : 'New';
 
+                $paymentAmounts = [];
+                $paymentIds     = [];
+                $totalPaid      = 0;
+
+                if (isset($collections[$lead->id])) {
+
+                    foreach ($collections[$lead->id] as $row) {
+
+                        if (!empty($row->collection_amt)) {
+
+                            $paymentAmounts[] = number_format($row->collection_amt, 0);
+                            $totalPaid += $row->collection_amt;
+                        }
+
+                        if (!empty($row->payment_id)) {
+                            $paymentIds[] = $row->payment_id;
+                        }
+                    }
+                }
+
+                $paymentAmountText = implode(', ', $paymentAmounts);
+                $paymentIdText     = implode(', ', $paymentIds);
+
                 $csvData[] = [
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,
                     'Customer Mobile' => '="'. substr($lead->user->mobile, 2, 12).'"',
@@ -563,6 +599,9 @@ class CollectionController extends Controller
                     'State' => $lead->addressDetails->state ?? '',
                     'Cibil Score' => $loans->cibil_score ?? 0,
                     'Customer Type' => $customerType,
+                    'Part Payment Amounts' => $paymentAmountText,
+                    'Payment IDs' => $paymentIdText,
+                    'Total Part Paid' => number_format($totalPaid, 0),
                     'Intrest Calculated upto' => $today,
                     'Payment Link' => $paymentLink,
                     'Settlement Payment Link' => $settlementpaymentLink,
@@ -853,13 +892,38 @@ class CollectionController extends Controller
         $query = LoanApplication::whereHas('loanDisbursal')
 
             // JOIN FIRST (so aliases exist)
-            ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'loan_applications.id')
-            ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'loan_applications.id')
+            // Join latest approval per loan
+            ->join(DB::raw("
+                (
+                    SELECT la1.*
+                    FROM loan_approvals la1
+                    INNER JOIN (
+                        SELECT loan_application_id, MAX(id) as max_id
+                        FROM loan_approvals
+                        GROUP BY loan_application_id
+                    ) la2
+                    ON la1.id = la2.max_id
+                ) as lap
+            "), 'lap.loan_application_id', '=', 'loan_applications.id')
+
+            // Join latest disbursal per loan
+            ->join(DB::raw("
+                (
+                    SELECT ld1.*
+                    FROM loan_disbursals ld1
+                    INNER JOIN (
+                        SELECT loan_application_id, MAX(id) as max_id
+                        FROM loan_disbursals
+                        GROUP BY loan_application_id
+                    ) ld2
+                    ON ld1.id = ld2.max_id
+                ) as ld
+            "), 'ld.loan_application_id', '=', 'loan_applications.id')
 
             // SELECT base + calculated column
             ->select([
                 'loan_applications.*'
-            ])
+            ])->distinct()
 
             // NOW ADD account type count
             ->addSelect([
@@ -896,26 +960,46 @@ class CollectionController extends Controller
         $toDate = $request->get('to_date');
 
         if ($dateRange) {
-            $query->whereHas('loanApproval', function ($collectionQuery) use ($dateRange, $fromDate, $toDate) {
-                if ($dateRange === 'today') {
-                    $collectionQuery->whereDate('repay_date', now()->today());
-                } elseif ($dateRange === 'yesterday') {
-                    $collectionQuery->whereDate('repay_date', now()->yesterday());
-                } elseif ($dateRange === 'last_3_days') {
-                    $collectionQuery->whereBetween('repay_date', [now()->subDays(3), now()]);
-                } elseif ($dateRange === 'last_7_days') {
-                    $collectionQuery->whereBetween('repay_date', [now()->subDays(7), now()]);
-                } elseif ($dateRange === 'last_15_days') {
-                    $collectionQuery->whereBetween('repay_date', [now()->subDays(15), now()]);
-                } elseif ($dateRange === 'current_month') {
-                    $collectionQuery->whereBetween('repay_date', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
-                } elseif ($dateRange === 'previous_month') {
-                    $collectionQuery->whereBetween('repay_date', [Carbon::now()->subMonth()->startOfMonth(), Carbon::now()->subMonth()->endOfMonth()]);
-                } elseif ($dateRange === 'custom' && $fromDate && $toDate) {
-                    $collectionQuery->whereBetween('repay_date', [$fromDate, $toDate]);
-                }
-            });
+
+            if ($dateRange === 'today') {
+                $query->whereDate('lap.repay_date', now()->today());
+            }
+
+            elseif ($dateRange === 'yesterday') {
+                $query->whereDate('lap.repay_date', now()->yesterday());
+            }
+
+            elseif ($dateRange === 'last_3_days') {
+                $query->whereBetween('lap.repay_date', [now()->subDays(3), now()]);
+            }
+
+            elseif ($dateRange === 'last_7_days') {
+                $query->whereBetween('lap.repay_date', [now()->subDays(7), now()]);
+            }
+
+            elseif ($dateRange === 'last_15_days') {
+                $query->whereBetween('lap.repay_date', [now()->subDays(15), now()]);
+            }
+
+            elseif ($dateRange === 'current_month') {
+                $query->whereBetween('lap.repay_date', [
+                    now()->startOfMonth(),
+                    now()->endOfMonth()
+                ]);
+            }
+
+            elseif ($dateRange === 'previous_month') {
+                $query->whereBetween('lap.repay_date', [
+                    now()->subMonth()->startOfMonth(),
+                    now()->subMonth()->endOfMonth()
+                ]);
+            }
+
+            elseif ($dateRange === 'custom' && $fromDate && $toDate) {
+                $query->whereBetween('lap.repay_date', [$fromDate, $toDate]);
+            }
         }
+
 
         if ($searchTerm) {
             $query->where(function ($q) use ($searchTerm) {
@@ -927,93 +1011,148 @@ class CollectionController extends Controller
             });
         }
 
-        if ($request->has('export') && $request->export === 'csv') {
-            $leads = $query->get();
+if ($request->has('export') && $request->export === 'csv') {
 
-            $csvData = [];
+    set_time_limit(0);
+    ini_set('output_buffering','off');
+    ini_set('zlib.output_compression', false);
+    while (ob_get_level()) ob_end_clean();
 
-            foreach ($leads as $lead) {
-                // Run the same sub-query to get your dynamic values:
-                $loans = DB::table('loan_applications as la')
-                    ->join('loan_disbursals as ld', 'ld.loan_application_id', '=', 'la.id')
-                    ->join('loan_approvals as lap', 'lap.loan_application_id', '=', 'la.id')
-                    ->leftJoin(DB::raw('(SELECT loan_application_id, SUM(collection_amt) as total_paid,
-                    SUM(principal) as total_principal_paid, SUM(interest) as total_interest_paid, SUM(penal) as total_penal_paid,
-                    MAX(collection_date) as last_collection_date, MAX(created_at) as last_payment_date FROM utr_collections GROUP BY loan_application_id) as uc'), 'uc.loan_application_id', '=', 'la.id')
-                    ->select([
-                        'lap.repay_date','lap.salary_date','lap.approval_amount','lap.loan_tenure_days','lap.repayment_amount', 'uc.total_principal_paid', 'uc.total_interest_paid', 'uc.total_penal_paid', 'uc.last_collection_date', 'uc.last_payment_date', 'uc.total_paid','ld.disbursal_date',
-                        DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
-                        DB::raw('
-                        (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount))
-                        + ((IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount) * lap.roi / 100) * DATEDIFF("' . $today . '", ld.created_at) - IFNULL(uc.total_interest_paid, 0))
-                        + IF(DATEDIFF("' . $today . '", lap.repay_date) > 0, (IFNULL(lap.approval_amount - uc.total_principal_paid, lap.approval_amount)) * 0.0025 * DATEDIFF("' . $today . '", lap.repay_date), 0 ) as total_dues')
-                    ])
-                    ->where('la.id', $lead->id)
-                    ->first();
+    $filename = 'collection_export_' . now()->format('Ymd_His') . '.csv';
 
-                $totalDues = max((int)($loans->total_dues ?? 0), 0);
-                $daysAfterDue = max((int)($loans->days_after_due ?? 0), 0);
-                $repayDate = !empty($loans->repay_date) ? $loans->repay_date : '';
-                $disbursal_date = !empty($loans->disbursal_date) ? $loans->disbursal_date : '';
+    return response()->streamDownload(function () use ($query, $today) {
+
+        $file = fopen('php://output', 'w');
+
+        fputcsv($file, [
+            'Customer Name','Customer Mobile','Loan Application No',
+            'Loan Amount','Total Due','Repayment Amount',
+            'Disbursement date','Repayment date',
+            'Principal Coll.','Interest Coll.','Penal Coll.',
+            'Collection Date','Collection Amount',
+            'DPD','Bucket','Email',
+            'Loan Tenure','Status','Salary Date',
+            'Account Type','Account Type Count',
+            'CIBIL Score','Monthly Income','Employment Type',
+            'Organisation Name','Designation',
+            'City','PIN Code','Full Address'
+        ]);
+
+        // ✅ CLONE MAIN QUERY (DON'T MODIFY ORIGINAL)
+        $exportQuery = clone $query;
+
+        // ✅ ONLY ADD COLLECTION + AADHAAR JOIN
+        $exportQuery
+            ->leftJoin(DB::raw("
+                (
+                    SELECT loan_application_id,
+                        SUM(collection_amt) as total_paid,
+                        SUM(principal) as total_principal_paid,
+                        SUM(interest) as total_interest_paid,
+                        SUM(penal) as total_penal_paid,
+                        MAX(collection_date) as last_collection_date
+                    FROM utr_collections
+                    GROUP BY loan_application_id
+                ) as uc
+            "), 'uc.loan_application_id','=','loan_applications.id')
+
+            ->leftJoin('aadhaar_data as aad','aad.user_id','=','loan_applications.user_id')
+
+            ->addSelect([
+                'lap.approval_amount',
+                'lap.loan_tenure_days',
+                'lap.repayment_amount',
+                'lap.repay_date',
+                'lap.salary_date',
+                'lap.cibil_score',
+                'lap.monthly_income',
+                'lap.roi',
+                'ld.disbursal_date',
+                'ld.created_at as disbursal_created_at',
+                'uc.total_principal_paid',
+                'uc.total_interest_paid',
+                'uc.total_penal_paid',
+                'uc.total_paid',
+                'uc.last_collection_date',
+                'aad.full_address',
+
+                DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
+
+                DB::raw("
+                    (IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount))
+                    + ((IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount) * lap.roi / 100)
+                    * DATEDIFF('$today', ld.created_at) - IFNULL(uc.total_interest_paid,0))
+                    + IF(DATEDIFF('$today', lap.repay_date) > 0,
+                        (IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount))
+                        * 0.0025 * DATEDIFF('$today', lap.repay_date),0)
+                    as total_dues
+                ")
+            ])
+
+            // 🔥 THIS IS THE REAL FIX
+            ->groupBy('loan_applications.id')
+
+            ->orderBy('loan_applications.id');
+
+        $exportQuery->chunk(200, function ($rows) use ($file) {
+
+            foreach ($rows as $lead) {
+
+                $totalDues = max((int)$lead->total_dues,0);
+                $dpd = max((int)$lead->days_after_due,0);
                 $loanStatus = $totalDues == 0 ? 'Paid' : 'Unpaid';
 
-                $userAddress = DB::table('aadhaar_data')->where('user_id', $lead->user->id)->first();
+                fputcsv($file, [
 
+                    $lead->user->firstname.' '.$lead->user->lastname,
+                    '="'.$lead->user->mobile.'"',
+                    $lead->loan_no,
 
-                $csvData[] = [
-                        'Customer Name'      => $lead->user->firstname . ' ' . $lead->user->lastname,
-                        'Customer Mobile'    => '="'. substr($lead->user->mobile, 2, 12).'"',
-                        'Loan Application No'=> $lead->loan_no,
-                        'Loan Amount'        => number_format($loans->approval_amount ?? 0, 0),
-                        'Total Due'          => number_format($totalDues, 0),
-                        'Repayment Amount'   => number_format($loans->repayment_amount ?? 0, 0),
-                        'Disbursement date'  => $disbursal_date,
-                        'Repayment date'     => $repayDate,
-                        'Principal Coll.'    => $loans->total_principal_paid ?? 0,
-                        'Interest Coll.'     => $loans->total_interest_paid ?? 0,
-                        'Penal Coll.'        => $loans->total_penal_paid ?? 0,
-                        'Collection Date'    => $loans->last_collection_date ?? '',
-                        'Collection Amount'  => number_format($loans->total_paid ?? 0, 0),
-                        'DPD'                => $daysAfterDue,
-                        'Bucket'             => '="'.$this->getDpDBucket($daysAfterDue).'"',
-                        'Email'              => $lead->user->email,
-                        'Loan Tenure'        => $loans->loan_tenure_days ?? 0,
-                        'Status'             => $loanStatus,
-                        'Salary Date'        => !empty($loans->salary_date) ? $loans->salary_date : '',
-                        'Account Type'       => $lead->account_type_count == 1 ? 'New' : 'Existing',
-                        'Account Type Count' => $lead->account_type_count,
-                        'CIBIL Score'        => !empty($lead->loanApproval->cibil_score) ? $lead->loanApproval->cibil_score : '',
-                        'Monthly Income'     => !empty($lead->loanApproval->monthly_income) ? number_format($lead->loanApproval->monthly_income,2) : '',
-                        'Employment Type'    => !empty($lead->personalDetails->employment_type) ? $lead->personalDetails->employment_type : '',
-                        'Organisation Name'  => !empty($lead->employmentDetails->company_name) ? $lead->employmentDetails->company_name : '',
-                        'Designation'        => !empty($lead->employmentDetails->designation) ? $lead->employmentDetails->designation : '',
-                        'City'               => !empty($lead->addressDetails->city) ? $lead->addressDetails->city : '',
-                        'PIN Code'           => !empty( $lead->addressDetails->pincode) ? $lead->addressDetails->pincode : '',
-                        'Full Address'       => isset($userAddress) ? $userAddress->full_address : '',
-                ];
+                    number_format($lead->approval_amount,0),
+                    number_format($totalDues,0),
+                    number_format($lead->repayment_amount,0),
+
+                    $lead->disbursal_date,
+                    $lead->repay_date,
+
+                    $lead->total_principal_paid ?? 0,
+                    $lead->total_interest_paid ?? 0,
+                    $lead->total_penal_paid ?? 0,
+
+                    $lead->last_collection_date ?? '',
+                    number_format($lead->total_paid ?? 0,0),
+
+                    $dpd,
+                    '="'.$this->getDpDBucket($dpd).'"',
+
+                    $lead->user->email,
+                    $lead->loan_tenure_days,
+                    $loanStatus,
+                    $lead->salary_date,
+
+                    $lead->account_type_count == 1 ? 'New' : 'Existing',
+                    $lead->account_type_count,
+
+                    $lead->loanApproval->cibil_score ?? '',
+                    number_format($lead->loanApproval->monthly_income ?? 0,2),
+
+                    $lead->personalDetails->employment_type ?? '',
+                    $lead->employmentDetails->company_name ?? '',
+                    $lead->employmentDetails->designation ?? '',
+
+                    $lead->addressDetails->city ?? '',
+                    $lead->addressDetails->pincode ?? '',
+
+                    $lead->full_address ?? ''
+                ]);
             }
+        });
 
-            $dateRangeText = $dateRange ?? 'alltime';
-            $timestamp = now()->format('Ymd_His');
+        fclose($file);
 
-            $filename = "{$dateRangeText}_collection_export_{$timestamp}.csv";
+    }, $filename, ['Content-Type'=>'text/csv']);
+}
 
-            $headers = [
-                'Content-Type' => 'text/csv',
-                'Content-Disposition' => "attachment; filename=\"$filename\"",
-            ];
-
-            $callback = function () use ($csvData) {
-                $file = fopen('php://output', 'w');
-                fputcsv($file, array_keys($csvData[0]));
-                foreach ($csvData as $row) {
-                    fputcsv($file, $row);
-                }
-                fclose($file);
-            };
-
-            return Response::stream($callback, 200, $headers);
-        }
 
         $totalRecordsQuery = clone $query;
         $totalRecords = $totalRecordsQuery->count();

@@ -58,6 +58,10 @@ class LoanApplyController extends Controller
                 
             }
 
+            if ($lastRejectedLoan && $lastRejectedLoan->loan_closed_status == 'closed'){
+                //$preLoanData = 'applyforaloan';
+            }
+
             $loans = LoanApplication::with([
                 'personalDetails', 
                 'employmentDetails', 
@@ -143,6 +147,7 @@ class LoanApplyController extends Controller
             'data'   => $loan ? [
                 'loan_id' => $loan->id,
                 'current_step' => $loan->current_step, 
+                'next_step' => $loan->next_step,
             ] : [],
         ]);
     }
@@ -299,7 +304,6 @@ class LoanApplyController extends Controller
                     ->where('loan_disbursal_status', 'disbursed')
                     ->where('loan_closed_status', 'closed')
                     ->whereNotNull('loan_closed_date')
-                    ->where('loan_closed_date', '>=', now()->subMonths(6))
                     ->orderBy('loan_closed_date', 'desc')
                     ->first();
 					
@@ -722,7 +726,7 @@ class LoanApplyController extends Controller
                 // Merge computed salary_date into request data
                 $data = [];
                 $data['salary_date'] = $salaryDate->format('Y-m-d');
-                $data['repay_date'] =  $repayDate->format('Y-m-d'); // store full date
+                $data['repay_date'] =  $salaryDate->format('Y-m-d'); // store full date
                 $data['loan_tenure_days'] = $tenureDays;
                 $data['loan_application_id'] = $request->loan_application_id;
                 $data['user_id'] = auth()->id();
@@ -1209,7 +1213,7 @@ class LoanApplyController extends Controller
             'mobile_num'                => $mobile,
             "start_month" => now()->subMonths(3)->startOfMonth()->format('Y-m'),
             "end_month" => now()->format('Y-m'),
-            "relaxation_days" => "1",
+            "relaxation_days" => "10",
             'consent_request' => [
                 [
                 'fetch_type' => "ONETIME",
