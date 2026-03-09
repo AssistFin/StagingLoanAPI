@@ -41,6 +41,7 @@ class LoanApplyController extends Controller
             |--------------------------------------------------------------------------
             */
             $lastRejectedLoan = LoanApplication::where('user_id', $userId)
+                ->where('admin_approval_status', 'rejected')
                 ->orderBy('updated_at', 'desc')
                 ->first();
 
@@ -53,13 +54,9 @@ class LoanApplyController extends Controller
                 if ($daysPassed < 45) {
                     $preLoanData = 'noteligible';
                 } else {
-                    $preLoanData = 'applyforaloan';
+                    //$preLoanData = 'applyforaloan';
                 }
                 
-            }
-
-            if ($lastRejectedLoan && $lastRejectedLoan->loan_closed_status == 'closed'){
-                //$preLoanData = 'applyforaloan';
             }
 
             $loans = LoanApplication::with([
@@ -121,6 +118,27 @@ class LoanApplyController extends Controller
                     }
                 }
             }
+
+            // if(!empty($loans)){
+            //     $preLoanData = '';
+            // }
+
+            $lastSettlementLoan = LoanApplication::where('user_id', $userId)
+                ->where('admin_approval_status', 'approved')
+                ->orderBy('admin_approval_date', 'desc')
+                ->first();
+
+            if(!empty($lastSettlementLoan)){
+                $lastCollection = DB::table('utr_collections')
+                ->where('loan_application_id', $lastSettlementLoan['id'])
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+                if ($lastSettlementLoan && $lastCollection && strtolower($lastCollection->status) === 'settlement') {
+                    $preLoanData = 'noteligible';
+                }
+            }
+            
 
             return response()->json(['status' => true, 'data' => $loans, 'data2' => $preLoanData]);
         } catch (\Exception $e) {
@@ -983,6 +1001,14 @@ class LoanApplyController extends Controller
             $loan->current_step = $request->current_step;
             $loan->next_step = $request->next_step;
             $loan->save();
+
+            if($request->backto == 'backto'){
+                $existingUpdate = LoanKYCDetails::where('loan_application_id', $request->loan_application_id)
+                ->update([
+                    "aadhar_number" => '',
+                    "aadhar_otp_verified" => 0,
+                ]);
+            }
 
             return response()->json([
                 'status' => true,

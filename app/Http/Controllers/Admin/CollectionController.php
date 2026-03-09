@@ -1030,7 +1030,7 @@ if ($request->has('export') && $request->export === 'csv') {
             'Disbursement date','Repayment date',
             'Principal Coll.','Interest Coll.','Penal Coll.',
             'Collection Date','Collection Amount',
-            'DPD','Bucket','Email',
+            'DPD','Bucket','Email', 'CPA Name',
             'Loan Tenure','Status','Salary Date',
             'Account Type','Account Type Count',
             'CIBIL Score','Monthly Income','Employment Type',
@@ -1057,7 +1057,7 @@ if ($request->has('export') && $request->export === 'csv') {
             "), 'uc.loan_application_id','=','loan_applications.id')
 
             ->leftJoin('aadhaar_data as aad','aad.user_id','=','loan_applications.user_id')
-
+            ->leftJoin('admins as adm','adm.id','=','lap.credited_by')
             ->addSelect([
                 'lap.approval_amount',
                 'lap.loan_tenure_days',
@@ -1075,6 +1075,7 @@ if ($request->has('export') && $request->export === 'csv') {
                 'uc.total_paid',
                 'uc.last_collection_date',
                 'aad.full_address',
+                'adm.name as cpa_name',
 
                 DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
 
@@ -1126,6 +1127,8 @@ if ($request->has('export') && $request->export === 'csv') {
                     '="'.$this->getDpDBucket($dpd).'"',
 
                     $lead->user->email,
+                    $lead->cpa_name ?? '',
+
                     $lead->loan_tenure_days,
                     $loanStatus,
                     $lead->salary_date,

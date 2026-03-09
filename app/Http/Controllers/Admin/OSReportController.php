@@ -557,17 +557,23 @@ class OSReportController extends Controller
                     ->leftJoin(DB::raw('(
                         SELECT 
                             loan_application_id,
-                            SUM(collection_amt) as total_paid,
-                            SUM(principal) as total_principal_paid,
-                            SUM(interest) as total_interest_paid,
-                            SUM(penal) as total_penal_paid,
-                            MAX(collection_date) as last_payment_date,
-                            MAX(status) as ucstatus,
-                            discount_principal as dspr,
-                            discount_interest as dsit,
-                            discount_penal as dspl
-                        FROM utr_collections
-                        GROUP BY loan_application_id
+                            SUM(uc1.collection_amt) as total_paid,
+                            SUM(uc1.principal) as total_principal_paid,
+                            SUM(uc1.interest) as total_interest_paid,
+                            SUM(uc1.penal) as total_penal_paid,
+                            MAX(uc1.collection_date) as last_payment_date,
+                            (
+                                SELECT uc2.status 
+                                FROM utr_collections uc2 
+                                WHERE uc2.loan_application_id = uc1.loan_application_id 
+                                ORDER BY uc2.collection_date DESC 
+                                LIMIT 1
+                            ) as ucstatus,
+                            SUM(discount_principal) as dspr,
+                            SUM(discount_interest) as dsit,
+                            SUM(discount_penal) as dspl
+                        FROM utr_collections as uc1
+                        GROUP BY uc1.loan_application_id
                     ) as uc'), 'uc.loan_application_id', '=', 'la.id')
                     ->select([
                         'la.loan_no',
@@ -911,7 +917,7 @@ class OSReportController extends Controller
         $debugSql = Str::replaceArray('?', [$from, $to], $sql);
 
         // Log it to storage/logs/laravel.log
-        Log::info('OS Report Final SQL', ['sql' => $debugSql]);
+        //Log::info('OS Report Final SQL', ['sql' => $debugSql]);
 
         $data = collect(DB::select($sql, [$from, $to]));
 

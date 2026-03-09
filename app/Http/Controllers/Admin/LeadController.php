@@ -951,7 +951,7 @@ class LeadController extends Controller
                             ->whereIn('la2.admin_approval_status',['approved','rejected']);
                     });
 
-                });
+                })->orderBy('created_at', 'asc');
 
 
         // ================================
