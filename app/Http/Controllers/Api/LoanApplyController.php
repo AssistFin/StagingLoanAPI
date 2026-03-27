@@ -80,6 +80,55 @@ class LoanApplyController extends Controller
                 ->first();
 
             if ($loans) {
+
+                $experianData = ExperianCreditReport::whereNotNull('response_data')
+                ->where('lead_id', $loans['id'])
+                ->orderBy('ecr_id','desc')->first();
+
+                $bscore = 0;
+                if(!empty($experianData)){
+                    $data = json_decode($experianData->response_data, true);
+                    if(!empty($data['UserMessage']['UserMessageText']) && $data['UserMessage']['UserMessageText'] == 'Normal Response'){
+                        $bscore = $data['SCORE']['BureauScore'];
+                        $prevDate = Carbon::parse($experianData->created_at);
+                        $daysPassed = $prevDate->diffInDays(Carbon::now());
+
+                        Log::info('Bureau data updatation data ', [
+                            'bscore' => $bscore,
+                            'prevDate' => $prevDate,
+                            'daysPassed' => $daysPassed,
+                        ]);
+                    }
+                }
+
+                if(!empty($experianData) && $bscore != 0 && $daysPassed > 15 && $loans['loan_disbursal_status'] != 'disbursed' && $loans['admin_approval_status'] != 'rejected'){
+                        $arrData["loan_application_id"] = $loans['id'];
+                        $arrData["current_step"] = 'submitselfie';
+                        $arrData["next_step"] = 'addressconfirmation';
+                        $reqObj = Request::create('', 'POST', $arrData);
+                        $this->updateLoanStep($reqObj);
+
+                        LoanApplication::where('id', $loans['id'])->update([
+                            'admin_approval_status' => 'pending',
+                            'user_acceptance_status' => 'pending'
+                        ]);
+
+                        LoanAddressDetails::where('loan_application_id', $loans['id'])->delete();
+                        LoanEmploymentDetails::where('loan_application_id', $loans['id'])->delete();
+                        LoanBankDetails::where('loan_application_id', $loans['id'])->delete();
+                        LoanApproval::where('loan_application_id', $loans['id'])->delete();
+                        DigitapBankRequest::where('customer_id', $loans['id'])->delete();
+                        ExperianCreditReport::where('lead_id', $loans['id'])->delete();
+
+                        Log::info('Bureau data update after 15 days ', [
+                            'loan_application_id' => $loans['id'],
+                            'current_step' => 'submitselfie',
+                            'next_step' => 'addressconfirmation',
+                        ]);
+
+
+                }
+
                 $enachData = DB::table('cashfree_enach_request_response_data')
                 ->where('subscription_id', $loans['loan_no'])
                 ->select('status', 'created_at')

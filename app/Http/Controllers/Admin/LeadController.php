@@ -911,7 +911,9 @@ class LeadController extends Controller
                     $q->select(DB::raw(1))
                     ->from('digitap_bank_requests as dr')
                     ->whereColumn('dr.customer_id','loan_applications.id')
-                    ->where('dr.status','xlsx_report_saved');
+                    ->where('dr.txn_id', '!=', '')
+                    //->whereIn('dr.status', ['xlsx_report_saved', 'ReportGenerated']);
+                    ->where('dr.status', 'xlsx_report_saved');
                 })
 
                 ->with([
@@ -1147,6 +1149,7 @@ class LeadController extends Controller
         }
 
         $digitapBankRequestData = DigitapBankRequest::where(['customer_id'=> $id, 'status' => 'xlsx_report_saved'])->orderBy('id','desc')->first();
+        //$digitapBankRequestData = DigitapBankRequest::where('customer_id', $id)->where('txn_id', '!=', '')->whereIn('status', ['xlsx_report_saved', 'ReportGenerated'])->orderBy('id','desc')->first();
         //dd($digitapBankRequestData);
         
         $cashfreeExistingActiveData = CashfreeEnachRequestResponse::where('subscription_id', $lead->loan_no)->where('reference_id', '!=', '')->where('status', 'ACTIVE')->orderBy('id','desc')->get();
@@ -1158,7 +1161,7 @@ class LeadController extends Controller
                 $status = $response_data['authorization_details']['authorization_status'] ?? '';
                 $bank_account_no = $response_data['authorization_details']['payment_method']['enach']['account_number'] ?? '';
 
-                if($status == 'ACTIVE' && $lead->bankDetails->account_number == $bank_account_no){
+                if($status == 'ACTIVE' && !empty($lead->bankDetails->account_number) && $lead->bankDetails->account_number == $bank_account_no){
                     $cashfreeData = CashfreeEnachRequestResponse::where('alt_subscription_id', $new_alt_subscription_id)->first();
                     //dd($cashfreeData);
                     break;

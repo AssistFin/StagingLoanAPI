@@ -32,8 +32,8 @@ class DigitapBankStatementService
             'institution_id'      => $institutionId,
             'client_ref_num'      => $refNum,
             'txn_completed_cburl' => config('services.docs.app_url').'/api/digitap/bsu/webhook',
-            'start_month'         => now()->subMonths(6)->startOfMonth()->format('Y-m-d'),
-            'end_month'           => now()->format('Y-m-d'),
+            'start_month'         => now()->subMonths(4)->format('Y-m'),
+            'end_month'           => now()->subMonth()->format('Y-m'),
             'acceptance_policy'   => 'atLeastOneTransactionInRange',
             'relaxation_days'     => '2'
         ];
@@ -147,8 +147,9 @@ class DigitapBankStatementService
             'report_type'   => $reportType,
             'report_subtype'=> $reportSubtype
         ]);
-
+        \Log::info('Digitap BSA Report JSON Response', ['response' => $response]);
         DigitapBankRequest::where('txn_id', $request->txn_id)
+            ->where('status', '!=', 'json_report_saved')
             ->update([
                 'report_json_data' => json_encode($response, JSON_UNESCAPED_UNICODE),
                 'status'           => 'json_report_saved'
@@ -174,9 +175,11 @@ class DigitapBankStatementService
 
             // save file using Laravel Storage
             Storage::disk('public')->put($xlsx_filePath, $xlsxData);
+            //file_put_contents(storage_path('app/public/'.$xlsx_filePath), $response2['raw']);
 
             // update db with only the path
             DigitapBankRequest::where('txn_id', $request->txn_id)
+                ->where('status', '!=', 'xlsx_report_saved')
                 ->update([
                     'report_xlsx_data' => $xlsx_filePath, // store relative path
                     'status'           => 'xlsx_report_saved'
@@ -184,7 +187,7 @@ class DigitapBankStatementService
         }
 
         // return clean response (without binary)
-        return $response;
+        return $response2;
     }
 
     /**
@@ -200,7 +203,7 @@ class DigitapBankStatementService
         // Try to decode JSON
         $json = $res->json();
 
-        if ($json === null && $payload['report_type'] != 'xlsx') {
+        if ($json === null && ($payload['report_type'] ?? '') != 'xlsx') {
             \Log::error("Digitap API ($endpoint) returned non-JSON", [
                 'status'   => $res->status(),
                 'body'     => $res->body(),

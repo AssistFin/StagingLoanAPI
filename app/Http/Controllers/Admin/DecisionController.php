@@ -266,12 +266,19 @@ class DecisionController extends Controller
                 $loanAmount = $lead->collections->sum('collection_amt');
 
                 $dpd = 0;
-                if ($lead->loanApproval && $lead->loanApproval->repay_date) {
-                    $repayDate = Carbon::parse($lead->loanApproval->repay_date);
-                    //$disbursal_date = Carbon::parse($lead->loanDisbursal->disbursal_date);
-                    $dpd = $repayDate->isPast() ? $repayDate->diffInDays(now()) : 0;
-                }
+                // if ($lead->loanApproval && $lead->loanApproval->repay_date) {
+                //     $repayDate = Carbon::parse($lead->loanApproval->repay_date);
+                //     //$disbursal_date = Carbon::parse($lead->loanDisbursal->disbursal_date);
+                //     $dpd = $repayDate->isPast() ? $repayDate->diffInDays($lead->loan_closed_date) : 0;
+                // }
                 
+                if ($lead->loanApproval && $lead->loanApproval->repay_date && $lead->loan_closed_date) {
+                    $repayDate = Carbon::parse($lead->loanApproval->repay_date);
+                    $closedDate = Carbon::parse($lead->loan_closed_date);
+
+                    $dpd = $closedDate->gt($repayDate) ? $repayDate->diffInDays($closedDate) : 0;
+                }
+
                 $csvData[] = [
                     'Closed Date' => $lead->loan_closed_date ? Carbon::parse($lead->loan_closed_date)->format('d-m-Y') : '',
                     'Customer Name' => $lead->user->firstname . ' ' . $lead->user->lastname,

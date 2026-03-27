@@ -48,7 +48,7 @@
                                     <td>{{ $banking->loan_no }}</td>
                                     <td>{{ $banking->user ? $banking->user->firstname . " " . $banking->user->lastname : '' }}</td>
                                     <td>{{ $banking->user ? $banking->user->mobile : '' }}</td>
-                                    <td>{{ number_format($banking->loanApproval->approval_amount,0) }}</td>
+                                    <td>{{ !empty($banking->loanApproval->approval_amount) ? number_format($banking->loanApproval->approval_amount,0) : 0 }}</td>
                                     <td>{{ !empty($banking->loanApproval->disbursal_amount) ? number_format($banking->loanApproval->disbursal_amount,0) : 0 }}</td>
                                     <td>{{ !empty($banking->loanApproval->tentative_disbursal_date) ? $banking->loanApproval->tentative_disbursal_date : '' }}</td>
                                 </tr>

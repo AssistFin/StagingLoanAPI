@@ -14,6 +14,7 @@ class ExperianCreditBureauController extends Controller
 
     public function index(Request $request)
     {
+        ini_set('memory_limit', '4096M');
         $pageTitle = 'Experian Credit Bureau Report';
         $excludedUserIds = ['591','592','593','594','595','601','697','1003','1379','1680'];
         $today = now()->format('Y-m-d');
@@ -182,7 +183,7 @@ class ExperianCreditBureauController extends Controller
                     'Date Reported' => $todayDate,
                     'High Credit/Sanctioned Amt' => $lead->approval_amount,
                     'Current Balance' => empty($lead->loan_closed_date) ? number_format($loan->remaining_principal ?? 0, 2) : 0,
-                    'Amt Overdue' => empty($lead->loan_closed_date) ? number_format($totalDues ?? 0, 2) : 0,
+                    'Amt Overdue' => ($lead->loan_closed_status == 'pending') ? number_format($totalDues ?? 0, 2) : 0,
                     'No of Days Past Due' => $daysAfterDue,
                     'Old Mbr Code' => '',
                     'Old Mbr Short Name' => '',
@@ -203,7 +204,7 @@ class ExperianCreditBureauController extends Controller
                     'Written- off Principal Amount' => '',
                     'Settlement Amt' => !empty($loans->total_paid) ? $loans->total_paid : 0,
                     'Payment Frequency' => 'Monthly',
-                    'Actual Payment Amt' => number_format($totalDues ?? 0, 2),
+                    'Actual Payment Amt' => ($lead->loan_closed_status == 'pending') ? number_format($totalDues ?? 0, 2) : 0,
                     'Occupation Code' => !empty($lead->personalDetails->employment_type) ? $lead->personalDetails->employment_type : 0,
                     'Income' => !empty($lead->loanApproval->monthly_income) ? number_format($lead->loanApproval->monthly_income, 0) : 0,
                     'Net/Gross Income Indicator' => !empty($lead->loanApproval->monthly_income) ? number_format($lead->loanApproval->monthly_income, 0) : 0,

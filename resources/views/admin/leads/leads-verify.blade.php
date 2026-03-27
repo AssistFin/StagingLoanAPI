@@ -1366,8 +1366,8 @@
                                                 data-id="{{ $lead->id }}" 
                                                 data-url="{{ route('admin.digitap.bsaDataShow', $lead->id) }}">View Report
                                         </button--> Txn Not Completed
-                                    @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'report_saved' && empty($digitapBankRequestData->report_json_data))
-                                        <!--button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-success">Check Status</button--> Txn Not Completed
+                                    @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'ReportGenerated' && empty($digitapBankRequestData->report_json_data))
+                                        <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-success">Check Status</button> 
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'TxnDateRange')
                                         <span>No bank transactions in the expected date range.</span>
                                     @else
@@ -2353,17 +2353,17 @@
                     loan_id : id
                 },
                 success: function(response) {
-                    alert("Success");
+                    alert("Transaction Request Failed");
                     location.reload();
                 },
                 error: function() {
-                    alert("Request failed!");
-
+                    alert("Success");
+                    location.reload();
                     // Re-enable button if error occurs
-                    btn2.disabled = false;
-                    btn2.innerHTML = "Check Status";
-                    btn2.classList.remove("btn-secondary");
-                    btn2.classList.add("btn-danger");
+                    // btn2.disabled = false;
+                    // btn2.innerHTML = "Check Status";
+                    // btn2.classList.remove("btn-secondary");
+                    // btn2.classList.add("btn-danger");
                 }
             });
         }else{

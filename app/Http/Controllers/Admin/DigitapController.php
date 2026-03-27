@@ -277,20 +277,45 @@ class DigitapController extends Controller
         $status = !empty($request->input('status')) ? $request->input('status') : 'Failed';
         $request_id = !empty($request->input('request_id')) ? $request->input('request_id') : null;
 
+        if (!$request_id || !$txn_id) {
+            return response()->json(['message' => 'Invalid'], 400);
+        }
 
-        if($request_id && $txn_id){
-            $digitapBankRequest = DigitapBankRequest::where(['request_id' => $request_id])
-            ->update([
+        try {
+            DB::beginTransaction();
+
+            // 🔒 Lock the row
+            $digitapBankRequest = DigitapBankRequest::where('request_id', (string) $request_id)->first();
+
+            if (!$digitapBankRequest) {
+                DB::rollBack();
+                return response()->json(['message' => 'Not found'], 404);
+            }
+
+            // ✅ Prevent duplicate processing
+            if ($digitapBankRequest->status === 'ReportGenerated') {
+                DB::commit();
+                return response()->json(['message' => 'Already processed'], 200);
+            }
+
+            // ✅ Update safely
+            $digitapBankRequest->update([
                 "status" => $code,
                 "txn_id" => $txn_id,
             ]);
-            $loanData = DigitapBankRequest::where('request_id', $request_id)->first();
 
-            $reportData = $digitap->retrieveReport($loanData);
+            DB::commit(); // ✅ Release lock quickly
+
+            // ⚠️ VERY IMPORTANT: Heavy work OUTSIDE transaction
+            dispatch(new \App\Jobs\ProcessDigitapReport($request_id));
 
             return response()->json(['message' => 'Webhook handled OK'], 200);
-        }else{
-            return response()->json(['message' => 'Webhook Failed'], 301);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Callback failed: " . $e->getMessage());
+
+            return response()->json(['message' => 'Error'], 500);
         }
     }
 

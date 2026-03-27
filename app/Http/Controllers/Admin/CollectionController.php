@@ -599,7 +599,7 @@ class CollectionController extends Controller
                     'State' => $lead->addressDetails->state ?? '',
                     'Cibil Score' => $loans->cibil_score ?? 0,
                     'Customer Type' => $customerType,
-                    'Part Payment Amounts' => $paymentAmountText,
+                    'Part Payment Amounts' => $paymentAmountText ?? '',
                     'Payment IDs' => $paymentIdText,
                     'Total Part Paid' => number_format($totalPaid, 0),
                     'Intrest Calculated upto' => $today,
@@ -607,10 +607,10 @@ class CollectionController extends Controller
                     'Settlement Payment Link' => $settlementpaymentLink,
                     'Part Payment Link' => $partpaymentLink,
                     'DPD' => $daysAfterDue,
-                    'Email' => $lead->user->email,
-                    'Relative Name' => $lead->addressDetails->relative_name,
-                    'Relation' => $lead->addressDetails->relation,
-                    'Relative Contact No' => $lead->addressDetails->contact_number,
+                    'Email' => $lead->user->email ?? '',
+                    'Relative Name' => $lead->addressDetails->relative_name ?? '',
+                    'Relation' => $lead->addressDetails->relation ?? '',
+                    'Relative Contact No' => $lead->addressDetails->contact_number ?? '',
                     'Loan Tenure' => $loans->loan_tenure_days ?? 0,
                     'CPA' => $loans->credited_by_name ?? '',
                     'Full Address' => isset($userAddress) ? $userAddress->full_address : '',
@@ -950,6 +950,7 @@ class CollectionController extends Controller
                 'bankDetails',
                 'loanDisbursal',
                 'loanApproval',
+                //'experianCreditReport',
             ])
 
             ->orderBy('lap.repay_date', 'DESC');
@@ -1011,150 +1012,201 @@ class CollectionController extends Controller
             });
         }
 
-if ($request->has('export') && $request->export === 'csv') {
+        if ($request->has('export') && $request->export === 'csv') {
 
-    set_time_limit(0);
-    ini_set('output_buffering','off');
-    ini_set('zlib.output_compression', false);
-    while (ob_get_level()) ob_end_clean();
+            set_time_limit(0);
+            ini_set('output_buffering','off');
+            ini_set('zlib.output_compression', false);
+            while (ob_get_level()) ob_end_clean();
 
-    $filename = 'collection_export_' . now()->format('Ymd_His') . '.csv';
+            $filename = 'collection_export_' . now()->format('Ymd_His') . '.csv';
 
-    return response()->streamDownload(function () use ($query, $today) {
+            return response()->streamDownload(function () use ($query, $today) {
 
-        $file = fopen('php://output', 'w');
-
-        fputcsv($file, [
-            'Customer Name','Customer Mobile','Loan Application No',
-            'Loan Amount','Total Due','Repayment Amount',
-            'Disbursement date','Repayment date',
-            'Principal Coll.','Interest Coll.','Penal Coll.',
-            'Collection Date','Collection Amount',
-            'DPD','Bucket','Email', 'CPA Name',
-            'Loan Tenure','Status','Salary Date',
-            'Account Type','Account Type Count',
-            'CIBIL Score','Monthly Income','Employment Type',
-            'Organisation Name','Designation',
-            'City','PIN Code','Full Address'
-        ]);
-
-        // ✅ CLONE MAIN QUERY (DON'T MODIFY ORIGINAL)
-        $exportQuery = clone $query;
-
-        // ✅ ONLY ADD COLLECTION + AADHAAR JOIN
-        $exportQuery
-            ->leftJoin(DB::raw("
-                (
-                    SELECT loan_application_id,
-                        SUM(collection_amt) as total_paid,
-                        SUM(principal) as total_principal_paid,
-                        SUM(interest) as total_interest_paid,
-                        SUM(penal) as total_penal_paid,
-                        MAX(collection_date) as last_collection_date
-                    FROM utr_collections
-                    GROUP BY loan_application_id
-                ) as uc
-            "), 'uc.loan_application_id','=','loan_applications.id')
-
-            ->leftJoin('aadhaar_data as aad','aad.user_id','=','loan_applications.user_id')
-            ->leftJoin('admins as adm','adm.id','=','lap.credited_by')
-            ->addSelect([
-                'lap.approval_amount',
-                'lap.loan_tenure_days',
-                'lap.repayment_amount',
-                'lap.repay_date',
-                'lap.salary_date',
-                'lap.cibil_score',
-                'lap.monthly_income',
-                'lap.roi',
-                'ld.disbursal_date',
-                'ld.created_at as disbursal_created_at',
-                'uc.total_principal_paid',
-                'uc.total_interest_paid',
-                'uc.total_penal_paid',
-                'uc.total_paid',
-                'uc.last_collection_date',
-                'aad.full_address',
-                'adm.name as cpa_name',
-
-                DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
-
-                DB::raw("
-                    (IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount))
-                    + ((IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount) * lap.roi / 100)
-                    * DATEDIFF('$today', ld.created_at) - IFNULL(uc.total_interest_paid,0))
-                    + IF(DATEDIFF('$today', lap.repay_date) > 0,
-                        (IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount))
-                        * 0.0025 * DATEDIFF('$today', lap.repay_date),0)
-                    as total_dues
-                ")
-            ])
-
-            // 🔥 THIS IS THE REAL FIX
-            ->groupBy('loan_applications.id')
-
-            ->orderBy('loan_applications.id');
-
-        $exportQuery->chunk(200, function ($rows) use ($file) {
-
-            foreach ($rows as $lead) {
-
-                $totalDues = max((int)$lead->total_dues,0);
-                $dpd = max((int)$lead->days_after_due,0);
-                $loanStatus = $totalDues == 0 ? 'Paid' : 'Unpaid';
+                $file = fopen('php://output', 'w');
 
                 fputcsv($file, [
-
-                    $lead->user->firstname.' '.$lead->user->lastname,
-                    '="'.$lead->user->mobile.'"',
-                    $lead->loan_no,
-
-                    number_format($lead->approval_amount,0),
-                    number_format($totalDues,0),
-                    number_format($lead->repayment_amount,0),
-
-                    $lead->disbursal_date,
-                    $lead->repay_date,
-
-                    $lead->total_principal_paid ?? 0,
-                    $lead->total_interest_paid ?? 0,
-                    $lead->total_penal_paid ?? 0,
-
-                    $lead->last_collection_date ?? '',
-                    number_format($lead->total_paid ?? 0,0),
-
-                    $dpd,
-                    '="'.$this->getDpDBucket($dpd).'"',
-
-                    $lead->user->email,
-                    $lead->cpa_name ?? '',
-
-                    $lead->loan_tenure_days,
-                    $loanStatus,
-                    $lead->salary_date,
-
-                    $lead->account_type_count == 1 ? 'New' : 'Existing',
-                    $lead->account_type_count,
-
-                    $lead->loanApproval->cibil_score ?? '',
-                    number_format($lead->loanApproval->monthly_income ?? 0,2),
-
-                    $lead->personalDetails->employment_type ?? '',
-                    $lead->employmentDetails->company_name ?? '',
-                    $lead->employmentDetails->designation ?? '',
-
-                    $lead->addressDetails->city ?? '',
-                    $lead->addressDetails->pincode ?? '',
-
-                    $lead->full_address ?? ''
+                    'Customer Name','Customer Mobile','Loan Application No',
+                    'Loan Amount','Total Due','Repayment Amount',
+                    'Disbursement date','Repayment date',
+                    'Principal Coll.','Interest Coll.','Penal Coll.',
+                    'Collection Date','Collection Amount',
+                    'DPD','Bucket','Email', 'CPA Name',
+                    'Ref Name','Ref Relation', 'Ref Number',
+                    'Loan Tenure','Status','Salary Date',
+                    'Account Type','Account Type Count',
+                    'CIBIL Score','Monthly Income','Employment Type',
+                    'Organisation Name','Designation',
+                    'City','PIN Code','Full Address',
                 ]);
-            }
-        });
 
-        fclose($file);
+                // ✅ CLONE MAIN QUERY (DON'T MODIFY ORIGINAL)
+                $exportQuery = clone $query;
 
-    }, $filename, ['Content-Type'=>'text/csv']);
-}
+                // ✅ ONLY ADD COLLECTION + AADHAAR JOIN
+                $exportQuery
+                    ->leftJoin(DB::raw("
+                        (
+                            SELECT loan_application_id,
+                                SUM(collection_amt) as total_paid,
+                                SUM(principal) as total_principal_paid,
+                                SUM(interest) as total_interest_paid,
+                                SUM(penal) as total_penal_paid,
+                                MAX(collection_date) as last_collection_date
+                            FROM utr_collections
+                            GROUP BY loan_application_id
+                        ) as uc
+                    "), 'uc.loan_application_id','=','loan_applications.id')
+
+                    ->leftJoin('aadhaar_data as aad','aad.user_id','=','loan_applications.user_id')
+                    ->leftJoin('admins as adm','adm.id','=','lap.credited_by')
+                    ->leftJoin('loan_address_details as lad','lad.loan_application_id','=','loan_applications.id')
+                    ->addSelect([
+                        'lap.approval_amount',
+                        'lap.loan_tenure_days',
+                        'lap.repayment_amount',
+                        'lap.repay_date',
+                        'lap.salary_date',
+                        'lap.cibil_score',
+                        'lap.monthly_income',
+                        'lap.roi',
+                        'ld.disbursal_date',
+                        'ld.created_at as disbursal_created_at',
+
+                        'lad.relation',
+                        'lad.relative_name',
+                        'lad.contact_number',
+
+                        'uc.total_principal_paid',
+                        'uc.total_interest_paid',
+                        'uc.total_penal_paid',
+                        'uc.total_paid',
+                        'uc.last_collection_date',
+                        'aad.full_address',
+                        'adm.name as cpa_name',
+
+                        DB::raw("DATEDIFF('$today', lap.repay_date) as days_after_due"),
+
+                        DB::raw("
+                            (IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount))
+                            + ((IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount) * lap.roi / 100)
+                            * DATEDIFF('$today', ld.created_at) - IFNULL(uc.total_interest_paid,0))
+                            + IF(DATEDIFF('$today', lap.repay_date) > 0,
+                                (IFNULL(lap.approval_amount - IFNULL(uc.total_principal_paid,0), lap.approval_amount))
+                                * 0.0025 * DATEDIFF('$today', lap.repay_date),0)
+                            as total_dues
+                        ")
+                    ])
+
+                    // 🔥 THIS IS THE REAL FIX
+                    ->groupBy('loan_applications.id')
+
+                    ->orderBy('loan_applications.id');
+
+                $exportQuery->chunk(200, function ($rows) use ($file) {
+
+                    foreach ($rows as $lead) {
+
+                        // $experian = null;
+
+                        // if (!empty($lead->experianCreditReport) && !empty($lead->experianCreditReport->response_data)) {
+                        //     $experian = json_decode($lead->experianCreditReport->response_data, true);
+                        // }
+                        // $telephone = $mobile = $emailid = [];
+                        // if(!empty($experian['CAIS_Account']['CAIS_Account_DETAILS']))
+                        // {
+                        //     $accountDetails = $experian['CAIS_Account']['CAIS_Account_DETAILS'] ?? [];
+                        //     foreach($accountDetails as $account)
+                        //     {
+                        //         $phones = $account['CAIS_Holder_Phone_Details'] ?? [];
+                        //         if(!empty($phones))
+                        //         {
+                        //             foreach($phones as $index => $ph)
+                        //             {
+                        //                 $tel   = $ph['Telephone_Number'] ?? null;
+                        //                 $mob   = $ph['Mobile_Telephone_Number'] ?? null;
+                        //                 $email = $ph['EMailId'] ?? null;
+
+                        //                 // Convert arrays to comma-separated strings
+                        //                 $tel   = is_array($tel)   ? implode(', ', $tel)   : $tel;
+                        //                 $mob   = is_array($mob)   ? implode(', ', $mob)   : $mob;
+                        //                 $email = is_array($email) ? implode(', ', $email) : $email;
+
+                        //                 if ($tel)   $telephone[] = $tel;
+                        //                 if ($mob)   $mobile[]    = $mob;
+                        //                 if ($email) $emailid[]   = $email;
+                        //             }
+                        //         }
+                        //     }
+                        // }
+
+                        // $telephone = array_unique($telephone);
+                        // $mobile    = array_unique($mobile);
+                        // $emailid   = array_unique($emailid);
+
+                        $totalDues = max((int)$lead->total_dues,0);
+                        $dpd = max((int)$lead->days_after_due,0);
+                        $loanStatus = $totalDues == 0 ? 'Paid' : 'Unpaid';
+
+                        fputcsv($file, [
+
+                            $lead->user->firstname.' '.$lead->user->lastname,
+                            '="'.$lead->user->mobile.'"',
+                            $lead->loan_no,
+
+                            number_format($lead->approval_amount,0),
+                            number_format($totalDues,0),
+                            number_format($lead->repayment_amount,0),
+
+                            $lead->disbursal_date,
+                            $lead->repay_date,
+
+                            $lead->total_principal_paid ?? 0,
+                            $lead->total_interest_paid ?? 0,
+                            $lead->total_penal_paid ?? 0,
+
+                            $lead->last_collection_date ?? '',
+                            number_format($lead->total_paid ?? 0,0),
+
+                            $dpd,
+                            '="'.$this->getDpDBucket($dpd).'"',
+
+                            $lead->user->email,
+                            $lead->cpa_name ?? '',
+
+                            $lead->relation ?? '',
+                            $lead->relative_name ?? '',
+                            $lead->contact_number ?? '',
+
+                            $lead->loan_tenure_days,
+                            $loanStatus,
+                            $lead->salary_date,
+
+                            $lead->account_type_count == 1 ? 'New' : 'Existing',
+                            $lead->account_type_count,
+
+                            $lead->loanApproval->cibil_score ?? '',
+                            number_format($lead->loanApproval->monthly_income ?? 0,2),
+
+                            $lead->personalDetails->employment_type ?? '',
+                            $lead->employmentDetails->company_name ?? '',
+                            $lead->employmentDetails->designation ?? '',
+
+                            $lead->addressDetails->city ?? '',
+                            $lead->addressDetails->pincode ?? '',
+
+                            $lead->full_address ?? '',
+                            // implode(', ', $telephone),
+                            // implode(', ', $mobile),
+                            // implode(', ', $emailid)
+                        ]);
+                    }
+                });
+
+                fclose($file);
+
+            }, $filename, ['Content-Type'=>'text/csv']);
+        }
 
 
         $totalRecordsQuery = clone $query;
