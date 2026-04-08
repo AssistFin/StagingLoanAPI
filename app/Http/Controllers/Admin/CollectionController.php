@@ -16,7 +16,7 @@ class CollectionController extends Controller
 {
     public function collectionPredue(Request $request)
     {
-        ini_set('memory_limit', '2048M');
+        ini_set('memory_limit', '4096M');
         $today = now()->toDateString();
 
         // 1️⃣ Base query
@@ -147,6 +147,9 @@ class CollectionController extends Controller
                     'Salary Date' => $loans->salary_date ?? '',
                     'City' => $lead->addressDetails->city ?? '',
                     'State' => $lead->addressDetails->state ?? '',
+                    'Relative Name' => $lead->addressDetails->relative_name ?? '',
+                    'Relation' => $lead->addressDetails->relation ?? '',
+                    'Relative Contact No' => $lead->addressDetails->contact_number ?? '',
                     'Customer Type' => $customerType,
                     'Cashfree Reference No' => $loans->reference_id ?? '',
                     'Repayment Amount' => number_format($loans->repayment_amount ?? 0, 0),

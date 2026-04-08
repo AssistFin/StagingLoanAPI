@@ -12,6 +12,8 @@ use App\Models\LoanApplication;
 use App\Models\LoanDocument;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use App\Models\FaceMatch;
+use Carbon\Carbon;
 
 class DigitapController extends Controller
 {
@@ -373,18 +375,101 @@ class DigitapController extends Controller
                     ['id', $selfieData->lead_id]
                 ])->first();
 
-        if($selfieData && $status == 'SUCCESS'){
-            if ($loan) {
-                $loan->current_step = 'submitselfie';
-                $loan->next_step = 'addressconfirmation';
-                $loan->save();
-            }
+        $aadharData = DB::table('aadhaar_data')->where('user_id', $selfieData->user_id)->orderBy('id','desc')->first();
 
+        if($selfieData && $status == 'SUCCESS'){
+            //  if ($loan) {
+            //     $loan->current_step = 'submitselfie';
+            //     $loan->next_step = 'addressconfirmation';
+            //     $loan->save();
+            // }
             $resData = $this->getSelfieData($uniqueId, $transactionId);
 
             if(!empty($resData) && !empty($resData['model']['base64Image'])){
                 $this->uploadSelfie($resData['model'], $transactionId);
             }
+
+            if(!empty($resData) && !empty($resData['model']['base64Image']) && !empty($aadharData->photo)){
+
+                $personImage = preg_replace('#^data:image/\w+;base64,#i', '', $resData['model']['base64Image']);
+                $cardImage   = preg_replace('#^data:image/\w+;base64,#i', '', $aadharData->photo);
+
+                $auth = base64_encode(config('services.digitap.client_id'). ':' . config('services.digitap.client_secret'));
+
+                $requestPayload = [
+                    'person' => $personImage,
+                    'card' => $cardImage,
+                    'clientRefId' => 'REF' . time()
+                ];
+
+
+                $response = Http::withHeaders([
+                    'Authorization' => 'Basic ' . $auth,
+                    'Content-Type'  => 'application/json',
+                ])->post(rtrim(config('services.digitap.db_url'), '/') . '/fmfl/v2/face-match', $requestPayload);
+
+                $responseData = $response->json();
+
+                // \Log::info('Digitap Face Match Payload', ['payload' => $requestPayload]);
+                // \Log::info('Face Match Response', [
+                //     'status_code' => $response->status(),
+                //     'response' => $responseData
+                // ]);
+
+                if ($response->failed()) {
+                    Log::error('Face Match API Failed', [
+                        'status' => $response->status(),
+                        'body' => $response->body()
+                    ]);
+                }
+
+                $record = FaceMatch::create([
+                    'user_id' => $selfieData->user_id,
+                    'loan_application_id' => $selfieData->lead_id,
+
+                    'person_image' => $personImage,
+                    'card_image' => $cardImage,
+
+                    'request_payload' => $requestPayload,     // no json_encode
+                    'response_payload' => $responseData,      // no json_encode
+
+                    'is_match' => $responseData['result']['is_same_face'] ?? false,
+                    'confidence' => $responseData['result']['same_face_confidence'] ?? 0,
+
+                    'attempt_count' => 1,
+                    'attempt_date' => Carbon::today(),
+
+                    'final_status' => 'pending'
+                ]);
+
+                if (!empty($responseData['status']) && $responseData['status'] == 'success') {
+
+                    $isMatch = $responseData['result']['is_same_face'] ?? false;
+                    $confidence = $responseData['result']['same_face_confidence'] ?? 0;
+
+                    if ($isMatch && $confidence > 0.75) {
+
+                        if ($loan) {
+                            $loan->current_step = 'submitselfie';
+                            $loan->next_step = 'addressconfirmation';
+                            $loan->save();
+                        }
+
+                        FaceMatch::where('id', $record->id)->update([
+                            'final_status' => 'approved'
+                        ]);
+                    }else{
+                        if ($loan) {
+                            $loan->current_step = 'verifyotp';
+                            $loan->next_step = 'submitselfie';
+                            $loan->save();
+                        }
+                    }
+                }
+                
+            }
+
+
         } else {
             if ($loan) {
                 $loan->current_step = 'verifyotp';

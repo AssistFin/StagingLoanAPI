@@ -35,7 +35,9 @@ class ExperianCreditBureauController extends Controller
             ->join('loan_address_details', 'loan_address_details.loan_application_id', '=', 'loan_applications.id')
             ->leftJoin('aadhaar_data', 'aadhaar_data.user_id', '=', 'loan_applications.user_id')
             ->leftJoin(DB::raw('(
-                SELECT loan_application_id, SUM(collection_amt) as total_paid, collection_date
+                SELECT loan_application_id, SUM(collection_amt) as total_paid, 
+                SUM(CASE WHEN status = "Settlement" THEN collection_amt ELSE 0 END) as settlement_amount,
+                collection_date
                 FROM utr_collections
                 GROUP BY loan_application_id
             ) as uc'), 'uc.loan_application_id', '=', 'loan_applications.id')
@@ -51,8 +53,10 @@ class ExperianCreditBureauController extends Controller
                 'pan_data.date_of_birth as date_of_birth',
                 'aadhaar_data.aadhaar_number as aadhaar_number',
                 'aadhaar_data.gender as gender',
+                'aadhaar_data.full_address as full_address',
                 'uc.total_paid as total_paid',
                 'uc.collection_date as collection_date',
+                'uc.settlement_amount as settlement_amount',
                 'loan_address_details.house_no as house_no',
                 'loan_address_details.city as city',
                 'loan_address_details.state as state',
@@ -125,7 +129,7 @@ class ExperianCreditBureauController extends Controller
 
                 $totalDues = $loan->total_dues ?? 0;
 
-                $full_address = $lead->house_no ? $lead->house_no.', '.$lead->city : '';
+                //$full_address = $lead->house_no ? $lead->house_no.', '.$lead->city : '';
                 $state = $lead->state ? $lead->state : '';
                 $pin_code = $lead->pincode ? $lead->pincode : '';
                 $address_type = $lead->address_type ? $lead->address_type : '';
@@ -140,7 +144,7 @@ class ExperianCreditBureauController extends Controller
                     // 'Closed Date' => !empty($lead->loan_closed_date) ? $lead->loan_closed_date : '',
                     // 'Dpd' => $loan->dpd,
                     'Consumer Name' => $lead->user->firstname.' '.$lead->user->lastname,
-                    'Date of Birth' => '="'.$lead->date_of_birth.'"',
+                    'Date of Birth' => Carbon::parse($lead->date_of_birth)->format('d-m-Y'),
                     'Gender' => !empty($lead->gender) && $lead->gender == 'M' ? 'Male' : 'Female',
                     'Income Tax ID Number' => '="'.$lead->pan.'"',
                     'Passport Number' => '',
@@ -162,10 +166,10 @@ class ExperianCreditBureauController extends Controller
                     'Extension Other' => '',
                     'Email ID 1' => $lead->user->email,
                     'Email ID 2' => '',
-                    'Address 1' => $full_address,
+                    'Address 1' => $lead->full_address ?? '',
                     'State Code 1' => $state,
                     'PIN Code 1' => '="'.$pin_code.'"',
-                    'Address Category 1' =>$address_type,
+                    'Address Category 1' => 'Permanent',
                     'Residence Code 1' => '',
                     'Address 2' => '',
                     'State Code 2' => '',
@@ -175,7 +179,7 @@ class ExperianCreditBureauController extends Controller
                     'Current/New Member Code' => $lead->user_id,
                     'Current/New Member Short Name' => $lead->user->username,
                     'Curr/New Account No' => $lead->loan_no,
-                    'Account Type' => 'STPL',
+                    'Account Type' => 'Personal Loan',
                     'Ownership Indicator' => '',
                     'Date Opened/Disbursed' => $lead->loan_disbursal_date ? date('Y-m-d', strtotime($lead->loan_disbursal_date)) : '',
                     'Date of Last Payment' => !empty($lead->collection_date) ? date('Y-m-d', strtotime($lead->collection_date)) : '',
@@ -183,7 +187,7 @@ class ExperianCreditBureauController extends Controller
                     'Date Reported' => $todayDate,
                     'High Credit/Sanctioned Amt' => $lead->approval_amount,
                     'Current Balance' => empty($lead->loan_closed_date) ? number_format($loan->remaining_principal ?? 0, 2) : 0,
-                    'Amt Overdue' => ($lead->loan_closed_status == 'pending') ? number_format($totalDues ?? 0, 2) : 0,
+                    'Amt Overdue' => ($daysAfterDue > 0) ? number_format(max($totalDues ?? 0, 0), 2) : 0,
                     'No of Days Past Due' => $daysAfterDue,
                     'Old Mbr Code' => '',
                     'Old Mbr Short Name' => '',
@@ -202,7 +206,7 @@ class ExperianCreditBureauController extends Controller
                     'EMI Amount' => !empty($lead->loanApproval->repayment_amount && $lead->loanApproval->repayment_amount != 0.00) ? $lead->loanApproval->repayment_amount : 0,
                     'Written- off Amount (Total)' => '',
                     'Written- off Principal Amount' => '',
-                    'Settlement Amt' => !empty($loans->total_paid) ? $loans->total_paid : 0,
+                    'Settlement Amt' => !empty($lead->settlement_amount) ? number_format($lead->settlement_amount, 2) : 0,
                     'Payment Frequency' => 'Monthly',
                     'Actual Payment Amt' => ($lead->loan_closed_status == 'pending') ? number_format($totalDues ?? 0, 2) : 0,
                     'Occupation Code' => !empty($lead->personalDetails->employment_type) ? $lead->personalDetails->employment_type : 0,

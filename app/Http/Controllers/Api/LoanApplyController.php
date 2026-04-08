@@ -168,9 +168,6 @@ class LoanApplyController extends Controller
                 }
             }
 
-            // if(!empty($loans)){
-            //     $preLoanData = '';
-            // }
 
             $lastSettlementLoan = LoanApplication::where('user_id', $userId)
                 ->where('admin_approval_status', 'approved')
@@ -200,7 +197,7 @@ class LoanApplyController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Something went wrong while fetching loan data. Please try again later.'
-            ], 500);
+            ], 401);
         }
     }
 

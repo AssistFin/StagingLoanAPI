@@ -8,6 +8,8 @@ use App\Traits\UserNotify;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\LoanApplication;
+use App\Models\LoanApproval;
 
 class User extends Authenticatable {
     use HasApiTokens, Searchable, UserNotify;
@@ -60,6 +62,11 @@ class User extends Authenticatable {
         return $this->hasMany(LoanApplication::class);
     }
 
+    public function loanApprovals()
+    {
+        return $this->hasMany(LoanApproval::class);
+    }
+
     public function loans() {
         return $this->hasMany(Loan::class);
     }
@@ -103,7 +110,23 @@ class User extends Authenticatable {
 
     // SCOPES
     public function scopeActive($query) {
-        return $query->where('status', Status::USER_ACTIVE)->where('ev', Status::VERIFIED)->where('sv', Status::VERIFIED);
+        return $query->whereHas('loanApplications', function ($q) {
+            $q->where('admin_approval_status', '!=', 'rejected');
+        });
+    }
+
+    public function scopeActiveLoans($query) {
+        return $query->whereHas('loanApplications', function ($q) {
+            $q->where('loan_disbursal_status', 'disbursed')
+            ->where('loan_closed_status', 'pending');
+        });
+    }
+
+    public function scopeClosedLoans($query) {
+        return $query->whereHas('loanApplications', function ($q) {
+            $q->where('loan_disbursal_status', 'disbursed')
+            ->where('loan_closed_status', 'closed');
+        });
     }
 
     public function scopeBanned($query) {

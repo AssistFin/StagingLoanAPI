@@ -43,7 +43,30 @@ class LeadController extends Controller
             ->toArray();
 
         // Step 3: Start building the loan applications query
-        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','user.utmTracking:id,user_id,utm_source','loanApproval','loanApproval.creditedBy:id,name','personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in'])
+        $query = LoanApplication::query()
+                ->leftJoinSub(
+                DB::table('loan_applications')
+                    ->select('user_id', DB::raw('COUNT(*) as total_loans'))
+                    ->groupBy('user_id'),
+                'loan_counts',
+                function ($join) {
+                    $join->on('loan_counts.user_id', '=', 'loan_applications.user_id');
+                }
+            )
+            ->select('loan_applications.*')
+            ->selectRaw("
+                CASE 
+                    WHEN loan_counts.total_loans >= 2 THEN 'Existing'
+                    ELSE 'Fresh'
+                END as account_type
+            ")
+            ->with([
+                'user:id,firstname,lastname,mobile,email',
+                'user.utmTracking:id,user_id,utm_source',
+                'loanApproval',
+                'loanApproval.creditedBy:id,name',
+                'personalDetails:id,loan_application_id,employment_type,monthly_income,income_received_in'
+            ])
             ->withExists([
                 'personalDetails',
                 'employmentDetails',
@@ -51,8 +74,8 @@ class LeadController extends Controller
                 'addressDetails',
                 'bankDetails',
                 'bredata'
-            ])->whereNotIn('user_id', $excludedUserIds)
-            ->orderByDesc('user_id');
+            ])->whereNotIn('loan_applications.user_id', $excludedUserIds)
+            ->orderByDesc('loan_applications.user_id');
 
         // Step 4: Apply search filter (search by name, email, mobile, loan_no)
         $searchTerm = $request->get('search');
@@ -308,32 +331,32 @@ class LeadController extends Controller
                 switch ($dateRange) {
                     case 'today':
                         $query->whereHas('loanDisbursal', function ($q) {
-                            $q->whereDate('created_at', Carbon::today());
+                            $q->whereDate('disbursal_date', Carbon::today());
                         });
                         break;
                     case 'yesterday':
                         $query->whereHas('loanDisbursal', function ($q) {
-                            $q->whereDate('created_at', Carbon::yesterday());
+                            $q->whereDate('disbursal_date', Carbon::yesterday());
                         });
                         break;
                     case 'last_3_days':
                         $query->whereHas('loanDisbursal', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(3), now()]);
+                            $q->whereBetween('disbursal_date', [now()->subDays(3), now()]);
                         });
                         break;
                     case 'last_7_days':
                         $query->whereHas('loanDisbursal', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(7), now()]);
+                            $q->whereBetween('disbursal_date', [now()->subDays(7), now()]);
                         });
                         break;
                     case 'last_15_days':
                         $query->whereHas('loanDisbursal', function ($q) {
-                            $q->whereBetween('created_at', [now()->subDays(15), now()]);
+                            $q->whereBetween('disbursal_date', [now()->subDays(15), now()]);
                         });
                         break;
                     case 'current_month':
                         $query->whereHas('loanDisbursal', function ($q) {
-                            $q->whereBetween('created_at', [
+                            $q->whereBetween('disbursal_date', [
                                 Carbon::now()->startOfMonth(),
                                 Carbon::now()->endOfMonth()
                             ]);
@@ -341,7 +364,7 @@ class LeadController extends Controller
                         break;
                     case 'previous_month':
                         $query->whereHas('loanDisbursal', function ($q) {
-                            $q->whereBetween('created_at', [
+                            $q->whereBetween('disbursal_date', [
                                 Carbon::now()->subMonth()->startOfMonth(),
                                 Carbon::now()->subMonth()->endOfMonth()
                             ]);
@@ -533,6 +556,7 @@ class LeadController extends Controller
                             'Monthly Income' => $lead->personalDetails->monthly_income ?? '',
                             'UTR No' => optional($lead->loanDisbursal)->utr_no ?? '',
                             'CPA' => optional(optional($lead->loanApproval)->creditedBy)->name ?? 'N/A',
+                            'Account Type' => $lead->account_type,
                         ];
                     } else {
                         $row = [
@@ -904,7 +928,17 @@ class LeadController extends Controller
         $query = LoanApplication::query()
 
                 ->select('loan_applications.*')
-
+                ->selectRaw("
+                    CASE 
+                        WHEN (
+                            SELECT COUNT(*) 
+                            FROM loan_applications la_count
+                            WHERE la_count.user_id = loan_applications.user_id
+                        ) >= 2 
+                        THEN 'Existing'
+                        ELSE 'Fresh'
+                    END as account_type
+                ")
                 ->where('loan_applications.admin_approval_status','pending')
 
                 ->whereExists(function ($q) {
@@ -990,7 +1024,7 @@ class LeadController extends Controller
                 fputcsv($file, [
                     'Customer Name','Mobile','Loan No','Loan Amount',
                     'Apply Date','Employment Type','Monthly Income',
-                    'Income Received In','Purpose Of Loan','Source'
+                    'Income Received In','Purpose Of Loan','Source','Account Type'
                 ]);
 
                 $query->orderBy('loan_applications.id')
@@ -1009,6 +1043,7 @@ class LeadController extends Controller
                             optional($lead->personalDetails)->income_received_in,
                             $lead->purpose_of_loan,
                             optional($lead->user->utmTracking)->utm_source,
+                            $lead->account_type,
                         ]);
                     }
 

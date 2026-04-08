@@ -147,7 +147,7 @@ class DigitapBankStatementService
             'report_type'   => $reportType,
             'report_subtype'=> $reportSubtype
         ]);
-        \Log::info('Digitap BSA Report JSON Response', ['response' => $response]);
+        //Log::info('Digitap BSA Report JSON Response', ['response' => $response]);
         DigitapBankRequest::where('txn_id', $request->txn_id)
             ->where('status', '!=', 'json_report_saved')
             ->update([
