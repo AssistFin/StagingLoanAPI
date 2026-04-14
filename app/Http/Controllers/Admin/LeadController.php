@@ -37,29 +37,14 @@ class LeadController extends Controller
             ->pluck('loan_application_id');
 
         // Step 2: Get distinct user_ids from loan applications that have KYC details
-        $userIdsWithKyc = LoanApplication::whereIn('id', $usersWithKyc)
-            ->pluck('user_id')
-            ->unique()
-            ->toArray();
+        // $userIdsWithKyc = LoanApplication::whereIn('id', $usersWithKyc)
+        //     ->pluck('user_id')
+        //     ->unique()
+        //     ->toArray();
 
         // Step 3: Start building the loan applications query
         $query = LoanApplication::query()
-                ->leftJoinSub(
-                DB::table('loan_applications')
-                    ->select('user_id', DB::raw('COUNT(*) as total_loans'))
-                    ->groupBy('user_id'),
-                'loan_counts',
-                function ($join) {
-                    $join->on('loan_counts.user_id', '=', 'loan_applications.user_id');
-                }
-            )
             ->select('loan_applications.*')
-            ->selectRaw("
-                CASE 
-                    WHEN loan_counts.total_loans >= 2 THEN 'Existing'
-                    ELSE 'Fresh'
-                END as account_type
-            ")
             ->with([
                 'user:id,firstname,lastname,mobile,email',
                 'user.utmTracking:id,user_id,utm_source',
@@ -77,6 +62,44 @@ class LeadController extends Controller
             ])->whereNotIn('loan_applications.user_id', $excludedUserIds)
             ->orderByDesc('loan_applications.user_id');
 
+        $loanType = $request->get('loan_type');
+
+        // ================================
+        // ✅ ACCOUNT TYPE FIX (CORE CHANGE)
+        // ================================
+        if ($loanType === 'disbursed_loan') {
+
+            $query->leftJoin('loan_disbursals as ld_main', 'ld_main.loan_application_id', '=', 'loan_applications.id');
+
+            $query->selectRaw("
+                CASE 
+                    WHEN ld_main.disbursal_date = (
+                        SELECT MIN(ld2.disbursal_date)
+                        FROM loan_applications la2
+                        JOIN loan_disbursals ld2 
+                            ON ld2.loan_application_id = la2.id
+                        WHERE la2.user_id = loan_applications.user_id
+                    )
+                    THEN 'Fresh'
+                    ELSE 'Existing'
+                END as account_type
+            ");
+
+        } else {
+
+            $query->selectRaw("
+                CASE 
+                    WHEN loan_applications.id = (
+                        SELECT MIN(la2.id)
+                        FROM loan_applications la2
+                        WHERE la2.user_id = loan_applications.user_id
+                    )
+                    THEN 'Fresh'
+                    ELSE 'Existing'
+                END as account_type
+            ");
+        }
+
         // Step 4: Apply search filter (search by name, email, mobile, loan_no)
         $searchTerm = $request->get('search');
         if ($searchTerm) {
@@ -92,7 +115,6 @@ class LeadController extends Controller
 
         // Step 5 & 6: Date Range and Loan Type Filtering
         $dateRange = $request->get('date_range');
-        $loanType = $request->get('loan_type');
 
         if ($loanType === 'complete_app_loan') {
             if ($dateRange) {
@@ -373,7 +395,11 @@ class LeadController extends Controller
                     case 'custom':
                         if ($request->from_date && $request->to_date) {
                             $query->whereHas('loanDisbursal', function ($q) use ($request) {
-                                $q->whereBetween('created_at', [$request->from_date, $request->to_date]);
+                                $from = Carbon::parse($request->from_date)->startOfDay();
+                                $to   = Carbon::parse($request->to_date)->endOfDay();
+
+                                $q->whereBetween('disbursal_date', [$from, $to]);
+                                //$q->whereBetween('created_at', [$request->from_date, $request->to_date]);
                             });
                         }
                         break;
@@ -412,7 +438,11 @@ class LeadController extends Controller
                         break;
                     case 'custom':
                         if ($request->from_date && $request->to_date) {
-                            $query->whereBetween('loan_applications.loan_closed_date', [$request->from_date, $request->to_date]);
+                            $from = Carbon::parse($request->from_date)->startOfDay();
+                            $to   = Carbon::parse($request->to_date)->endOfDay();
+
+                            $query->whereBetween('loan_applications.loan_closed_date', [$from, $to]);
+                            //$query->whereBetween('loan_applications.loan_closed_date', [$request->from_date, $request->to_date]);
                         }
                         break;
                 }
@@ -449,7 +479,11 @@ class LeadController extends Controller
                         break;
                     case 'custom':
                         if ($request->from_date && $request->to_date) {
-                            $query->whereBetween('loan_applications.created_at', [$request->from_date, $request->to_date]);
+                                $from = Carbon::parse($request->from_date)->startOfDay();
+                                $to   = Carbon::parse($request->to_date)->endOfDay();
+
+                                $query->whereBetween('loan_applications.created_at', [$from, $to]);
+                            //$query->whereBetween('loan_applications.created_at', [$request->from_date, $request->to_date]);
                         }
                         break;
                 }
@@ -475,9 +509,54 @@ class LeadController extends Controller
         $customerType = $request->get('customer_type');
         if ($customerType) {
             if ($customerType === 'new_cust') {
-                $query->has('user.loanApplications', '=', 1); // Only 1 loan
+
+                if ($loanType === 'disbursed_loan') {
+
+                    $query->whereRaw("
+                        ld_main.disbursal_date = (
+                            SELECT MIN(ld2.disbursal_date)
+                            FROM loan_applications la2
+                            JOIN loan_disbursals ld2 
+                                ON ld2.loan_application_id = la2.id
+                            WHERE la2.user_id = loan_applications.user_id
+                        )
+                    ");
+
+                } else {
+
+                    $query->whereRaw("
+                        loan_applications.id = (
+                            SELECT MIN(la2.id)
+                            FROM loan_applications la2
+                            WHERE la2.user_id = loan_applications.user_id
+                        )
+                    ");
+                }
+
             } elseif ($customerType === 'exist_cust') {
-                $query->has('user.loanApplications', '>', 1); // Multiple loans
+
+                if ($loanType === 'disbursed_loan') {
+
+                    $query->whereRaw("
+                        ld_main.disbursal_date > (
+                            SELECT MIN(ld2.disbursal_date)
+                            FROM loan_applications la2
+                            JOIN loan_disbursals ld2 
+                                ON ld2.loan_application_id = la2.id
+                            WHERE la2.user_id = loan_applications.user_id
+                        )
+                    ");
+
+                } else {
+
+                    $query->whereRaw("
+                        loan_applications.id > (
+                            SELECT MIN(la2.id)
+                            FROM loan_applications la2
+                            WHERE la2.user_id = loan_applications.user_id
+                        )
+                    ");
+                }
             }
         }
 
@@ -752,7 +831,7 @@ class LeadController extends Controller
 
         $leads = $query->paginate(25);
 
-        return view('admin.leads.leads-all', compact('leads', 'usersWithKyc', 'userIdsWithKyc','totalAmount', 'totalRecords'));
+        return view('admin.leads.leads-all', compact('leads', 'usersWithKyc', 'totalAmount', 'totalRecords'));
     }
 
     public function leadsWBS(Request $request)

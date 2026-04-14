@@ -75,10 +75,16 @@ forward to serving you again.<br><br>
 Warm regards,<br>
 Customer Support | LoanOne";
 
+        $house_no = $loanAddressDetailsData->house_no ?? '';
+        $city = $loanAddressDetailsData->city ?? '';
+        $state = $loanAddressDetailsData->state ?? '';
+        $pincode = $loanAddressDetailsData->pincode ?? '';
+
+
         $data = [
                     'date' => now()->format('d/m/Y'),
                     'borrower_name' => $userData->firstname.' '.$userData->lastname,
-                    'address' => $loanAddressDetailsData->house_no.' '.$loanAddressDetailsData->city.' '.$loanAddressDetailsData->state.' '.$loanAddressDetailsData->pincode,
+                    'address' => $house_no.' '.$city.' '.$state.' '.$pincode,
                     'loan_app_no' => $loanData->loan_no,
                     'loan_disbursement_date' =>Carbon::parse($approvalData->approval_date)->format('d/m/Y'),
                     'loan_closure_date' => now()->format('d/m/Y'),
@@ -89,12 +95,76 @@ Customer Support | LoanOne";
         $pdf = Pdf::loadView('admin.leads.noc', $data);
 
         // 3️⃣ Save PDF to storage if needed (optional)
+        // Storage::put('noc/'.$loanData->loan_no.'_noc.pdf', $pdf->output());
+        // $fullPathToPDF = storage_path('app/noc/'.$loanData->loan_no.'_noc.pdf');
+        // $mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
+        //$mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
+
+        // 3️⃣ Save PDF to storage if needed (optional)
         Storage::put('noc/'.$loanData->loan_no.'_noc.pdf', $pdf->output());
         $fullPathToPDF = storage_path('app/noc/'.$loanData->loan_no.'_noc.pdf');
         $mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
         //$mailSend = sendMailViaSMTP($subject, $message, $userData->email, $fullPathToPDF);
 
-        Log::info("Mail Send Via SMTP and te response is : {$mailSend}");
+        $fileName = $loanData->loan_no . '_noc.pdf';
+
+        $s3Path = 'noc/' . $fileName;
+
+        // -------------------------
+        // Upload PDF to S3
+        // -------------------------
+
+        Storage::disk('s3')->put(
+            $s3Path,
+            $pdf->output(),
+            'private'
+        );
+
+        Log::info('NOC uploaded to S3', [
+            'path' => $s3Path
+        ]);
+
+        // -------------------------
+        // Generate TEMP DOWNLOAD URL (for mail attachment)
+        // -------------------------
+
+        $tempUrl = Storage::disk('s3')->url(
+            $s3Path
+        );
+
+        // -------------------------
+        // Download temporarily for mail attachment
+        // -------------------------
+
+        $tempFile = storage_path('app/tmp/'.$fileName);
+
+        if (!file_exists(storage_path('app/tmp'))) {
+            mkdir(storage_path('app/tmp'), 0755, true);
+        }
+
+        file_put_contents(
+            $tempFile,
+            file_get_contents($tempUrl)
+        );
+
+        // -------------------------
+        // Send Mail
+        // -------------------------
+
+        $mailSend = sendMailViaSMTP(
+            $subject,
+            $message,
+            $userData->email,
+            $tempFile
+        );
+
+        // -------------------------
+        // Cleanup
+        // -------------------------
+
+        unlink($tempFile);
+
+        Log::info("Mail Send Via SMTP and the response is : {$mailSend}");
 
             // $loan = LoanApplication::where('user_id', $request->user_id)->first();
             $loan = LoanApplication::where([['user_id', $request->user_id], ['id', $request->loan_application_id]])->first();

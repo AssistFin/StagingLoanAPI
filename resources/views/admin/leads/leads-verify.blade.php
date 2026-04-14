@@ -114,9 +114,9 @@
                         $selfiePath = null;
 
                         if (isset($lead->loanDocument) && is_object($lead->loanDocument) && !empty($lead->loanDocument->selfie_image)) {
-                            $selfiePath = url('/admin/secure-file/'.$lead->loanDocument->selfie_image);
+                            $selfiePath = 'https://loanone-s3.s3.ap-south-1.amazonaws.com/loan1documents/'.$lead->loanDocument->selfie_image;
                         } elseif (!empty($selfieDoc->selfie_image ?? '')) {
-                            $selfiePath = url('/admin/secure-file/'.$selfieDoc->selfie_image);
+                            $selfiePath = 'https://loanone-s3.s3.ap-south-1.amazonaws.com/loan1documents/'.$selfieDoc->selfie_image;
                         } else {
                             $selfiePath = asset('assets/admin/images/admin.png');
                         }
@@ -824,7 +824,9 @@
                 <div class="tab-pane fade" id="Disbursal" role="tabpanel" aria-labelledby="Disbursal-tab">
                     <h2>Loan Disbursal @if(!empty($loanApproval->disbursal_amount)) - (Amount Approved: {{round($loanApproval->disbursal_amount, 2)}}) @endif</h2>
                     @if(!empty($loanApproval->kfs_path))
-                        <a class="btn btn-info" href="{{ url('/admin/kfs-document/'.$loanApproval->kfs_path.'/'.$lead->id) }}" target="_blank">
+                        <a class="btn btn-info"
+                        href="https://loanone-s3.s3.ap-south-1.amazonaws.com/loan1documents/documents/loan_{{ $lead->id }}/kfs/updated_{{ $loanApproval->kfs_path }}"
+                        target="_blank">
                             View KFS Signed Document
                         </a>
 
@@ -1357,9 +1359,17 @@
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'ReportGenerated')
                                         <button type="button" id="checkBSABtn3_{{ $lead->id }}" onclick="checkBSAScoreStatus({{ $lead->id }})" class="btn btn-info">View Report</button>
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'xlsx_report_saved' && !empty($digitapBankRequestData->report_xlsx_data))
-                                        <a href="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}"
+                                        <!-- <a href="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}"
                                         target="_blank" class="btn btn-primary btn-check-status"
-                                        data-lead-id="{{ $lead->id }}" data-excel-url="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}">View Excel Report</a>
+                                        data-lead-id="{{ $lead->id }}" data-excel-url="{{ url('/admin/digitap_reports/'.$digitapBankRequestData->report_xlsx_data) }}">View Excel Report</a> -->
+
+                                        <a href="{{ Storage::disk('s3')->url('digitap_reports/' . $digitapBankRequestData->report_xlsx_data) }}"
+                                        target="_blank"
+                                        class="btn btn-primary btn-check-status"
+                                        data-lead-id="{{ $lead->id }}"
+                                        data-excel-url="{{ Storage::disk('s3')->url('digitap_reports/' . $digitapBankRequestData->report_xlsx_data) }}">
+                                        View Excel Report
+                                        </a>
 
                                     @elseif(isset($digitapBankRequestData) && $digitapBankRequestData->status == 'json_report_saved' && !empty($digitapBankRequestData->report_json_data))
                                         <!--button class="btn btn-primary view-bsa-report" 

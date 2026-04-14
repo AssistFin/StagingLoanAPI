@@ -12,6 +12,7 @@ use App\Models\LoanApplication;
 use App\Models\LoanDocument;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use App\Models\FaceMatch;
 use Carbon\Carbon;
 
@@ -549,21 +550,27 @@ class DigitapController extends Controller
                 return;
             }
 
-            // Directory
-            $securePath = config('services.docs.upload_kfs_doc');
+            $s3Path = 'loan1documents';
 
-            if (!file_exists($securePath)) {
-                mkdir($securePath, 0777, true);
-            }
+            $fileName = 'selfie_' . $selfieLoanAppData->lead_id . '_' . time() . '.png';
 
-            // File name
-            $fileName = 'selfie_' . time() . '.png';
-            $filePath = $securePath . '/' . $fileName;
+            $fullPath = $s3Path . '/' . $fileName;
 
-            // Save file
-            file_put_contents($filePath, $imageData);
+            // ---------------------------
+            // UPLOAD TO S3
+            // ---------------------------
 
-            Log::info('Selfie saved locally', ['path' => $filePath]);
+            Storage::disk('s3')->put(
+                $fullPath,
+                $imageData,
+                'private' // IMPORTANT for PII documents
+            );
+
+            $result = Storage::disk('s3')->put($fullPath, $imageData);
+
+            Log::info('Upload result', ['result' => $result]);
+
+            Log::info('Selfie uploaded to S3', ['path' => $fullPath]);
 
             // Save to DB
             LoanDocument::updateOrCreate(

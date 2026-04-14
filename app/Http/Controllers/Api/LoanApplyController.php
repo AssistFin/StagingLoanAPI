@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class LoanApplyController extends Controller
 {
@@ -157,8 +158,18 @@ class LoanApplyController extends Controller
                 $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $loans['id'])->first();
                 if(!empty($loanApprovalData->kfs_path)){
                     $loanNo = $loans['id'];
-                    $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
-                    if (!file_exists($outputPath)) {
+                    // $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$loanApprovalData->kfs_path}";
+                    // if (!file_exists($outputPath)) {
+                    //     $arrayData["loan_application_id"] = $loans['id'];
+                    //     $arrayData["current_step"] = 'loanstatus';
+                    //     $arrayData["next_step"] = 'viewloan';
+                    //     $requestObj = Request::create('', 'POST', $arrayData);
+                    //     $this->updateLoanStep($requestObj);
+                    // }
+
+                    $outputPath = 'loan1documents/documents/loan_'.$loanNo.'/kfs/updated_'.$loanApprovalData->kfs_path;
+                    
+                    if (!Storage::disk('s3')->exists($outputPath)) {
                         $arrayData["loan_application_id"] = $loans['id'];
                         $arrayData["current_step"] = 'loanstatus';
                         $arrayData["next_step"] = 'viewloan';
@@ -917,22 +928,51 @@ class LoanApplyController extends Controller
         $fileName = $request->file_name;
         $loanNo = $request->loan_application_id;
 
-        $filePath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/{$fileName}";
+        // $filePath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/{$fileName}";
 
-        if (!file_exists($filePath)) {
-            return response()->json(['status' => false, 'message' => 'File not found.'], 404);
+        // if (!file_exists($filePath)) {
+        //     return response()->json(['status' => false, 'message' => 'File not found.'], 404);
+        // }
+
+        // $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$fileName}";
+
+        $s3Path = 'loan1documents/documents/loan_'.$loanNo.'/kfs/'.$fileName;
+        $updatedS3Path = 'loan1documents/documents/loan_'.$loanNo.'/kfs/updated_'.$fileName;
+
+        // -------------------------
+        // CHECK FILE EXISTS IN S3
+        // -------------------------
+        if (!Storage::disk('s3')->exists($s3Path)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'File not found'
+            ], 404);
         }
 
-        $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$loanNo}/kfs/updated_{$fileName}";
+        // -------------------------
+        // CREATE TEMP DIRECTORY
+        // -------------------------
+        $tmpDir = storage_path('app/tmp');
 
-        $pdf = new Fpdi();
+        if (!file_exists($tmpDir)) {
+            mkdir($tmpDir, 0755, true);
+        }
 
-        $pageCount = $pdf->setSourceFile($filePath);
+        $localInput = $tmpDir.'/'.$fileName;
+        $localOutput = $tmpDir.'/updated_'.$fileName;
+
+        // -------------------------
+        // DOWNLOAD PDF FROM S3
+        // -------------------------
+        file_put_contents(
+            $localInput,
+            Storage::disk('s3')->get($s3Path)
+        );
 
         $pdf = new Fpdi();
         $pdf->SetAutoPageBreak(false); 
 
-        $pageCount = $pdf->setSourceFile($filePath);
+        $pageCount = $pdf->setSourceFile($localInput);
 
         for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
             $templateId = $pdf->importPage($pageNo);
@@ -960,7 +1000,22 @@ class LoanApplyController extends Controller
             $pdf->MultiCell($textWidth, 4, "{$text1}\n{$text2}", 0, 'L');
         }     
 
-        $pdf->Output($outputPath, 'F');
+        $pdf->Output($localOutput, 'F');
+
+        // -------------------------
+        // UPLOAD TO S3
+        // -------------------------
+        Storage::disk('s3')->put(
+            $updatedS3Path,
+            file_get_contents($localOutput),
+            'private' // use private for loan docs
+        );
+
+        // -------------------------
+        // CLEAN TEMP FILES
+        // -------------------------
+        @unlink($localInput);
+        @unlink($localOutput);
 
         $cashfreeExistingData = CashfreeEnachRequestResponse::where('subscription_id', $request->loan_number)->where('reference_id', '!=', '')->orderBy('id','desc')->first();
 
@@ -1086,8 +1141,17 @@ class LoanApplyController extends Controller
         $lastPart = end($parts); 
         $loanApprovalData = DB::table('loan_approvals')->where('loan_application_id', $lastPart)->first();
         if(!empty($loanApprovalData->kfs_path)){
-            $outputPath = config('services.docs.upload_kfs_doc') . "/documents/loan_{$lastPart}/kfs/updated_{$loanApprovalData->kfs_path}";
-            if (!file_exists($outputPath) || $loanApprovalData->loan_purpose == 'no' ) {
+
+            $path = 'loan1documents/documents/loan_'.$lastPart.'/kfs/updated_'.$loanApprovalData->kfs_path;
+            
+            if (!Storage::disk('s3')->exists($path)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'File not found'
+                ], 404);
+            }
+
+            if (!Storage::disk('s3')->exists($path) || $loanApprovalData->loan_purpose == 'no' ) {
                 $arrayData["loan_application_id"] = $lastPart;
                 $arrayData["current_step"] = 'loanstatus';
                 $arrayData["next_step"] = 'viewloan';

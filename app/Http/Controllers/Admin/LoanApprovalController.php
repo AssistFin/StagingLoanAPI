@@ -364,10 +364,10 @@ class LoanApprovalController extends Controller
             $fileName = null;
         }
             // Define Secure Storage Path
-            $securePath = config('services.docs.upload_kfs_doc') . "/documents/loan_" . $request->loan_application_id . "/kfs";
-            if (!file_exists($securePath)) {
-                mkdir($securePath, 0777, true);
-            }
+            // $securePath = config('services.docs.upload_kfs_doc') . "/documents/loan_" . $request->loan_application_id . "/kfs";
+            // if (!file_exists($securePath)) {
+            //     mkdir($securePath, 0777, true);
+            // }
 
             $userAddress = DB::table('aadhaar_data')->where('user_id', $user->id)->first();
             
@@ -402,7 +402,13 @@ class LoanApprovalController extends Controller
                 ->setOption('defaultFont', 'Arial Unicode MS')
                 ->setOption('enable_local_file_access', true);
 
-                $pdf->save($securePath . "/" . $fileName);
+                //$pdf->save($securePath . "/" . $fileName);
+                $s3Path = "loan1documents/documents/loan_" . $request->loan_application_id . "/kfs/" . $fileName;
+
+                Storage::disk('s3')->put($s3Path, $pdf->output(), [
+                    'visibility' => 'private',
+                    'ContentType' => 'application/pdf'
+                ]);
             }
 
         // Save Loan Approval with KFS Path

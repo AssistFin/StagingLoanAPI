@@ -170,12 +170,14 @@ class DigitapBankStatementService
             // relative path in storage/app/public/
             $xlsx_filePath = $request->txn_id.'_report.xlsx';
 
-            // make sure directory exists in storage/app/public/
-            Storage::disk('public')->makeDirectory('digitap_reports');
+            // S3 path
+            $s3Path = 'digitap_reports/' . $xlsx_filePath;
 
-            // save file using Laravel Storage
-            Storage::disk('public')->put($xlsx_filePath, $xlsxData);
-            //file_put_contents(storage_path('app/public/'.$xlsx_filePath), $response2['raw']);
+            $uploaded = Storage::disk('s3')->put($s3Path, $xlsxData, [
+                'visibility' => 'public', // important for sensitive data
+                'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+
 
             // update db with only the path
             DigitapBankRequest::where('txn_id', $request->txn_id)
