@@ -20,7 +20,10 @@ class LoanAddressDetails extends Model
         'state',
         'relation',
         'relative_name',
-        'contact_number'
+        'contact_number',
+        'reference2_relation',
+        'reference2_relative_name',
+        'reference2_contact_number',
     ];
 
     public function loanApplication()

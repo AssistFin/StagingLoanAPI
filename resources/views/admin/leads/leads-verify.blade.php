@@ -401,7 +401,11 @@
                                                 <tr><th>Relation</th><td id="v_relation">{{ $lead->addressDetails->relation ?? '' }}</td></tr>
                                                 <tr><th>Relative Name</th><td id="v_relative_name">{{ $lead->addressDetails->relative_name ?? '' }}</td></tr>
                                                 <tr><th>Contact Number</th><td id="v_contact_number">{{ $lead->addressDetails->contact_number ?? '' }}</td></tr>
+                                                <tr><th>Relation 2</th><td id="v_relation2">{{ $lead->addressDetails->reference2_relation ?? '' }}</td></tr>
+                                                <tr><th>Relative Name 2</th><td id="v_relative_name2">{{ $lead->addressDetails->reference2_relative_name ?? '' }}</td></tr>
+                                                <tr><th>Contact Number 2</th><td id="v_contact_number2">{{ $lead->addressDetails->reference2_contact_number ?? '' }}</td></tr>
                                             </tbody>
+                                            
                                         </table>
                                         @if(!$loanDisbursalExists)
                                         <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
@@ -416,8 +420,9 @@
                                             @csrf
                                             <input type="hidden" name="id" value="{{ $lead->addressDetails->id ?? '' }}">
                                             <input type="hidden" name="lead_id" value="{{ $lead->id }}">
-
+                                            
                                             <div class="row">
+                                                <!-- Reference 1 -->
                                                 <div class="col-md-6 mb-2">
                                                     <label>Relation</label>
                                                     <input type="text" name="relation" class="form-control" value="{{ $lead->addressDetails->relation ?? '' }}">
@@ -430,12 +435,30 @@
                                                     <label>Contact Number</label>
                                                     <input type="text" name="contact_number" class="form-control" value="{{ $lead->addressDetails->contact_number ?? '' }}">
                                                 </div>
+                                                
+                                                <!-- Break line -->
+                                                <div class="col-12"><hr></div>
+                                                
+                                                <!-- Reference 2 -->
+                                                <div class="col-md-6 mb-2">
+                                                    <label>Relation 2</label>
+                                                    <input type="text" name="reference2_relation" class="form-control" value="{{ $lead->addressDetails->reference2_relation ?? '' }}">
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label>Relative Name 2</label>
+                                                    <input type="text" name="reference2_relative_name" class="form-control" value="{{ $lead->addressDetails->reference2_relative_name ?? '' }}">
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label>Contact Number 2</label>
+                                                    <input type="text" name="reference2_contact_number" class="form-control" value="{{ $lead->addressDetails->reference2_contact_number ?? '' }}">
+                                                </div>
                                             </div>
-
+                                            
                                             <button type="submit" class="btn btn-success">Save</button>
                                             <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
                                         </form>
                                     </div>
+                                    
 
                                 </div>
                             </div>
@@ -2618,11 +2641,19 @@ document.getElementById('addressForm').addEventListener('submit', function(e) {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
+
             // Update table view values
+            // Reference 1 (existing)
             document.getElementById('v_relation').innerText = data.data.relation;
             document.getElementById('v_relative_name').innerText = data.data.relative_name;
             document.getElementById('v_contact_number').innerText = data.data.contact_number;
-
+            
+            // Reference 2 (new added)
+            document.getElementById('v_relation2').innerText = data.data.reference2_relation;
+            document.getElementById('v_relative_name2').innerText = data.data.reference2_relative_name;
+            document.getElementById('v_contact_number2').innerText = data.data.reference2_contact_number;
+            
+            
             // Switch back to view mode
             document.getElementById('addressEdit').style.display = 'none';
             document.getElementById('addressView').style.display = 'block';

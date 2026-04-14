@@ -1885,11 +1885,17 @@ class LeadController extends Controller
 
         if ($request) {
             // Prepare update data
-            $updateData = [
-                'relation' => $request->relation,
-                'relative_name' => $request->relative_name,
-                'contact_number' => $request->contact_number,
-            ];
+          $updateData = [
+              'relation' => $request->relation,
+              'relative_name' => $request->relative_name,
+              'contact_number' => $request->contact_number,
+              
+              // Reference 2
+              'reference2_relation' => $request->reference2_relation,
+              'reference2_relative_name' => $request->reference2_relative_name,
+              'reference2_contact_number' => $request->reference2_contact_number,
+              ];
+              
 
             DB::table('loan_address_details')
                 ->where('loan_application_id', $request->lead_id)

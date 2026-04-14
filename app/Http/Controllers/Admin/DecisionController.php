@@ -401,8 +401,6 @@ class DecisionController extends Controller
                         : 0;
                 }
 
-                // start Calculate net amounts after discounts
-
                 $netPrincipal = max(0, ($collection->principal ?? 0) - ($collection->discount_principal ?? 0));
                 $netInterest  = max(0, ($collection->interest ?? 0) - ($collection->discount_interest ?? 0));
                 $netPenal     = max(0, ($collection->penal ?? 0) - ($collection->discount_penal ?? 0));
@@ -412,44 +410,11 @@ class DecisionController extends Controller
                 $repayment = optional($loan->loanApproval)->repayment_amount ?? 0;
                 
                 $final_outstanding_amount = $total_amount - $repayment;
-
-                $value = in_array(strtolower($collection->status), ['closed', 'settlement'])
-               ? 0
+                
+                $os_amt = in_array(strtolower($collection->status), ['closed', 'settlement']) ? 0
                : $final_outstanding_amount;
                
-                // end Calculate net amounts after discounts
 
-<<<<<<< HEAD
-                // start Calculate net amounts after discounts
-
-                $netPrincipal = max(0, ($collection->principal ?? 0) - ($collection->discount_principal ?? 0));
-                $netInterest  = max(0, ($collection->interest ?? 0) - ($collection->discount_interest ?? 0));
-                $netPenal     = max(0, ($collection->penal ?? 0) - ($collection->discount_penal ?? 0));
-                
-                $total_amount = $netPrincipal + $netInterest + $netPenal;
-                
-                $repayment = optional($loan->loanApproval)->repayment_amount ?? 0;
-                
-                $final_outstanding_amount = $total_amount - $repayment;
-
-                $value = in_array(strtolower($collection->status), ['closed', 'settlement'])
-               ? 0
-               : $final_outstanding_amount;
-               
-                // end Calculate net amounts after discounts
-
-=======
-               // Start Remaining Amount Calculation Controller Logic:
-
-                // $totalLoanAmount = optional($loan->loanApproval)->repayment_amount ?? 0;
-                // $totalPaidAmount = $collection->collection_amt;
-                // $remainingAmount = $totalLoanAmount - $totalPaidAmount;
-                // $remainingAmount = max(0, $remainingAmount);
-
-               // end Remaining Amount Calculation Controller Logic:
-                
-                
->>>>>>> e60271a84aa7dc343fd2c9ad0bf13682bcf993be
                 $csvData[] = [
                     'Collection Id'        => $collection->id,
                     'Collection Date'      => Carbon::parse($collection->collection_date)->format('d-m-Y'),
@@ -460,15 +425,13 @@ class DecisionController extends Controller
                     'Loan Amount'          => optional($loan->loanApproval)->approval_amount ?? 0,
                     'Repayment Amount'     => optional($loan->loanApproval)->repayment_amount ?? 0,
 
-<<<<<<< HEAD
-                    // start add other relevant fields as needed 
 
                     'Principal'            => $collection->principal,
                     'Interest'             => $collection->interest,
                     'Penal'                => $collection->penal,
                     'Discount Principal'   => $collection->discount_principal,
                     'Discount Interest'    => $collection->discount_interest,
-                    'Discount Penalty'     => $collection->discount_penal,
+                    'Discount Penal'     => $collection->discount_penal,
 
                     'Net Principal'        => $netPrincipal,
                     'Net Interest'         => $netInterest,
@@ -476,20 +439,11 @@ class DecisionController extends Controller
 
                     // end add other relevant fields as needed
 
-=======
-                    // start Add components to CSV
-                    'Principal'           => $collection->principal,
-                    'Interest'            => $collection->interest,
-                    'Penal'               => $collection->penal,
-                    'Discount Principal'  => $collection->discount_principal,
-                    'Discount Interest'   => $collection->discount_interest,
-                    'Discount Penal'      => $collection->discount_penal,
-
-                    // end Add components to CSV
-                    
->>>>>>> e60271a84aa7dc343fd2c9ad0bf13682bcf993be
                     'Paid Amount'          => $collection->collection_amt,
-                    'Outstanding Amount'   => $value,
+                    'Outstanding Amount'   => $os_amt,
+
+                    'Paid Amount'          => $collection->collection_amt,
+
                     'Payment Status'       => $collection->status,
                     'Payment ID'           => $collection->payment_id,
 
@@ -497,9 +451,6 @@ class DecisionController extends Controller
                     'Repayment Date'       => optional($loan->loanApproval)->repay_date ?? '',
 
                     'DPD'                  => $dpd,
-
-            
-
 
                 ];
             }

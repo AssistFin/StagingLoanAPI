@@ -203,32 +203,45 @@ class AdminController extends Controller
         return view('admin.profile', compact('pageTitle', 'admin'));
     }
 
+    
     public function profileUpdate(Request $request)
     {
         $this->validate($request, [
             'name' => 'required',
             'email' => 'required|email',
             'image' => ['nullable','image',new FileTypeValidate(['jpg','jpeg','png'])]
-        ]);
-        $user = auth('admin')->user();
-
-        if ($request->hasFile('image')) {
-            try {
-                $old = $user->image;
-                $user->image = fileUploader($request->image, getFilePath('adminProfile'), getFileSize('adminProfile'), $old);
-            } catch (\Exception $exp) {
-                $notify[] = ['error', 'Couldn\'t upload your image'];
-                return back()->withNotify($notify);
+            ]);
+            
+            $user = auth('admin')->user();
+            
+            if ($request->hasFile('image')) {
+                try {
+                    
+                    if ($user->image && file_exists(getFilePath('adminProfile') . '/' . $user->image)) {
+                        unlink(getFilePath('adminProfile') . '/' . $user->image);
+                        }
+                        
+                        
+                        $user->image = fileUploader(
+                            $request->image,
+                            getFilePath('adminProfile'),
+                            getFileSize('adminProfile')
+                            );
+                            
+                } catch (\Exception $exp) {
+                    $notify[] = ['error', 'Couldn\'t upload your image'];
+                    return back()->withNotify($notify);
+                }
             }
-        }
-
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->save();
-        $notify[] = ['success', 'Profile updated successfully'];
+                                
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->save();
+                                
+            $notify[] = ['success', 'Profile updated successfully'];
         return to_route('admin.profile')->withNotify($notify);
     }
-
+                                
     public function password()
     {
         $pageTitle = 'Password Setting';
