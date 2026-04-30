@@ -144,7 +144,7 @@ class CreditBureauController extends Controller
                     </urn:process>
                 </soapenv:Body>
                 </soapenv:Envelope>';
-
+        \Log::error('XML Parsing Request: ' . $xmlRequestBody);
         $response = Http::withHeaders([
                 'Content-Type' => 'text/xml; charset=utf-8',
             ])->withBody($xmlRequestBody, 'text/xml')
@@ -174,7 +174,7 @@ class CreditBureauController extends Controller
         //Storage::put("experian/Tilak_{$timestamp}_{$randomString}_request.xml", $xmlRequestBody);
         //Storage::put("experian/Tilak_{$timestamp}_{$randomString}_response.xml", $rawOut);
 
-        ini_set('memory_limit', '512M');
+        ini_set('memory_limit', '2048M');
         // 5. Generate PDF with key data
         //$pdf = Pdf::loadView('admin.creditbureau.pdf-template', [ 'data' => $jsonData ]);
         //$filename = "Tilak_{$timestamp}_{$randomString}.pdf";
@@ -189,18 +189,38 @@ class CreditBureauController extends Controller
             'pdf_url' => $pdfPath,
             'created_at' => now(),
         ]);
-
-        $query = LoanApplication::with(['user:id,firstname,lastname,mobile','personalDetails','employmentDetails', 'kycDetails', 'loanDocument', 'addressDetails', 'bankDetails'])
-        ->leftJoin('experian_credit_reports', 'experian_credit_reports.lead_id', '=', 'loan_applications.id')
-        ->join('pan_data', 'pan_data.user_id', '=', 'loan_applications.user_id')
-        ->orderByDesc('loan_applications.user_id');
-        $userRecords = $query->paginate(25);
-
-        $data = $jsonData;
-        //$pdfurl = Storage::url($pdfPath);
-        $pdfurl = null;
         
         if(empty($request->get('verify'))){
+
+            $query = LoanApplication::query()
+                ->select([
+                    'loan_applications.id',
+                    'loan_applications.user_id',
+                    'loan_applications.created_at',
+                    'loan_applications.status',
+                ])
+                ->with([
+                    'user:id,firstname,lastname,mobile',
+                    'personalDetails:id,loan_application_id,...',
+                    'employmentDetails:id,loan_application_id,...',
+                    'kycDetails:id,loan_application_id,...',
+                    'addressDetails:id,loan_application_id,...',
+                    'bankDetails:id,loan_application_id,...'
+                ])
+                ->withExists([
+                    'loanDocument as has_documents'
+                ])
+                ->withExists([
+                    'kycDetails as has_kyc'
+                ])
+                ->orderByDesc('loan_applications.id');
+
+                $userRecords = $query->paginate(25);
+
+                $data = $jsonData;
+                //$pdfurl = Storage::url($pdfPath);
+                $pdfurl = null;
+
             return view('admin.creditbureau.credit-bureau', compact( 'userRecords', 'data', 'pdfurl'));
         }
         

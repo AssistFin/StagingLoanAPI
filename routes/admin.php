@@ -335,6 +335,9 @@ Route::middleware('admin')->group(function () {
     Route::post('/loan-approval/store', [LoanApprovalController::class, 'store'])->name('loan.approval.store');
     Route::post('/loan-disbursal/store', [LoanDisbursalController::class, 'store'])->name('loan.disbursal.store');
     Route::post('/loan-utr/store', [LoanUtrController::class, 'store'])->name('loan.utr.store');
+    //Route::post('/send-predue-sms', [CollectionController::class, 'sendPredueSms'])->name('send.predue.sms');
+    Route::post('/bulk-predue-sms', [CollectionController::class, 'sendBulkPredueSms'])->name('bulk.predue.sms');
+    Route::post('/bulk-overdue-sms', [CollectionController::class, 'sendBulkOverdueSms'])->name('bulk.overdue.sms');
 
     // Admin Support
     Route::controller(SupportTicketController::class)
@@ -460,6 +463,7 @@ Route::middleware('admin')->group(function () {
 
     Route::name('experiancreditbureau.')->prefix('experiancreditbureau')->controller(ExperianCreditBureauController::class)->group(function () {
         Route::get('/index', 'index')->name('index');
+        Route::get('/transunion', 'transunion')->name('transunion');
     });
 
     Route::name('creditbureau.')->prefix('creditbureau')->controller(ScoreMeWebhookController::class)->group(function () {

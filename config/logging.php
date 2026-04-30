@@ -120,6 +120,11 @@ return [
             'path' => storage_path('logs/scoreme-webhook.log'),
             'level' => 'debug',
         ],
+        'worker' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/worker.log'),
+            'level' => 'info',
+        ],
     ],
 
 ];

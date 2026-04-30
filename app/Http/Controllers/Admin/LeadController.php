@@ -1693,7 +1693,7 @@ class LeadController extends Controller
                 "payment_id" => "CF-".$request->subscription_id,
                 'payment_amount' => floatval(preg_replace('/[^\d.]/', '', $request->payment_amount)),
                 'payment_schedule_date' => Carbon::parse($request->schedule_on)->toIso8601String(),
-                'payment_remarks' => $request->remarks,
+                'payment_remarks' => 'Zapploans Repayment',
                 "payment_type" => "CHARGE"
             ]);
             
@@ -1702,7 +1702,7 @@ class LeadController extends Controller
                 'payment_id' => "CF-".$request->subscription_id,
                 'payment_amount' => floatval(preg_replace('/[^\d.]/', '', $request->payment_amount)),
                 'payment_schedule_date' => $request->schedule_on,
-                'payment_remarks' => $request->remarks,
+                'payment_remarks' => 'Zapploans Repayment',
                 'payment_type' => 'CHARGE',
                 'response_status' => $response->successful() ? 'Success' : 'Failed',
                 'response_data' => $response,

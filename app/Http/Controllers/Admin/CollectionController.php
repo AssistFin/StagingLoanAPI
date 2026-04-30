@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Response;
 use Carbon\Carbon;
 use App\Models\CollectionConfiguration;
 use App\Http\Controllers\Api\LoanPaymentController;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+use App\Jobs\SendBulkPredueSmsJob;
+use App\Jobs\SendBulkOverdueSmsJob;
 
 class CollectionController extends Controller
 {
@@ -351,6 +355,8 @@ class CollectionController extends Controller
 
             return $lead;
         });
+
+        auth('admin')->user()->load('roles');
 
         return view('admin.collection.collection-predue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
@@ -882,6 +888,8 @@ class CollectionController extends Controller
 
             return $lead;
         });
+
+        auth('admin')->user()->load('roles');
 
         return view('admin.collection.collection-overdue', compact('leads','totalRecords','totalDuesSum','totalApprovalAmount'));
     }
@@ -1546,4 +1554,89 @@ class CollectionController extends Controller
             return '>180';
         }
     }
+
+    // public function sendPredueSms(Request $request)
+    // {
+    //     $mobile = $request->mobile;
+    //     $name = $request->name;
+    //     $dues = $request->dues;
+    //     $paymentLink = $request->payment_link;
+
+    //     // Equence credentials
+    //     $username = config('services.equence.send_sms_user');
+    //     $password = config('services.equence.send_sms_pass');
+    //     $senderId = config('services.equence.send_sms_from');
+    //     $mobileWithCountryCode = $mobile;
+    //     $loginUrl = 'https://loanone.in/';
+    //     $text = "Dear User, Repayment of your loan emi of Rs. {$dues} with LoanOne is due for payment. Please pay before the due date to avoid penalties and maintain a good credit score. Pay now: {$loginUrl} Regards, LoanOne";
+
+    //     try {
+    //         $response = Http::withHeaders([
+    //             'Content-Type' => 'application/json',
+    //         ])->post(config('services.equence.send_sms_url'), [
+    //             'username' => $username,
+    //             'password' => $password,
+    //             'to' => $mobileWithCountryCode,
+    //             'from' => $senderId,
+    //             'text' => $text,
+    //         ]);
+
+    //         // dd($response->json(), $text);
+    //         Log::info("Equence SMS For Predue Collection Response : ", $response->json());
+
+    //         return response()->json([
+    //             'status' => true,
+    //             'message' => 'SMS sent successfully'
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         Log::error("Failed to send SMS For Predue Collection via Equence: " . $e->getMessage());
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'SMS failed: ' . $e->getMessage()
+    //         ]);
+    //     }
+    // }
+
+    public function sendBulkPredueSms(Request $request)
+    {
+
+        $users = $request->users;
+
+        if (empty($users)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No users selected'
+            ]);
+        }
+
+        // 🚀 Dispatch Job (NON-BLOCKING)
+        SendBulkPredueSmsJob::dispatch($users);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'SMS sending started in background'
+        ]);
+    }
+
+    public function sendBulkOverdueSms(Request $request)
+    {
+
+        $users = $request->users;
+
+        if (empty($users)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No users selected'
+            ]);
+        }
+
+        // 🚀 Dispatch Job (NON-BLOCKING)
+        SendBulkOverdueSmsJob::dispatch($users);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'SMS sending started in background'
+        ]);
+    }
+
 }

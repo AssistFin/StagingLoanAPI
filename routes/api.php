@@ -37,6 +37,7 @@ Route::post('/partpay/initiate', [CollectionController::class, 'initiatePartPaym
 | is assigned the "api" middleware group. Enjoy building your API!
 |
  */
+Route::get('/payment/verify', [LoanPaymentController::class, 'verifyPayment']);
 
 Route::namespace('Api')->name('api.')->group(function () {
 
@@ -105,7 +106,7 @@ Route::namespace('Api')->name('api.')->group(function () {
 
     Route::namespace('Auth')->group(function () {
         Route::post('login', [LoginController::class, 'login']);
-        Route::get('/payment/verify', [LoanPaymentController::class, 'verifyPayment']);
+        //Route::get('/payment/verify', [LoanPaymentController::class, 'verifyPayment']);
         Route::post('loginwithmobile', [LoginController::class, 'loginWithMobile']);
         Route::post('verify-login-otp', [LoginController::class, 'verifyLoginMobileOtp']);
         Route::get('logout', [LoginController::class, 'logout']);

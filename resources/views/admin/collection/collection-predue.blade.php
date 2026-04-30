@@ -84,6 +84,17 @@
                             <button type="button" id="cpd_user_export" class="btn btn-success form-control">Export User Contacts</button>
                         </div>
 
+                            @php
+                                $allowedRoles = ['Admin', 'Superadmin', 'Sub Admin', 'Chief Technical Officer', 'Collection Manager'];
+                                $user = auth('admin')->user();
+                                //dd(auth('admin'));
+                            @endphp
+                            @if($user->roles->whereIn('name', $allowedRoles)->count())
+                                
+
+                                <button type="button" class="btn btn-success" id="bulk-sms-btn" >Send Bulk SMS</button>
+                            @endif
+
                         {{-- Custom Date Row --}}
                         <div id="customDateSection" class="custom-date-container" style="margin-top: 10px;">
                             <div class="section-heading">Select Custom Date Range:</div>
@@ -98,6 +109,16 @@
                         <table class="table table--light style--two">
                             <thead>
                             <tr>
+                                <th>
+                                @php
+                                    $allowedRoles = ['Admin', 'Superadmin', 'Sub Admin', 'Chief Technical Officer', 'Collection Manager'];
+                                    $user = auth('admin')->user();
+                                    //dd(auth('admin'));
+                                @endphp
+                                @if($user->roles->whereIn('name', $allowedRoles)->count())    
+                                <input type="checkbox" id="select-all">
+                                @endif
+                                </th>
                                 <th></th>
                                 <th>@lang('Loan Application No.')</th>
                                 <th>@lang('Customer Name')</th>
@@ -106,12 +127,26 @@
                                 <th>@lang('Total Due')</th>
                                 <th>@lang('Repayment Date')</th>
                                 <th>@lang('Payment Link')</th>
-                                <!--th>@lang('Action')</th-->
+                                <!---th>@lang('Action')</th-->
                             </tr>
                             </thead>
                             <tbody id="cPredueTable">
                             @forelse($leads as $lead)
                                 <tr>
+                                    @php
+                                        $allowedRoles = ['Admin', 'Superadmin', 'Sub Admin', 'Chief Technical Officer', 'Collection Manager'];
+                                        $user = auth('admin')->user();
+                                        //dd(auth('admin'));
+                                    @endphp
+                                    @if($user->roles->whereIn('name', $allowedRoles)->count()) 
+                                        <td>
+                                            <input type="checkbox" class="row-checkbox"
+                                                data-id="{{ $lead->id }}"
+                                                data-mobile="{{ $lead->user->mobile }}"
+                                                data-dues="{{ $lead->total_dues }}"
+                                            >
+                                        </td>
+                                    @endif
                                     <td style="cursor: pointer">
                                         <a href="{{route('admin.leads.verify', base64_encode($lead->id))}}"><i class="fas fa-eye"></i></a>
                                     </td>
@@ -122,7 +157,10 @@
                                     <td>{{ $lead->total_dues }}</td>
                                     <td>{{ $lead->loanApproval->repay_date }}</td>
                                     <td>{{ $lead->paymentLink }}</td>
-                                    <!--td><button type="button" class="btn btn-success">Send SMS</button><button type="button" class="btn btn-danger">Send Email</button></td-->
+                                    <!--td>
+                                        <button type="button" class="btn btn-success send-sms-btn" data-id="{{ $lead->id }}" data-mobile="{{ $lead->user->mobile }}" data-name="{{ $lead->user->firstname }}" data-dues="{{ $lead->total_dues }}" data-link="{{ $lead->paymentLink }}">Send SMS</button>
+                                        <button type="button" class="btn btn-danger">Send Email</button>
+                                    </td-->
                                 </tr>
                             @empty
                                 <tr>
@@ -275,4 +313,88 @@
         });
     });
 </script>
+<script>
+    // ✅ Select All
+    $(document).on('click', '#select-all', function () {
+        $('.row-checkbox').prop('checked', $(this).prop('checked'));
+    });
+
+    // ✅ Bulk SMS
+    $('#bulk-sms-btn').on('click', function () {
+
+        let selected = [];
+
+        $('.row-checkbox:checked').each(function () {
+            selected.push({
+                id: $(this).data('id'),
+                mobile: $(this).data('mobile'),
+                dues: $(this).data('dues')
+            });
+        });
+
+        if (selected.length === 0) {
+            alert('Please select at least one user');
+            return;
+        }
+
+        if (!confirm(`Send SMS to ${selected.length} users?`)) return;
+
+        let btn = $(this);
+        btn.prop('disabled', true).text('Sending...');
+
+        $.ajax({
+            url: "{{ route('admin.bulk.predue.sms') }}",
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                users: selected
+            },
+            success: function (res) {
+                alert(res.message);
+                btn.prop('disabled', false).text('Send Bulk SMS');
+            },
+            error: function () {
+                alert('Bulk SMS failed');
+                btn.prop('disabled', false).text('Send Bulk SMS');
+            }
+        });
+    });
+</script>
+<!--script>
+    $(document).on('click', '.send-sms-btn', function () {
+
+    let btn = $(this);
+
+    let data = {
+        _token: "{{ csrf_token() }}",
+        id: btn.data('id'),
+        mobile: btn.data('mobile'),
+        name: btn.data('name'),
+        dues: btn.data('dues'),
+        payment_link: btn.data('link')
+    };
+
+    btn.prop('disabled', true).text('Sending...');
+
+    $.ajax({
+        url: "",
+        type: "POST",
+        data: data,
+        success: function (res) {
+
+            if (res.status) {
+                alert('✅ SMS Sent');
+            } else {
+                alert('❌ ' + res.message);
+            }
+
+            btn.prop('disabled', false).text('Send SMS');
+        },
+        error: function () {
+            alert('Server error');
+            btn.prop('disabled', false).text('Send SMS');
+        }
+    });
+});
+</script-->
 @endpush
